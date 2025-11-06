@@ -1,0 +1,67 @@
+.document-upload {
+  padding: 20px;
+  background: #f9f9f9;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.document-upload h3 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.document-upload .form-group {
+  margin-bottom: 15px;
+}
+
+.document-upload label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 500;
+  color: #555;
+}
+
+.document-upload input[type="file"],
+.document-upload select,
+.document-upload textarea {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.document-upload textarea {
+  resize: vertical;
+}
+
+.document-upload button {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.document-upload button:hover:not(:disabled) {
+  background: #0056b3;
+}
+
+.document-upload button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.document-upload .error-message {
+  color: #dc3545;
+  margin-bottom: 15px;
+  padding: 10px;
+  background: #f8d7da;
+  border-radius: 4px;
+}
+
