@@ -156,7 +156,7 @@ async def re_extract_form(
                              'guardian_phone', 'annual_income', 'tenth_board', 'tenth_year', 
                              'tenth_percentage', 'tenth_school', 'twelfth_board', 'twelfth_year', 
                              'twelfth_percentage', 'twelfth_school', 'previous_qualification', 
-                             'graduation_details', 'course_applied', 'application_number', 'admission_date']:
+                             'graduation_details', 'course_applied', 'application_number', 'enrollment_number', 'admission_date']:
                     if structured_data.get(field):
                         setattr(form, field, structured_data[field])
         
@@ -211,7 +211,7 @@ async def verify_form(
         setattr(form, field, getattr(verification, field, None))
     
     # Course Application Details
-    for field in ['course_applied', 'application_number', 'admission_date']:
+    for field in ['course_applied', 'application_number', 'enrollment_number', 'admission_date']:
         setattr(form, field, getattr(verification, field, None))
     
     form.additional_info = verification.additional_info
@@ -294,13 +294,15 @@ async def search_forms(
     student_name: Optional[str] = Query(None),
     phone_number: Optional[str] = Query(None),
     email: Optional[str] = Query(None),
+    enrollment_number: Optional[str] = Query(None),
+    application_number: Optional[str] = Query(None),
     course_applied: Optional[str] = Query(None),
     status: Optional[FormStatus] = Query(None),
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db)
 ):
-    """Search forms by various criteria"""
+    """Search forms by various criteria including enrollment number"""
     query = db.query(AdmissionForm)
     
     # Build filters
@@ -311,6 +313,10 @@ async def search_forms(
         filters.append(AdmissionForm.phone_number.ilike(f"%{phone_number}%"))
     if email:
         filters.append(AdmissionForm.email.ilike(f"%{email}%"))
+    if enrollment_number:
+        filters.append(AdmissionForm.enrollment_number.ilike(f"%{enrollment_number}%"))
+    if application_number:
+        filters.append(AdmissionForm.application_number.ilike(f"%{application_number}%"))
     if course_applied:
         filters.append(AdmissionForm.course_applied.ilike(f"%{course_applied}%"))
     if status:

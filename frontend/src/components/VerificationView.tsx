@@ -675,6 +675,10 @@ function VerificationView() {
                   <input type="text" value={verification.application_number || ''} onChange={(e) => handleChange('application_number', e.target.value)} placeholder="Application Number" />
                 </div>
                 <div className="form-row">
+                  <label>Enrollment Number</label>
+                  <input type="text" value={verification.enrollment_number || ''} onChange={(e) => handleChange('enrollment_number', e.target.value)} placeholder="Enrollment Number" />
+                </div>
+                <div className="form-row">
                   <label>Admission Date</label>
                   <input type="text" value={verification.admission_date || ''} onChange={(e) => handleChange('admission_date', e.target.value)} placeholder="DD/MM/YYYY" />
                 </div>

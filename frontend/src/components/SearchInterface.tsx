@@ -9,6 +9,8 @@ function SearchInterface() {
     student_name: '',
     phone_number: '',
     email: '',
+    enrollment_number: '',
+    application_number: '',
     course_applied: '',
     status: '',
   });
@@ -192,6 +194,26 @@ function SearchInterface() {
               value={searchParams.email}
               onChange={(e) => handleChange('email', e.target.value)}
               placeholder="Search by email"
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Enrollment Number</label>
+            <input
+              type="text"
+              value={searchParams.enrollment_number}
+              onChange={(e) => handleChange('enrollment_number', e.target.value)}
+              placeholder="Search by enrollment"
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Application Number</label>
+            <input
+              type="text"
+              value={searchParams.application_number}
+              onChange={(e) => handleChange('application_number', e.target.value)}
+              placeholder="Search by application"
             />
           </div>
 
