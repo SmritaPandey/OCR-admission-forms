@@ -4,10 +4,17 @@ from backend.ocr.tesseract_provider import TesseractProvider
 from backend.config import settings
 
 # Lazy imports for optional providers
-def _get_google_provider():
+def _get_google_vision_provider():
     try:
         from backend.ocr.google_vision_provider import GoogleVisionProvider
         return GoogleVisionProvider
+    except ImportError:
+        return None
+
+def _get_google_documentai_provider():
+    try:
+        from backend.ocr.google_documentai_provider import GoogleDocumentAIProvider
+        return GoogleDocumentAIProvider
     except ImportError:
         return None
 
@@ -15,6 +22,20 @@ def _get_azure_provider():
     try:
         from backend.ocr.azure_vision_provider import AzureVisionProvider
         return AzureVisionProvider
+    except ImportError:
+        return None
+
+def _get_azure_form_recognizer_provider():
+    try:
+        from backend.ocr.azure_form_recognizer_provider import AzureFormRecognizerProvider
+        return AzureFormRecognizerProvider
+    except ImportError:
+        return None
+
+def _get_aws_textract_provider():
+    try:
+        from backend.ocr.aws_textract_provider import AWSTextractProvider
+        return AWSTextractProvider
     except ImportError:
         return None
 
@@ -35,14 +56,34 @@ class OCRFactory:
             "tesseract": TesseractProvider,
         }
         
-        google_provider = _get_google_provider()
-        if google_provider:
-            providers["google"] = google_provider
+        # Google Cloud Vision
+        google_vision = _get_google_vision_provider()
+        if google_vision:
+            providers["google-vision"] = google_vision
+            providers["google"] = google_vision  # Alias for backward compatibility
         
+        # Google Cloud Document AI - Best for handwriting
+        google_documentai = _get_google_documentai_provider()
+        if google_documentai:
+            providers["google-documentai"] = google_documentai
+        
+        # Azure Computer Vision
         azure_provider = _get_azure_provider()
         if azure_provider:
-            providers["azure"] = azure_provider
+            providers["azure-vision"] = azure_provider
+            providers["azure"] = azure_provider  # Alias for backward compatibility
         
+        # Azure Form Recognizer - Best for structured forms
+        azure_form = _get_azure_form_recognizer_provider()
+        if azure_form:
+            providers["azure-form-recognizer"] = azure_form
+        
+        # AWS Textract
+        aws_textract = _get_aws_textract_provider()
+        if aws_textract:
+            providers["aws-textract"] = aws_textract
+        
+        # ABBYY FineReader
         abbyy_provider = _get_abbyy_provider()
         if abbyy_provider:
             providers["abbyy"] = abbyy_provider

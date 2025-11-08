@@ -1,20 +1,24 @@
 # Student Admission Form Digitization System
 
-A comprehensive software system for digitizing student admission forms using OCR (Optical Character Recognition) technology. The system allows scanned handwritten forms to be uploaded, automatically extracts text using OCR, and presents the data for manual verification and correction. Verified data is stored in a secure database and can be searched or exported via an intuitive user interface.
+A comprehensive software system for digitizing handwritten student admission forms using advanced OCR (Optical Character Recognition) technology. The system allows scanned handwritten forms to be uploaded, automatically extracts text using state-of-the-art OCR, and presents the data for manual verification and correction. Verified data is stored in a secure database and can be searched, filtered, and exported via an intuitive user interface.
 
-## Features
+## ✨ Key Features
 
-- **File Upload**: Upload scanned admission forms in multiple formats (JPG, PNG, PDF, TIFF, BMP)
-- **OCR Extraction**: Automatic text extraction using multiple OCR providers:
-  - Tesseract (default, open-source)
-  - Google Cloud Vision (optional)
-  - Azure Computer Vision (optional)
-  - ABBYY FineReader (optional)
-- **Manual Verification**: User-friendly interface for verifying and correcting extracted data
-- **Search & Filter**: Search forms by student name, phone number, email, course, or status
-- **Data Export**: Export verified forms to CSV or JSON format
-- **Dashboard**: Overview of all forms with status tracking
-- **Re-extraction**: Re-extract forms with different OCR providers if needed
+- **📤 Smart File Upload**: Upload scanned admission forms in multiple formats (JPG, PNG, PDF, TIFF, BMP)
+- **🤖 Advanced OCR**: Automatic text extraction using multiple world-class OCR providers:
+  - **Google Document AI** ⭐ (BEST for handwritten forms)
+  - **Azure Form Recognizer** ⭐ (BEST for structured forms with checkboxes)
+  - **AWS Textract** (Excellent for forms and tables)
+  - **Google Cloud Vision** (Good for general text)
+  - **Tesseract** (Free, good for printed text)
+- **✅ Intelligent Verification**: Side-by-side view with auto-fill capabilities
+- **📋 Comprehensive Form Fields**: 40+ fields covering all student information
+- **🔍 Powerful Search**: Search by name, enrollment number, phone, email, or any field
+- **📎 Document Management**: Attach supporting documents (ID, certificates, etc.)
+- **🎓 Student Profiles**: Automatic linking of forms and documents
+- **📊 Data Export**: Export to CSV or JSON with filtering
+- **🔄 Re-extraction**: Try different OCR providers for better results
+- **📱 Responsive Design**: Works on desktop and tablets
 
 ## System Architecture
 
@@ -30,20 +34,26 @@ A comprehensive software system for digitizing student admission forms using OCR
 - **Routing**: React Router
 - **HTTP Client**: Axios
 
-## Prerequisites
+## 📋 Prerequisites
 
 ### Required
 - **Python 3.8+** with pip
-- **Node.js 16+** with npm (for frontend)
-- **Tesseract OCR** (for default OCR provider)
+- **Node.js 16+** with npm
+- **Tesseract OCR** (for free OCR option)
+
+### Recommended for Best Handwriting Recognition
+- **Google Cloud Document AI** (Best accuracy for handwriting) - See [SETUP_OCR.md](SETUP_OCR.md)
+- **Azure Form Recognizer** (Best for structured forms) - See [SETUP_OCR.md](SETUP_OCR.md)
+- **AWS Textract** (Good for forms and tables) - See [SETUP_OCR.md](SETUP_OCR.md)
 
 ### Optional
-- PostgreSQL (if not using SQLite)
-- Google Cloud Vision API credentials
-- Azure Computer Vision credentials
-- ABBYY FineReader Server
+- PostgreSQL (for production deployments)
 
-## Installation
+## 🚀 Quick Start
+
+**Want to get started quickly?** See [QUICK_START.md](QUICK_START.md) for a 5-minute setup guide!
+
+## 📦 Full Installation
 
 ### 1. Clone the Repository
 
@@ -291,32 +301,70 @@ The frontend will be available at: `http://localhost:5173` (or the port shown in
 └── README.md
 ```
 
-## Troubleshooting
+## 📚 Documentation
 
-### Backend Issues
+- **[QUICK_START.md](QUICK_START.md)** - Get started in 5 minutes
+- **[USER_GUIDE.md](USER_GUIDE.md)** - Complete user guide with screenshots and best practices
+- **[SETUP_OCR.md](SETUP_OCR.md)** - Detailed OCR provider setup (Google, Azure, AWS)
+- **[DEPLOYMENT.md](DEPLOYMENT.md)** - Production deployment guide
+- **[SYSTEM_OVERVIEW.md](SYSTEM_OVERVIEW.md)** - Technical architecture and design
 
-**Database Connection Error:**
-- SQLite: Ensure write permissions in the project directory
-- PostgreSQL: Verify PostgreSQL is running and credentials are correct
+## 🎯 System Capabilities
 
-**OCR Not Working:**
-- Tesseract: Verify Tesseract is installed and in PATH
-- Other providers: Check API credentials in `.env` file
+### Form Fields Supported
 
-**Import Errors:**
-- Ensure all Python dependencies are installed: `pip install -r requirements.txt`
+The system can extract and manage 40+ fields including:
 
-### Frontend Issues
+- **Basic Details**: Name, DOB, Gender, Category, Nationality, Religion, Aadhar, Blood Group
+- **Address**: Permanent and Correspondence addresses with City, State, Pincode
+- **Contact**: Phone, Alternate Phone, Email, Emergency Contacts
+- **Parent/Guardian**: Father, Mother, Guardian details with occupation and contact
+- **Education**: 10th and 12th details (Board, Year, %, School), Previous Qualifications
+- **Admission**: Course Applied, Application Number, Enrollment Number, Admission Date
+- **Documents**: ID Proof, Academic Certificates, Medical, Birth, Income, Caste Certificates
 
-**Cannot Connect to Backend:**
-- Verify backend is running on port 8000
-- Check CORS settings in `backend/config.py`
-- Verify `VITE_API_BASE_URL` in frontend (defaults to `http://localhost:8000`)
+### OCR Provider Comparison
 
-**File Upload Fails:**
-- Check file size (max 10MB default)
-- Verify file format is allowed (jpg, jpeg, png, pdf, tiff, bmp)
-- Check backend logs for detailed error messages
+| Provider | Handwriting | Forms | Checkboxes | Cost | Setup |
+|----------|------------|-------|------------|------|-------|
+| Google Document AI | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ✅ | $$ | Medium |
+| Azure Form Recognizer | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ✅ | $$ | Medium |
+| AWS Textract | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ✅ | $$ | Medium |
+| Google Vision | ⭐⭐⭐⭐ | ⭐⭐⭐ | ❌ | $$ | Easy |
+| Tesseract | ⭐⭐⭐ | ⭐⭐⭐ | ❌ | FREE | Easy |
+
+### Search and Filter Options
+
+- Search by: Student Name, Enrollment Number, Application Number, Phone, Email, Course
+- Filter by: Status (Uploaded, Extracted, Verified, Error)
+- Sort by: Upload Date, Verification Date, Student Name
+- Export: Filtered results to CSV or JSON
+
+## 🔧 Troubleshooting
+
+For common issues and solutions, see:
+- [USER_GUIDE.md - Troubleshooting Section](USER_GUIDE.md#troubleshooting)
+- [DEPLOYMENT.md - Production Issues](DEPLOYMENT.md#troubleshooting-production-issues)
+
+### Quick Fixes
+
+**Backend won't start:**
+```bash
+pip install -r requirements.txt
+python -m uvicorn backend.main:app --reload
+```
+
+**Frontend won't start:**
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+**OCR not working:**
+- Check Tesseract: `tesseract --version`
+- Verify API credentials in `.env` file
+- See [SETUP_OCR.md](SETUP_OCR.md) for detailed configuration
 
 ## Security Considerations
 

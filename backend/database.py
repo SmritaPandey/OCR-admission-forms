@@ -118,6 +118,7 @@ class AdmissionForm(Base):
     # Course Application Details
     course_applied = Column(String, nullable=True)
     application_number = Column(String, nullable=True)
+    enrollment_number = Column(String, nullable=True, index=True)  # For searching
     admission_date = Column(String, nullable=True)
     
     # Additional Information

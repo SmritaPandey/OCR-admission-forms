@@ -165,6 +165,10 @@ class SRCCFormParser:
         'application_number': [
             r'(?:application\s+no|application\s+number|app\s+no|app\s+number)[:\s]+([A-Z0-9\-]+)',
         ],
+        'enrollment_number': [
+            r'(?:enrollment\s+no|enrollment\s+number|enrol\s+no|enrolment\s+number|roll\s+no|roll\s+number)[:\s]+([A-Z0-9\-\/]+)',
+            r'(?:enrollment|enrolment|roll)[:\s]+([A-Z0-9\-\/]+)',
+        ],
         'admission_date': [
             r'(?:admission\s+date|date\s+of\s+admission)[:\s]+(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})',
         ],
