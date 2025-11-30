@@ -1,6 +1,11 @@
 """
 Azure Form Recognizer provider - Best for structured forms
 Excellent for detecting checkboxes, radio buttons, and form fields
+
+Supports:
+- Prebuilt models: prebuilt-document, prebuilt-layout, prebuilt-read
+- Custom models: Template and Neural models trained via Document Intelligence Studio
+  See: https://learn.microsoft.com/en-us/azure/ai-services/document-intelligence/train/custom-model
 """
 from typing import Dict, Any, Optional
 from PIL import Image
@@ -9,11 +14,20 @@ from backend.ocr.base_provider import OCRProvider
 from backend.config import settings
 
 class AzureFormRecognizerProvider(OCRProvider):
-    """Azure Form Recognizer - Excellent for structured forms"""
+    """
+    Azure Form Recognizer - Excellent for structured forms
+    
+    Supports both prebuilt and custom models:
+    - Prebuilt models: prebuilt-document, prebuilt-layout, prebuilt-read
+    - Custom models: Use AZURE_FORM_RECOGNIZER_CUSTOM_MODEL_ID to specify a trained custom model
+      Custom models can be template-based or neural-based for better accuracy on specific document types
+    """
     
     def __init__(self):
         self.name = "azure-form-recognizer"
         self._client = None
+        # Determine which model to use (custom model takes precedence)
+        self.model_id = settings.AZURE_FORM_RECOGNIZER_CUSTOM_MODEL_ID or "prebuilt-document"
     
     def _get_client(self):
         """Get or create Form Recognizer client"""
@@ -42,15 +56,37 @@ class AzureFormRecognizerProvider(OCRProvider):
         try:
             client = self._get_client()
             
+            # Validate and prepare image
+            if image is None:
+                raise ValueError("Image object is None")
+            
+            # Ensure image is in RGB mode
+            if image.mode != 'RGB':
+                image = image.convert('RGB')
+            
+            # Verify image is valid by checking size
+            if image.size[0] == 0 or image.size[1] == 0:
+                raise ValueError("Image has invalid dimensions")
+            
             # Convert PIL Image to bytes
             img_byte_arr = io.BytesIO()
-            image.save(img_byte_arr, format='PNG')
-            img_byte_arr.seek(0)
+            try:
+                image.save(img_byte_arr, format='PNG')
+                img_byte_arr.seek(0)
+                image_bytes = img_byte_arr.getvalue()
+                
+                # Validate that bytes were created
+                if not image_bytes or len(image_bytes) == 0:
+                    raise ValueError("Failed to convert image to bytes")
+            except Exception as save_error:
+                raise ValueError(f"Failed to save image to bytes: {str(save_error)}")
             
-            # Analyze document (prebuilt-document model is good for forms)
+            # Analyze document with selected model (custom or prebuilt)
+            # Custom models provide better accuracy for specific document types
+            # See: https://learn.microsoft.com/en-us/azure/ai-services/document-intelligence/train/custom-model
             poller = client.begin_analyze_document(
-                model_id="prebuilt-document",  # Good for forms
-                document=img_byte_arr.getvalue()
+                model_id=self.model_id,
+                document=image_bytes
             )
             result = poller.result()
             
@@ -128,5 +164,20 @@ class AzureFormRecognizerProvider(OCRProvider):
             return False
     
     def get_provider_name(self) -> str:
-        return "azure-form-recognizer"
+        model_type = "custom" if settings.AZURE_FORM_RECOGNIZER_CUSTOM_MODEL_ID else "prebuilt"
+        return f"azure-form-recognizer ({model_type})"
+    
+    def get_model_info(self) -> Dict[str, Any]:
+        """Get information about the model being used"""
+        return {
+            "model_id": self.model_id,
+            "model_type": "custom" if settings.AZURE_FORM_RECOGNIZER_CUSTOM_MODEL_ID else "prebuilt",
+            "supports": {
+                "form_fields": True,
+                "selection_marks": True,
+                "tables": True,
+                "signatures": self.model_id != "prebuilt-read",  # Custom models support signatures
+                "overlapping_fields": settings.AZURE_FORM_RECOGNIZER_CUSTOM_MODEL_ID is not None  # Neural models support this
+            }
+        }
 

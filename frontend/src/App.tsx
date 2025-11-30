@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import Dashboard from './components/Dashboard';
 import UploadForm from './components/UploadForm';
@@ -9,27 +8,22 @@ import './App.css';
 
 function NavLinks() {
   const location = useLocation();
-  
+  const links = [
+    { to: '/', label: 'Dashboard' },
+    { to: '/search', label: 'Search' },
+  ];
+
   return (
     <div className="nav-menu">
-      <Link 
-        to="/" 
-        className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}
-      >
-        Dashboard
-      </Link>
-      <Link 
-        to="/upload" 
-        className={`nav-link ${location.pathname === '/upload' ? 'active' : ''}`}
-      >
-        Upload
-      </Link>
-      <Link 
-        to="/search" 
-        className={`nav-link ${location.pathname === '/search' ? 'active' : ''}`}
-      >
-        Search
-      </Link>
+      {links.map((link) => (
+        <Link
+          key={link.to}
+          to={link.to}
+          className={`nav-link ${location.pathname === link.to ? 'active' : ''}`}
+        >
+          {link.label}
+        </Link>
+      ))}
     </div>
   );
 }
@@ -41,21 +35,41 @@ function App() {
         <nav className="navbar">
           <div className="nav-container">
             <Link to="/" className="nav-logo">
-              <h1>Admission Form System</h1>
+              <div className="nav-emblem" aria-hidden="true">AP</div>
+              <div className="nav-brand">
+                <span className="nav-brand-title">Admissions Portal</span>
+                <span className="nav-brand-subtitle">College Enrollment Command Center</span>
+              </div>
             </Link>
-            <NavLinks />
+            <div className="nav-actions">
+              <NavLinks />
+              <Link
+                to="/upload"
+                className="nav-cta"
+              >
+                New Submission
+              </Link>
+            </div>
           </div>
         </nav>
 
         <main className="main-content">
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/upload" element={<UploadForm />} />
-            <Route path="/forms/:id" element={<VerificationView />} />
-            <Route path="/students/:id" element={<StudentProfile />} />
-            <Route path="/search" element={<SearchInterface />} />
-          </Routes>
+          <div className="page-container">
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/upload" element={<UploadForm />} />
+              <Route path="/forms/:id" element={<VerificationView />} />
+              <Route path="/students/:id" element={<StudentProfile />} />
+              <Route path="/search" element={<SearchInterface />} />
+            </Routes>
+          </div>
         </main>
+
+        <footer className="site-footer">
+          <p>
+            © {new Date().getFullYear()} Admissions Office · Empowering a seamless college onboarding experience.
+          </p>
+        </footer>
       </div>
     </Router>
   );

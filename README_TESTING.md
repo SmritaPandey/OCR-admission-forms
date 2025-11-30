@@ -78,6 +78,23 @@ python3 test_system.py
 # ... etc
 ```
 
+---
+
+## Pytest Unit Suite
+
+In addition to the system smoke test, targeted unit tests cover form search filters and export helpers.
+
+```bash
+# Run backend/unit test suite
+pytest tests/test_filters_and_export.py
+```
+
+These tests validate:
+
+- Search filtering across name, status, and upload date ranges
+- Export serialization logic for CSV and JSON payloads
+- Inclusion of newly added fields (enrollment numbers, metadata) in exports
+
 ### Test Results
 
 - **All Pass (100%)**: System is ready to run

@@ -132,7 +132,30 @@ def load_image(file_path: str) -> Image.Image:
         
         # Handle image files
         else:
+            # Verify file exists and is readable
+            if not os.path.exists(file_path):
+                raise ValueError(f"File not found: {file_path}")
+            
+            if not os.path.isfile(file_path):
+                raise ValueError(f"Path is not a file: {file_path}")
+            
+            # Check file size
+            file_size = os.path.getsize(file_path)
+            if file_size == 0:
+                raise ValueError(f"File is empty: {file_path}")
+            
+            # Open and validate image
+            try:
+                # First, try to open and verify the image
+                test_image = Image.open(file_path)
+                # Verify image is valid by loading it (this closes the file)
+                test_image.verify()
+            except Exception as verify_error:
+                raise ValueError(f"Invalid or corrupted image file: {str(verify_error)}")
+            
+            # Reopen image after verification (verify() closes the file)
             image = Image.open(file_path)
+            
             # Convert to RGB if necessary (for JPEG compatibility)
             if image.mode in ('RGBA', 'LA', 'P'):
                 rgb_image = Image.new('RGB', image.size, (255, 255, 255))
@@ -142,6 +165,11 @@ def load_image(file_path: str) -> Image.Image:
                 return rgb_image
             elif image.mode != 'RGB':
                 image = image.convert('RGB')
+            
+            # Final validation
+            if image.size[0] == 0 or image.size[1] == 0:
+                raise ValueError(f"Image has invalid dimensions: {image.size}")
+            
             return image
             
     except Exception as e:

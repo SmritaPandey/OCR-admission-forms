@@ -1,5 +1,15 @@
 # Implementation Notes
 
+## Scope Decisions (November 2025)
+
+- **Supported intake channels**: Single-page and multi-page admission forms scanned at 300 dpi in PDF, PNG, or JPEG. Batch uploads deferred to a future release.
+- **Target accuracy**: ≥95 % character accuracy for printed text using Tesseract; ≥90 % field-level accuracy for handwriting when using Document AI or Azure Form Recognizer. Verification workflow remains mandatory before persistence.
+- **Processing throughput**: Sustain 60 single-page forms/hour on a single worker with Tesseract; cloud providers must process under 10 s per form, with retry budget of 2 attempts.
+- **Verification SLA**: Operators review OCR output within 24 h; confidence <0.8 automatically highlighted for manual attention.
+- **Provider mix**: Ship with Tesseract enabled by default. Cloud providers (Google Document AI, Azure Form Recognizer, AWS Textract) configurable via environment flags for handwriting-heavy deployments.
+- **Data retention**: Raw uploads retained for 30 days in `uploads/` before archival; verified structured data stored indefinitely per institutional policy.
+- **Minimum environment**: Python 3.11, Node 18, Tesseract 5.x. Production deployment requires PostgreSQL 14+ and object storage for uploads.
+
 ## What Has Been Completed
 
 ### 1. Backend Implementation ✅

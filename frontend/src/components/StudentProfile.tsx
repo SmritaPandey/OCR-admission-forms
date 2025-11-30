@@ -58,98 +58,137 @@ function StudentProfile() {
 
   return (
     <div className="student-profile">
-      <div className="profile-header">
-        <button onClick={() => navigate(-1)} className="btn btn-secondary">
-          ← Back
-        </button>
-        <h1>Student Profile: {profile.student_name}</h1>
-      </div>
-
-      <div className="profile-info">
-        <div className="info-card">
-          <h3>Basic Information</h3>
-          <div className="info-grid">
-            <div className="info-item">
-              <label>Student Name:</label>
-              <span>{profile.student_name}</span>
+      <section className="profile-hero">
+        <div className="hero-details">
+          <button onClick={() => navigate(-1)} className="btn btn-outline back-btn">
+            ← Back
+          </button>
+          <span className="page-eyebrow">Student Record</span>
+          <h1>{profile.student_name}</h1>
+          <p>
+            Centralized profile of supporting documents, verification history, and admission forms for
+            this applicant. Track outstanding actions and upload additional paperwork without leaving
+            the admissions console.
+          </p>
+          <div className="hero-meta">
+            <div className="meta-item">
+              <span className="meta-label">Profile Created</span>
+              <span className="meta-value">
+                {new Date(profile.created_date).toLocaleDateString()}
+              </span>
+            </div>
+            <div className="meta-item">
+              <span className="meta-label">Last Updated</span>
+              <span className="meta-value">
+                {new Date(profile.updated_date).toLocaleDateString()}
+              </span>
             </div>
             {profile.aadhar_number && (
-              <div className="info-item">
-                <label>Aadhar Number:</label>
-                <span>{profile.aadhar_number}</span>
+              <div className="meta-item">
+                <span className="meta-label">Aadhar</span>
+                <span className="meta-value">{profile.aadhar_number}</span>
               </div>
             )}
-            <div className="info-item">
-              <label>Profile Created:</label>
-              <span>{new Date(profile.created_date).toLocaleDateString()}</span>
-            </div>
-            <div className="info-item">
-              <label>Last Updated:</label>
-              <span>{new Date(profile.updated_date).toLocaleDateString()}</span>
-            </div>
           </div>
         </div>
-
-        <div className="stats-card">
-          <h3>Statistics</h3>
-          <div className="stats-grid">
-            <div className="stat-item">
-              <div className="stat-value">{profile.forms_count}</div>
-              <div className="stat-label">Forms</div>
-            </div>
-            <div className="stat-item">
-              <div className="stat-value">{profile.documents_count}</div>
-              <div className="stat-label">Documents</div>
-            </div>
+        <div className="hero-stats">
+          <div className="stat-card">
+            <span className="stat-chip">Admission Forms</span>
+            <span className="stat-value">{profile.forms_count}</span>
+            <span className="stat-description">Uploaded across all cycles</span>
+          </div>
+          <div className="stat-card">
+            <span className="stat-chip">Supporting Docs</span>
+            <span className="stat-value">{profile.documents_count}</span>
+            <span className="stat-description">Archived for compliance</span>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Forms Section */}
-      <div className="profile-section">
-        <h2>Admission Forms ({profile.forms.length})</h2>
+      <section className="profile-section">
+        <header className="section-header">
+          <div>
+            <h2>Admission Forms</h2>
+            <p>
+              {profile.forms.length > 0
+                ? 'Review submission status and navigate directly to verification.'
+                : 'No forms on record yet. Upload a form to begin the digitization workflow.'}
+            </p>
+          </div>
+          <span className="section-count">{profile.forms.length} total</span>
+        </header>
+
         {profile.forms.length === 0 ? (
-          <p className="empty-message">No forms found for this student</p>
+          <div className="empty-state">
+            No forms found for this student. Upload a form from the documents section below.
+          </div>
         ) : (
-          <div className="forms-list">
+          <div className="forms-grid">
             {profile.forms.map((form) => (
-              <div key={form.id} className="form-card">
-                <div className="form-header">
-                  <h4>
-                    <Link to={`/forms/${form.id}`}>{form.filename}</Link>
-                  </h4>
+              <article key={form.id} className="form-card">
+                <header className="form-card-header">
+                  <div>
+                    <h3>
+                      <Link to={`/forms/${form.id}`}>{form.filename}</Link>
+                    </h3>
+                    <p>Uploaded {new Date(form.upload_date).toLocaleDateString()}</p>
+                  </div>
                   <span className={`status-badge status-${form.status}`}>
                     {form.status}
                   </span>
-                </div>
-                <div className="form-meta">
-                  <span>Uploaded: {new Date(form.upload_date).toLocaleDateString()}</span>
-                  {form.student_name && <span>Student: {form.student_name}</span>}
-                  {form.course_applied && <span>Course: {form.course_applied}</span>}
-                </div>
-                {form.documents && form.documents.length > 0 && (
-                  <div className="form-documents">
-                    <small>{form.documents.length} document(s) attached</small>
+                </header>
+                <dl className="form-card-meta">
+                  {form.student_name && (
+                    <div>
+                      <dt>Student</dt>
+                      <dd>{form.student_name}</dd>
+                    </div>
+                  )}
+                  {form.course_applied && (
+                    <div>
+                      <dt>Course</dt>
+                      <dd>{form.course_applied}</dd>
+                    </div>
+                  )}
+                  <div>
+                    <dt>Provider</dt>
+                    <dd>{form.ocr_provider}</dd>
                   </div>
+                </dl>
+                {form.documents && form.documents.length > 0 && (
+                  <footer className="form-card-footer">
+                    {form.documents.length} supporting document
+                    {form.documents.length === 1 ? '' : 's'} attached
+                  </footer>
                 )}
-              </div>
+              </article>
             ))}
           </div>
         )}
-      </div>
+      </section>
 
-      {/* Documents Section */}
-      <div className="profile-section">
-        <h2>Student Documents ({profile.documents.length})</h2>
-        <DocumentUpload
-          studentProfileId={profile.id}
-          onUploadComplete={handleRefresh}
-        />
-        <DocumentList
-          studentProfileId={profile.id}
-          onRefresh={handleRefresh}
-        />
-      </div>
+      <section className="profile-section">
+        <header className="section-header">
+          <div>
+            <h2>Supporting Documents</h2>
+            <p>
+              Upload new files or manage existing documentation linked to this student profile. These
+              assets remain accessible during verification and auditing.
+            </p>
+          </div>
+          <span className="section-count">{profile.documents.length} total</span>
+        </header>
+        <div className="documents-panel">
+          <DocumentUpload
+            studentProfileId={profile.id}
+            onUploadComplete={handleRefresh}
+          />
+          <DocumentList
+            studentProfileId={profile.id}
+            onRefresh={handleRefresh}
+          />
+        </div>
+      </section>
     </div>
   );
 }

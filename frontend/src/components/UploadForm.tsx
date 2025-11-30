@@ -114,8 +114,22 @@ function UploadForm() {
 
   return (
     <div className="upload-form">
-      <h2>Upload Admission Form</h2>
-      
+      <div className="upload-header">
+        <div className="upload-heading">
+          <span className="page-eyebrow">Document Intake</span>
+          <h2>Upload Admission Form</h2>
+          <p>
+            Submit scanned admission forms and supporting paperwork to route them into the admissions
+            review workflow. You can import multiple files at once using drag &amp; drop.
+          </p>
+        </div>
+        <ul className="upload-guidelines">
+          <li>Use high-resolution scans (300&nbsp;DPI recommended) for handwritten content.</li>
+          <li>Merge multi-page documents into a single PDF before uploading.</li>
+          <li>Ensure each file remains under 10&nbsp;MB to preserve processing speed.</li>
+        </ul>
+      </div>
+
       <form onSubmit={handleSubmit} className="upload-container">
         <div
           className={`file-dropzone ${dragActive ? 'drag-active' : ''}`}
@@ -133,23 +147,26 @@ function UploadForm() {
             multiple
           />
           <label htmlFor="file-input" className="file-label">
-            <div>
+            <div className="dropzone-graphic" aria-hidden="true">
+              <span className="dropzone-icon">⬆︎</span>
+              <span className="dropzone-pulse" />
+            </div>
+            <div className="dropzone-copy">
               <p className="dropzone-text">
-                Drag and drop your scanned forms here, or click to browse
+                Drag &amp; drop scanned forms here or click to browse your computer.
               </p>
               <p className="dropzone-hint">
-                Supports: JPG, PNG, PDF, TIFF, BMP (Multiple files allowed)
+                Supports: JPG, PNG, PDF, TIFF, BMP · Multiple files allowed
               </p>
               <button
                 type="button"
-                className="btn btn-secondary"
-                style={{ marginTop: '1rem' }}
+                className="btn btn-secondary file-trigger"
                 onClick={(e) => {
                   e.preventDefault();
                   document.getElementById('file-input')?.click();
                 }}
               >
-                Choose Files
+                Select Files
               </button>
             </div>
           </label>
@@ -157,7 +174,10 @@ function UploadForm() {
 
         {files.length > 0 && (
           <div className="file-list">
-            <h4>Selected Files ({files.length}):</h4>
+            <div className="file-list-header">
+              <h4>Selected Files</h4>
+              <span className="file-count">{files.length} file(s)</span>
+            </div>
             {files.map((file) => (
               <div key={file.name} className="file-item">
                 {filePreviews[file.name] ? (
@@ -167,7 +187,7 @@ function UploadForm() {
                     className="file-preview"
                   />
                 ) : (
-                  <div className="file-preview file-preview-placeholder">
+                  <div className="file-preview file-preview-placeholder" aria-hidden="true">
                     <span>📄</span>
                     <span>{file.name.split('.').pop()?.toUpperCase()}</span>
                   </div>
@@ -204,7 +224,7 @@ function UploadForm() {
             ))}
           </select>
           <small className="form-hint">
-            Select the OCR provider to use for text extraction
+            Select the OCR provider to use for text extraction.
           </small>
         </div>
 
@@ -215,6 +235,11 @@ function UploadForm() {
         >
           {uploading ? `Uploading ${files.length} file(s)...` : `Upload & Extract ${files.length} file(s)`}
         </button>
+
+        <p className="upload-footer-hint">
+          Need to capture new documents? Schedule a scan session with the admissions desk to keep
+          your intake queue current.
+        </p>
       </form>
     </div>
   );
