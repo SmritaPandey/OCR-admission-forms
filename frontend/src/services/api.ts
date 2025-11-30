@@ -23,11 +23,27 @@ export interface FormResponse {
   ocr_provider: string;
 }
 
+export interface PageExtraction {
+  page: number;
+  raw_text?: string;
+  confidence?: number;
+  provider?: string;
+}
+
 export interface ExtractedData {
   raw_text: string;
-  confidence?: number;
+  confidence?: number | null;
   structured_data?: any;
   provider?: string;
+  word_count?: number;
+  psm_mode?: number;
+  pages_processed?: number;
+  page_results?: PageExtraction[];
+}
+
+export interface FormExtractionResponse {
+  message: string;
+  result: ExtractedData;
 }
 
 export type DocumentCategory = 
@@ -116,6 +132,7 @@ export interface FormDetail extends FormResponse {
   // Course Application Details
   course_applied?: string;
   application_number?: string;
+  enrollment_number?: string;
   admission_date?: string;
   additional_info?: any;
   verified_date?: string;
@@ -173,9 +190,24 @@ export interface FormVerification {
   // Course Application Details
   course_applied?: string;
   application_number?: string;
+  enrollment_number?: string;
   admission_date?: string;
   
   additional_info?: any;
+}
+
+export interface FormSearchQuery {
+  student_name?: string;
+  phone_number?: string;
+  email?: string;
+  enrollment_number?: string;
+  application_number?: string;
+  course_applied?: string;
+  status?: string;
+  date_from?: string;
+  date_to?: string;
+  page?: number;
+  limit?: number;
 }
 
 // API functions
@@ -214,8 +246,8 @@ export const apiService = {
   },
 
   // Re-extract form
-  reExtractForm: async (formId: number, ocrProvider?: string): Promise<any> => {
-    const response = await api.post(`/api/forms/${formId}/extract`, null, {
+  reExtractForm: async (formId: number, ocrProvider?: string): Promise<FormExtractionResponse> => {
+    const response = await api.post<FormExtractionResponse>(`/api/forms/${formId}/extract`, null, {
       params: ocrProvider ? { ocr_provider: ocrProvider } : undefined,
     });
     return response.data;
@@ -234,23 +266,29 @@ export const apiService = {
   },
 
   // Search forms
-  searchForms: async (params: {
-    student_name?: string;
-    phone_number?: string;
-    email?: string;
-    course_applied?: string;
-    status?: string;
-    page?: number;
-    limit?: number;
-  }): Promise<FormDetail[]> => {
-    const response = await api.get<FormDetail[]>('/api/forms/search/results', { params });
+  searchForms: async (params: FormSearchQuery): Promise<FormDetail[]> => {
+    const sanitizedParams = Object.fromEntries(
+      Object.entries(params).filter(([, value]) => value !== undefined && value !== '')
+    );
+    const response = await api.get<FormDetail[]>('/api/forms/search/results', { params: sanitizedParams });
     return response.data;
   },
 
   // Export forms
-  exportForms: async (format: 'csv' | 'json', status?: string): Promise<Blob> => {
+  exportForms: async (format: 'csv' | 'json', filters?: FormSearchQuery): Promise<Blob> => {
+    const params: Record<string, any> = { format };
+    if (filters) {
+      Object.entries(filters).forEach(([key, value]) => {
+        if (key === 'page' || key === 'limit') {
+          return;
+        }
+        if (value !== undefined && value !== '') {
+          params[key] = value;
+        }
+      });
+    }
     const response = await api.get(`/api/forms/export`, {
-      params: { format, status },
+      params,
       responseType: 'blob',
     });
     return response.data;

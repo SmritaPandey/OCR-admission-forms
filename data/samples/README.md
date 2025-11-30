@@ -1,0 +1,39 @@
+- # Sample Dataset Guide
+-
+- ## Overview
+-
+- This directory tracks reference assets used to benchmark OCR performance on admission forms. The actual files are stored outside the repository to avoid leaking PII; use the manifest below to replicate the dataset locally.
+-
+- ## Manifest
+-
+- | ID | Description | Format | Pages | Notes |
+- |----|-------------|--------|-------|-------|
+- | sample-printed-001 | Clean printed admission form (2024 template) | PDF | 1 | Baseline for Tesseract benchmarking |
+- | sample-printed-002 | Printed form with stamps and signatures | PDF | 2 | Tests preprocessing robustness |
+- | sample-handwritten-001 | Neat handwriting (blue ink) | PNG | 1 | Use for Document AI accuracy checks |
+- | sample-handwritten-002 | Mixed cursive and block letters | PNG | 2 | Evaluate multi-page handling |
+- | sample-scanned-lowres | Low-resolution scan (200 dpi) | JPG | 1 | Validates preprocessing thresholds |
+- | sample-mixed-media | Photos of forms captured on mobile | JPG | 3 | Stress-tests perspective correction |
+-
+- ## Ground Truth
+-
+- Store canonical JSON annotations alongside each sample using `{sample_id}.json`. An annotation should contain:
+- - `file`: optional filename (relative to `raw/`) when it differs from `{sample_id}.*`
+- - `fields`: map of field keys to normalized values (matching `backend/models/form.py`)
+- - `form_type`: optional hint (e.g., `srcc`) for downstream parsing
+- - `confidence`: optional map of field keys to manually assigned confidence scores
+- - `notes`: free-text comments about legibility or anomalies
+-
+- ## Usage Workflow
+-
+- 1. Copy the manifest entries from your secure storage into `data/samples/raw/`.
+- 2. Populate `{sample_id}.json` files in `data/samples/labels/`.
+- 3. Run preprocessing experiments from `backend/utils/image_preprocessing.py` and log outcomes in `data/samples/experiments.md`.
+- 4. Run `python -m backend.ocr.benchmark` to compare enabled OCR providers against the labeled dataset. Use `--help` for CLI options (e.g., provider filters, report output).
+-
+- ## Data Handling
+-
+- - Do not commit raw samples or labels to git; add both directories to your `.gitignore`.
+- - Sanitize PII before sharing samples externally.
+- - Rotate the dataset quarterly to capture template or handwriting variations.
+

@@ -24,7 +24,7 @@ async def upload_form(
         file_path, filename = await save_uploaded_file(file)
         
         # Determine OCR provider
-        provider_name = ocr_provider or "tesseract"
+        provider_name = (ocr_provider or settings.OCR_PROVIDER).lower()
         
         # Create form record - store relative path for file serving
         # Convert absolute path to relative path from uploads directory
@@ -182,7 +182,13 @@ async def upload_form(
         except Exception as e:
             form.status = FormStatus.ERROR
             db.commit()
-            raise HTTPException(status_code=500, detail=f"OCR extraction failed: {str(e)}")
+            error_msg = str(e)
+            # Provide more helpful error messages
+            if "tesseract" in error_msg.lower() and "not found" in error_msg.lower():
+                error_msg = "Tesseract OCR is not installed or not found. Please install Tesseract OCR and ensure it's in your PATH or set TESSERACT_CMD environment variable."
+            elif "broken data stream" in error_msg.lower() or ("invalid" in error_msg.lower() and "image" in error_msg.lower()):
+                error_msg = f"Image file is corrupted or invalid: {error_msg}"
+            raise HTTPException(status_code=500, detail=f"OCR extraction failed: {error_msg}")
         
         return FormResponse.model_validate(form)
         
@@ -210,7 +216,7 @@ async def upload_form_pages(
         import os
         
         # Determine OCR provider
-        provider_name = ocr_provider or "tesseract"
+        provider_name = (ocr_provider or settings.OCR_PROVIDER).lower()
         
         # Save all files and collect paths
         saved_files = []
@@ -331,7 +337,13 @@ async def upload_form_pages(
         except Exception as e:
             form.status = FormStatus.ERROR
             db.commit()
-            raise HTTPException(status_code=500, detail=f"OCR extraction failed: {str(e)}")
+            error_msg = str(e)
+            # Provide more helpful error messages
+            if "tesseract" in error_msg.lower() and "not found" in error_msg.lower():
+                error_msg = "Tesseract OCR is not installed or not found. Please install Tesseract OCR and ensure it's in your PATH or set TESSERACT_CMD environment variable."
+            elif "broken data stream" in error_msg.lower() or ("invalid" in error_msg.lower() and "image" in error_msg.lower()):
+                error_msg = f"Image file is corrupted or invalid: {error_msg}"
+            raise HTTPException(status_code=500, detail=f"OCR extraction failed: {error_msg}")
         
         return FormResponse.model_validate(form)
         
@@ -342,11 +354,34 @@ async def upload_form_pages(
 
 @router.get("/providers")
 async def list_ocr_providers():
-    """Get list of available OCR providers"""
-    from backend.ocr.ocr_factory import OCRFactory
+    """
+    Get list of available OCR providers and their capabilities
+    
+    For Azure Form Recognizer, includes information about custom models.
+    See: https://learn.microsoft.com/en-us/azure/ai-services/document-intelligence/train/custom-model
+    """
+    from backend.ocr.ocr_factory import OCRFactory, get_ocr_provider
     available = OCRFactory.get_available_providers()
     # Add "best" option if multiple providers are available
     if len(available) > 1:
         available.append("best")  # Multi-provider mode
-    return {"providers": available, "default": "tesseract"}
+    default_provider = settings.OCR_PROVIDER.lower()
+    if default_provider not in available:
+        default_provider = available[0] if available else "tesseract"
+    
+    # Get model information for Azure Form Recognizer if available
+    model_info = None
+    if "azure-form-recognizer" in available:
+        try:
+            provider = get_ocr_provider("azure-form-recognizer")
+            if hasattr(provider, 'get_model_info'):
+                model_info = provider.get_model_info()
+        except Exception:
+            pass
+    
+    return {
+        "providers": available,
+        "default": default_provider,
+        "model_info": model_info  # Azure custom model information if available
+    }
 

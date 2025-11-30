@@ -1,4 +1,6 @@
-from pydantic import BaseModel, EmailStr
+from __future__ import annotations
+
+from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional, Dict, Any, List
 from backend.database import FormStatus
@@ -19,10 +21,22 @@ class FormResponse(FormBase):
     class Config:
         from_attributes = True
 
+class PageExtraction(BaseModel):
+    page: int
+    raw_text: str = ""
+    confidence: Optional[float] = None
+    provider: Optional[str] = None
+
+
 class ExtractedData(BaseModel):
-    raw_text: str
+    raw_text: str = ""
     confidence: Optional[float] = None
     structured_data: Optional[Dict[str, Any]] = None
+    provider: Optional[str] = None
+    word_count: Optional[int] = None
+    psm_mode: Optional[int] = None
+    pages_processed: Optional[int] = None
+    page_results: Optional[List[PageExtraction]] = None
 
 class StudentInfo(BaseModel):
     # Basic Details
@@ -76,6 +90,7 @@ class StudentInfo(BaseModel):
     # Course Application Details
     course_applied: Optional[str] = None
     application_number: Optional[str] = None
+    enrollment_number: Optional[str] = None
     admission_date: Optional[str] = None
     
     additional_info: Optional[Dict[str, Any]] = None
@@ -132,6 +147,7 @@ class FormVerification(BaseModel):
     # Course Application Details
     course_applied: Optional[str] = None
     application_number: Optional[str] = None
+    enrollment_number: Optional[str] = None
     admission_date: Optional[str] = None
     
     additional_info: Optional[Dict[str, Any]] = None
@@ -139,7 +155,7 @@ class FormVerification(BaseModel):
 class FormDetailResponse(FormResponse):
     extracted_data: Optional[ExtractedData] = None
     student_profile_id: Optional[int] = None
-    documents: Optional[List] = None  # List of DocumentResponse
+    documents: Optional[List["DocumentResponse"]] = None  # Populated at runtime
     
     # Basic Details
     student_name: Optional[str] = None
@@ -192,6 +208,7 @@ class FormDetailResponse(FormResponse):
     # Course Application Details
     course_applied: Optional[str] = None
     application_number: Optional[str] = None
+    enrollment_number: Optional[str] = None
     admission_date: Optional[str] = None
     
     additional_info: Optional[Dict[str, Any]] = None
@@ -210,4 +227,14 @@ class FormSearchParams(BaseModel):
     date_to: Optional[datetime] = None
     page: int = 1
     limit: int = 20
+
+
+class FormExtractionResponse(BaseModel):
+    message: str
+    result: ExtractedData
+
+
+from backend.models.document import DocumentResponse  # noqa: E402
+
+FormDetailResponse.model_rebuild()
 

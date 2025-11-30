@@ -85,44 +85,107 @@ function Dashboard() {
     return <span className={`status-badge ${statusInfo.class}`}>{statusInfo.label}</span>;
   };
 
+  const overviewStats = [
+    {
+      label: 'Total Forms',
+      value: stats.total,
+      description: 'Overall submissions received this cycle',
+    },
+    {
+      label: 'Verified',
+      value: stats.verified,
+      description: 'Applications cleared for enrollment',
+    },
+    {
+      label: 'Pending Verification',
+      value: stats.pending,
+      description: 'Awaiting manual review and confirmation',
+    },
+    {
+      label: 'Supporting Documents',
+      value: stats.documents,
+      description: 'Files on record across all applicants',
+    },
+    {
+      label: 'Student Profiles',
+      value: stats.students,
+      description: 'Applicants actively tracked in the system',
+    },
+  ];
+
+  const currentYear = new Date().getFullYear();
+  const nextYear = currentYear + 1;
+
   if (loading) {
     return <div className="loading">Loading...</div>;
   }
 
   return (
     <div className="dashboard">
-      <div className="dashboard-header">
-        <h2>Dashboard</h2>
-        <Link to="/upload" className="btn btn-primary">
-          Upload New Form
-        </Link>
-      </div>
+      <section className="dashboard-hero">
+        <div className="hero-content">
+          <p className="hero-eyebrow">Admissions Cycle {currentYear} – {nextYear}</p>
+          <h1>Admissions Command Center</h1>
+          <p className="hero-copy">
+            Monitor intake momentum, track verification progress, and coordinate applicant follow-up
+            — all from a single, college-ready workspace.
+          </p>
+          <div className="hero-actions">
+            <Link to="/upload" className="btn btn-primary">
+              Upload New Form
+            </Link>
+            <Link to="/search" className="btn btn-outline">
+              Advanced Search
+            </Link>
+          </div>
+        </div>
+        <div className="hero-summary">
+          <div className="summary-card">
+            <span className="summary-label">Verified</span>
+            <span className="summary-value">{stats.verified}</span>
+            <span className="summary-description">Students cleared for onboarding</span>
+          </div>
+          <div className="summary-card">
+            <span className="summary-label">Pending Review</span>
+            <span className="summary-value">{stats.pending}</span>
+            <span className="summary-description">Awaiting quality checks</span>
+          </div>
+          <div className="summary-card">
+            <span className="summary-label">Documents on File</span>
+            <span className="summary-value">{stats.documents}</span>
+            <span className="summary-description">Supporting records archived</span>
+          </div>
+        </div>
+      </section>
 
       <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-value">{stats.total}</div>
-          <div className="stat-label">Total Forms</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-value">{stats.verified}</div>
-          <div className="stat-label">Verified</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-value">{stats.pending}</div>
-          <div className="stat-label">Pending Verification</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-value">{stats.documents}</div>
-          <div className="stat-label">Documents</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-value">{stats.students}</div>
-          <div className="stat-label">Student Profiles</div>
-        </div>
+        {overviewStats.map((item) => (
+          <div className="stat-card" key={item.label}>
+            <span className="stat-chip">{item.label}</span>
+            <div className="stat-value">{item.value}</div>
+            <p className="stat-description">{item.description}</p>
+          </div>
+        ))}
       </div>
 
       <div className="recent-forms">
-        <h3>Recent Forms</h3>
+        <div className="recent-header">
+          <div>
+            <h3>Recent Form Activity</h3>
+            <p className="recent-subtitle">
+              Latest submissions across the admissions cycle, ready for review or follow-up.
+            </p>
+          </div>
+          <div className="recent-actions">
+            <Link to="/upload" className="btn btn-secondary">
+              Upload Files
+            </Link>
+            <Link to="/search" className="btn btn-link">
+              View all records →
+            </Link>
+          </div>
+        </div>
+
         {forms.length === 0 ? (
           <div className="empty-state">
             <p>No forms uploaded yet.</p>

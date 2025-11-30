@@ -1,10 +1,148 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { apiService, FormDetail, FormVerification } from '../services/api';
 import { parseOCRText } from '../utils/ocrParser';
 import DocumentUpload from './DocumentUpload';
 import DocumentList from './DocumentList';
 import './VerificationView.css';
+
+const PROVIDER_LABELS: Record<string, string> = {
+  tesseract: 'Tesseract (Local)',
+  google: 'Google Vision',
+  'google-vision': 'Google Vision',
+  'google-documentai': 'Google Document AI',
+  'azure-vision': 'Azure Vision',
+  azure: 'Azure Vision',
+  'azure-form-recognizer': 'Azure Form Recognizer',
+  'aws-textract': 'AWS Textract',
+  abbyy: 'ABBYY FineReader',
+  multi: 'Automatic (Best)',
+  best: 'Automatic (Best)',
+};
+
+const FORM_FIELD_KEYS: (keyof FormVerification)[] = [
+  'student_name',
+  'date_of_birth',
+  'gender',
+  'category',
+  'nationality',
+  'religion',
+  'aadhar_number',
+  'blood_group',
+  'permanent_address',
+  'correspondence_address',
+  'pincode',
+  'city',
+  'state',
+  'phone_number',
+  'alternate_phone',
+  'email',
+  'emergency_contact_name',
+  'emergency_contact_phone',
+  'father_name',
+  'father_occupation',
+  'father_phone',
+  'mother_name',
+  'mother_occupation',
+  'mother_phone',
+  'guardian_name',
+  'guardian_relation',
+  'guardian_phone',
+  'annual_income',
+  'tenth_board',
+  'tenth_year',
+  'tenth_percentage',
+  'tenth_school',
+  'twelfth_board',
+  'twelfth_year',
+  'twelfth_percentage',
+  'twelfth_school',
+  'previous_qualification',
+  'graduation_details',
+  'course_applied',
+  'application_number',
+  'enrollment_number',
+  'admission_date',
+];
+
+const normalizeConfidence = (value?: number | null): number | undefined => {
+  if (value === null || value === undefined || Number.isNaN(value)) {
+    return undefined;
+  }
+  if (value <= 1) {
+    return value * 100;
+  }
+  return value;
+};
+
+const formatConfidenceValue = (value?: number | null): string => {
+  const normalized = normalizeConfidence(value);
+  return normalized !== undefined ? `${normalized.toFixed(1)}%` : 'n/a';
+};
+
+const determineConfidenceClass = (value?: number): { label: string; className: string } => {
+  if (value === undefined) {
+    return { label: 'Confidence: n/a', className: 'confidence-chip neutral' };
+  }
+  const formatted = `${formatConfidenceValue(value)}`;
+  if (value >= 90) {
+    return { label: `Confidence: ${formatted}`, className: 'confidence-chip high' };
+  }
+  if (value >= 75) {
+    return { label: `Confidence: ${formatted}`, className: 'confidence-chip medium' };
+  }
+  return { label: `Confidence: ${formatted}`, className: 'confidence-chip low' };
+};
+
+const formatProviderName = (provider?: string | null): string => {
+  if (!provider) {
+    return 'Not specified';
+  }
+  const key = provider.toLowerCase();
+  return PROVIDER_LABELS[key] || provider.replace(/[-_]/g, ' ').replace(/\b\w/g, (ch) => ch.toUpperCase());
+};
+
+const buildVerificationState = (data: FormDetail): FormVerification => {
+  const result: FormVerification = {};
+  FORM_FIELD_KEYS.forEach((field) => {
+    const value = (data as Record<string, unknown>)[field];
+    result[field] = (value ?? '') as string;
+  });
+  if (data.additional_info) {
+    result.additional_info = data.additional_info;
+  }
+  return result;
+};
+
+const mergeIntoVerification = (
+  base: FormVerification,
+  updates: Record<string, any> | undefined,
+  options: { overwrite?: boolean } = {}
+): FormVerification => {
+  if (!updates) {
+    return base;
+  }
+  const { overwrite = false } = options;
+  const next: FormVerification = { ...base };
+  Object.entries(updates).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === '') {
+      return;
+    }
+    const fieldKey = key as keyof FormVerification;
+    if (!(fieldKey in next)) {
+      return;
+    }
+    if (fieldKey === 'additional_info') {
+      const current = typeof next.additional_info === 'object' && next.additional_info !== null ? next.additional_info : {};
+      next.additional_info = { ...current, ...(value as Record<string, any>) };
+      return;
+    }
+    if (overwrite || !next[fieldKey]) {
+      next[fieldKey] = value as string;
+    }
+  });
+  return next;
+};
 
 function VerificationView() {
   const { id } = useParams<{ id: string }>();
@@ -13,7 +151,7 @@ function VerificationView() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [verification, setVerification] = useState<FormVerification>({});
-  const [showReExtractDialog, setShowReExtractDialog] = useState(false);
+  const [initialVerification, setInitialVerification] = useState<FormVerification>({});
   const [reExtractProvider, setReExtractProvider] = useState<string>('');
   const [availableProviders, setAvailableProviders] = useState<string[]>([]);
   const [reExtracting, setReExtracting] = useState(false);
@@ -21,6 +159,52 @@ function VerificationView() {
   const [totalPages, setTotalPages] = useState(1);
   const [isPdf, setIsPdf] = useState(false);
   const [showAllPages, setShowAllPages] = useState(false);
+
+  const currentProviderLabel = useMemo(
+    () => formatProviderName(form?.extracted_data?.provider || form?.ocr_provider),
+    [form?.extracted_data?.provider, form?.ocr_provider]
+  );
+
+  const normalizedConfidenceValue = useMemo(
+    () => normalizeConfidence(form?.extracted_data?.confidence ?? null),
+    [form?.extracted_data?.confidence]
+  );
+
+  const confidenceInfo = useMemo(
+    () => determineConfidenceClass(normalizedConfidenceValue),
+    [normalizedConfidenceValue]
+  );
+
+  const pageResults = useMemo(
+    () => form?.extracted_data?.page_results || [],
+    [form?.extracted_data?.page_results]
+  );
+
+  const pagesProcessed = useMemo(() => {
+    if (form?.extracted_data?.pages_processed) {
+      return form.extracted_data.pages_processed;
+    }
+    if (pageResults.length > 0) {
+      return pageResults.length;
+    }
+    return form ? 1 : 0;
+  }, [form, pageResults]);
+
+  const handleResetVerification = useCallback(() => {
+    setVerification(initialVerification);
+  }, [initialVerification]);
+
+  const handleApplyParsedData = useCallback(() => {
+    if (!form?.extracted_data?.raw_text) {
+      return;
+    }
+    const parsed = parseOCRText(form.extracted_data.raw_text);
+    const parsedData: Record<string, any> = { ...parsed };
+    if (parsed.address && !parsedData.permanent_address) {
+      parsedData.permanent_address = parsed.address;
+    }
+    setVerification((prev) => mergeIntoVerification(prev, parsedData, { overwrite: false }));
+  }, [form?.extracted_data?.raw_text]);
 
   useEffect(() => {
     if (id) {
@@ -32,10 +216,23 @@ function VerificationView() {
   const loadProviders = async () => {
     try {
       const providers = await apiService.getProviders();
-      setAvailableProviders(providers.providers);
-      if (providers.providers.length > 0 && !reExtractProvider) {
-        setReExtractProvider(providers.default || providers.providers[0]);
-      }
+      const normalized = providers.providers.map((name) => name.toLowerCase());
+      setAvailableProviders(normalized);
+      const defaultProvider = (providers.default || normalized[0] || '').toLowerCase();
+      setReExtractProvider((current) => {
+        const currentNormalized = current ? current.toLowerCase() : '';
+        if (currentNormalized && normalized.includes(currentNormalized)) {
+          return currentNormalized;
+        }
+        const adjustedDefault = defaultProvider === 'multi' ? 'best' : defaultProvider;
+        if (adjustedDefault && normalized.includes(adjustedDefault)) {
+          return adjustedDefault;
+        }
+        if (normalized.includes('best')) {
+          return 'best';
+        }
+        return normalized[0] || currentNormalized || '';
+      });
     } catch (error) {
       console.error('Failed to load providers:', error);
     }
@@ -46,6 +243,9 @@ function VerificationView() {
       setLoading(true);
       const data = await apiService.getForm(formId);
       setForm(data);
+      const normalizedProvider = data.ocr_provider ? data.ocr_provider.toLowerCase() : '';
+      const selection = normalizedProvider === 'multi' ? 'best' : normalizedProvider;
+      setReExtractProvider((prev) => selection || prev || '');
       
       // Check if PDF and get page info
       if (data.filename?.toLowerCase().endsWith('.pdf')) {
@@ -58,7 +258,6 @@ function VerificationView() {
             const pageInfo = await response.json();
             setTotalPages(pageInfo.total_pages || 1);
             setIsPdf(pageInfo.is_pdf !== false);
-            console.log('PDF detected:', pageInfo); // Debug log
           } else {
             // Fallback: assume it's a PDF even if endpoint fails
             setTotalPages(1);
@@ -76,89 +275,25 @@ function VerificationView() {
         setShowAllPages(false);
       }
       
-      // Pre-fill verification with existing verified data or auto-extract from OCR
-      if (data.status === 'verified') {
-        // Use verified data if available - map all fields
-        setVerification({
-          // Basic Details
-          student_name: data.student_name || '',
-          date_of_birth: data.date_of_birth || '',
-          gender: data.gender || '',
-          category: data.category || '',
-          nationality: data.nationality || '',
-          religion: data.religion || '',
-          aadhar_number: data.aadhar_number || '',
-          blood_group: data.blood_group || '',
-          // Address Details
-          permanent_address: data.permanent_address || '',
-          correspondence_address: data.correspondence_address || '',
-          pincode: data.pincode || '',
-          city: data.city || '',
-          state: data.state || '',
-          // Contact Details
-          phone_number: data.phone_number || '',
-          alternate_phone: data.alternate_phone || '',
-          email: data.email || '',
-          emergency_contact_name: data.emergency_contact_name || '',
-          emergency_contact_phone: data.emergency_contact_phone || '',
-          // Guardian/Parent Details
-          father_name: data.father_name || '',
-          father_occupation: data.father_occupation || '',
-          father_phone: data.father_phone || '',
-          mother_name: data.mother_name || '',
-          mother_occupation: data.mother_occupation || '',
-          mother_phone: data.mother_phone || '',
-          guardian_name: data.guardian_name || '',
-          guardian_relation: data.guardian_relation || '',
-          guardian_phone: data.guardian_phone || '',
-          annual_income: data.annual_income || '',
-          // Educational Qualifications
-          tenth_board: data.tenth_board || '',
-          tenth_year: data.tenth_year || '',
-          tenth_percentage: data.tenth_percentage || '',
-          tenth_school: data.tenth_school || '',
-          twelfth_board: data.twelfth_board || '',
-          twelfth_year: data.twelfth_year || '',
-          twelfth_percentage: data.twelfth_percentage || '',
-          twelfth_school: data.twelfth_school || '',
-          previous_qualification: data.previous_qualification || '',
-          graduation_details: data.graduation_details || '',
-          // Course Application Details
-          course_applied: data.course_applied || '',
-          application_number: data.application_number || '',
-          admission_date: data.admission_date || '',
-        });
-      } else if (data.extracted_data?.structured_data) {
-        // Use structured data from backend form parser (for SRCC forms)
-        const structured = data.extracted_data.structured_data;
-        setVerification({
-          student_name: structured.student_name || data.student_name || '',
-          date_of_birth: structured.date_of_birth || data.date_of_birth || '',
-          address: structured.address || data.address || '',
-          phone_number: structured.phone_number || data.phone_number || '',
-          email: structured.email || data.email || '',
-          guardian_name: structured.guardian_name || data.guardian_name || '',
-          guardian_phone: structured.guardian_phone || data.guardian_phone || '',
-          course_applied: structured.course_applied || data.course_applied || '',
-          previous_qualification: structured.previous_qualification || data.previous_qualification || '',
-        });
-      } else if (data.extracted_data?.raw_text) {
-        // Auto-fill from OCR text if not verified yet
-        const parsed = parseOCRText(data.extracted_data.raw_text);
-        
-        // Merge with any existing partial data, prioritizing OCR results
-        setVerification({
-          student_name: parsed.student_name || data.student_name || '',
-          date_of_birth: parsed.date_of_birth || data.date_of_birth || '',
-          address: parsed.address || data.address || '',
-          phone_number: parsed.phone_number || data.phone_number || '',
-          email: parsed.email || data.email || '',
-          guardian_name: parsed.guardian_name || data.guardian_name || '',
-          guardian_phone: parsed.guardian_phone || data.guardian_phone || '',
-          course_applied: parsed.course_applied || data.course_applied || '',
-          previous_qualification: parsed.previous_qualification || data.previous_qualification || '',
-        });
+      // Pre-fill verification using stored values and optionally overlay OCR extraction
+      const baseVerification = buildVerificationState(data);
+      let nextVerification = baseVerification;
+
+      if (data.status !== 'verified') {
+        if (data.extracted_data?.structured_data) {
+          nextVerification = mergeIntoVerification(nextVerification, data.extracted_data.structured_data, { overwrite: true });
+        } else if (data.extracted_data?.raw_text) {
+          const parsed = parseOCRText(data.extracted_data.raw_text);
+          const parsedData: Record<string, any> = { ...parsed };
+          if (parsed.address && !parsedData.permanent_address) {
+            parsedData.permanent_address = parsed.address;
+          }
+          nextVerification = mergeIntoVerification(nextVerification, parsedData, { overwrite: false });
+        }
       }
+
+      setInitialVerification(nextVerification);
+      setVerification(nextVerification);
     } catch (error) {
       console.error('Failed to load form:', error);
       alert('Failed to load form details');
@@ -171,22 +306,15 @@ function VerificationView() {
     if (!id) return;
     try {
       setReExtracting(true);
-      await apiService.reExtractForm(parseInt(id), reExtractProvider || undefined);
+      const response = await apiService.reExtractForm(parseInt(id), reExtractProvider || undefined);
       await loadForm(parseInt(id));
-      setShowReExtractDialog(false);
-      alert('Re-extraction completed');
+      const usedProvider = response.result.provider || reExtractProvider;
+      alert(`Re-extraction completed with ${formatProviderName(usedProvider)}`);
     } catch (error: any) {
       alert(`Re-extraction failed: ${error.response?.data?.detail || error.message}`);
     } finally {
       setReExtracting(false);
     }
-  };
-
-  const openReExtractDialog = () => {
-    if (form?.ocr_provider) {
-      setReExtractProvider(form.ocr_provider);
-    }
-    setShowReExtractDialog(true);
   };
 
   const handleSave = async () => {
@@ -249,9 +377,6 @@ function VerificationView() {
       <div className="verification-header">
         <h2>Verify Form: {form.filename}</h2>
         <div className="header-actions">
-          <button onClick={openReExtractDialog} className="btn btn-secondary" disabled={reExtracting}>
-            {reExtracting ? 'Re-extracting...' : 'Re-extract'}
-          </button>
           <button onClick={handleUpdate} className="btn btn-secondary" disabled={saving}>
             {saving ? 'Updating...' : 'Update'}
           </button>
@@ -261,6 +386,46 @@ function VerificationView() {
           <button onClick={() => navigate('/')} className="btn btn-secondary">
             Back
           </button>
+        </div>
+      </div>
+
+      <div className="provider-toolbar">
+        <div className="provider-summary">
+          <span className="provider-chip">
+            Current provider: <strong>{currentProviderLabel}</strong>
+          </span>
+          <span className={confidenceInfo.className}>{confidenceInfo.label}</span>
+          {pagesProcessed ? <span className="summary-pill">Pages: {pagesProcessed}</span> : null}
+          {form.extracted_data?.word_count ? (
+            <span className="summary-pill">Words: {form.extracted_data.word_count}</span>
+          ) : null}
+          {form.extracted_data?.psm_mode ? (
+            <span className="summary-pill">PSM {form.extracted_data.psm_mode}</span>
+          ) : null}
+        </div>
+        <div className="provider-controls">
+          <label htmlFor="provider-select">Switch provider</label>
+          <div className="provider-actions">
+            <select
+              id="provider-select"
+              value={reExtractProvider}
+              onChange={(e) => setReExtractProvider(e.target.value.toLowerCase())}
+              disabled={availableProviders.length === 0}
+            >
+              {availableProviders.map((provider) => (
+                <option key={provider} value={provider}>
+                  {formatProviderName(provider)}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={handleReExtract}
+              className="btn btn-primary"
+              disabled={reExtracting || !reExtractProvider}
+            >
+              {reExtracting ? 'Re-extracting...' : 'Run OCR'}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -315,9 +480,6 @@ function VerificationView() {
                         const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
                         const img = e.target as HTMLImageElement;
                         img.src = `${apiUrl}/uploads/${form.file_path}`;
-                      }}
-                      onLoad={() => {
-                        console.log(`Page ${pageNum} loaded successfully`);
                       }}
                     />
                   </div>
@@ -413,39 +575,51 @@ function VerificationView() {
             <div className="extracted-text">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                 <h4>Extracted Text (Raw)</h4>
-                {form.extracted_data.raw_text && (
+                <div className="extraction-actions">
+                  {form.extracted_data?.raw_text && (
+                    <button
+                      onClick={handleApplyParsedData}
+                      className="btn btn-sm btn-secondary"
+                      style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem' }}
+                    >
+                      🔄 Auto-fill Fields
+                    </button>
+                  )}
                   <button
-                    onClick={() => {
-                      const parsed = parseOCRText(form.extracted_data!.raw_text);
-                      setVerification(prev => ({
-                        ...prev,
-                        ...parsed,
-                        // Only update empty fields to preserve user edits
-                        student_name: prev.student_name || parsed.student_name || '',
-                        date_of_birth: prev.date_of_birth || parsed.date_of_birth || '',
-                        address: prev.address || parsed.address || '',
-                        phone_number: prev.phone_number || parsed.phone_number || '',
-                        email: prev.email || parsed.email || '',
-                        guardian_name: prev.guardian_name || parsed.guardian_name || '',
-                        guardian_phone: prev.guardian_phone || parsed.guardian_phone || '',
-                        course_applied: prev.course_applied || parsed.course_applied || '',
-                        previous_qualification: prev.previous_qualification || parsed.previous_qualification || '',
-                      }));
-                    }}
-                    className="btn btn-sm btn-secondary"
+                    onClick={handleResetVerification}
+                    className="btn btn-sm"
                     style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem' }}
                   >
-                    🔄 Auto-fill Fields
+                    ↩ Reset Changes
                   </button>
-                )}
+                </div>
               </div>
               <div className="raw-text-box">
                 {form.extracted_data.raw_text || 'No text extracted'}
               </div>
-              {form.extracted_data.confidence && (
+              {form.extracted_data && (
                 <p className="confidence">
-                  Confidence: {form.extracted_data.confidence.toFixed(1)}%
+                  Confidence: {formatConfidenceValue(form.extracted_data.confidence)}
                 </p>
+              )}
+              {pageResults.length > 1 && (
+                <div className="page-confidence-list">
+                  {pageResults.map((page) => (
+                    <div key={page.page} className="page-confidence-item">
+                      <div className="page-confidence-meta">
+                        <span className="page-confidence-page">Page {page.page}</span>
+                        {page.provider && (
+                          <span className="page-confidence-provider">
+                            {formatProviderName(page.provider)}
+                          </span>
+                        )}
+                      </div>
+                      <span className="page-confidence-value">
+                        {formatConfidenceValue(page.confidence)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           )}
@@ -717,44 +891,6 @@ function VerificationView() {
         </div>
       )}
 
-      {showReExtractDialog && (
-        <div className="modal-overlay" onClick={() => setShowReExtractDialog(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h3>Re-extract Form</h3>
-            <p>Select an OCR provider to re-extract text from this form:</p>
-            <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-              <label htmlFor="re-extract-provider">OCR Provider</label>
-              <select
-                id="re-extract-provider"
-                value={reExtractProvider}
-                onChange={(e) => setReExtractProvider(e.target.value)}
-                className="form-select"
-              >
-                {availableProviders.map((provider) => (
-                  <option key={provider} value={provider}>
-                    {provider.charAt(0).toUpperCase() + provider.slice(1)}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="modal-actions">
-              <button
-                onClick={() => setShowReExtractDialog(false)}
-                className="btn btn-secondary"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleReExtract}
-                disabled={reExtracting}
-                className="btn btn-primary"
-              >
-                {reExtracting ? 'Re-extracting...' : 'Re-extract'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -52,41 +52,48 @@ class OCRFactory:
     @classmethod
     def _get_providers(cls) -> dict:
         """Get providers dictionary with lazy loading"""
-        providers = {
-            "tesseract": TesseractProvider,
-        }
+        providers = {}
+
+        if settings.OCR_ENABLE_TESSERACT:
+            providers["tesseract"] = TesseractProvider
         
         # Google Cloud Vision
-        google_vision = _get_google_vision_provider()
-        if google_vision:
-            providers["google-vision"] = google_vision
-            providers["google"] = google_vision  # Alias for backward compatibility
+        if settings.OCR_ENABLE_GOOGLE_VISION:
+            google_vision = _get_google_vision_provider()
+            if google_vision:
+                providers["google-vision"] = google_vision
+                providers["google"] = google_vision  # Alias for backward compatibility
         
         # Google Cloud Document AI - Best for handwriting
-        google_documentai = _get_google_documentai_provider()
-        if google_documentai:
-            providers["google-documentai"] = google_documentai
+        if settings.OCR_ENABLE_GOOGLE_DOCUMENT_AI:
+            google_documentai = _get_google_documentai_provider()
+            if google_documentai:
+                providers["google-documentai"] = google_documentai
         
         # Azure Computer Vision
-        azure_provider = _get_azure_provider()
-        if azure_provider:
-            providers["azure-vision"] = azure_provider
-            providers["azure"] = azure_provider  # Alias for backward compatibility
+        if settings.OCR_ENABLE_AZURE_VISION:
+            azure_provider = _get_azure_provider()
+            if azure_provider:
+                providers["azure-vision"] = azure_provider
+                providers["azure"] = azure_provider  # Alias for backward compatibility
         
         # Azure Form Recognizer - Best for structured forms
-        azure_form = _get_azure_form_recognizer_provider()
-        if azure_form:
-            providers["azure-form-recognizer"] = azure_form
+        if settings.OCR_ENABLE_AZURE_FORM_RECOGNIZER:
+            azure_form = _get_azure_form_recognizer_provider()
+            if azure_form:
+                providers["azure-form-recognizer"] = azure_form
         
         # AWS Textract
-        aws_textract = _get_aws_textract_provider()
-        if aws_textract:
-            providers["aws-textract"] = aws_textract
+        if settings.OCR_ENABLE_AWS_TEXTRACT:
+            aws_textract = _get_aws_textract_provider()
+            if aws_textract:
+                providers["aws-textract"] = aws_textract
         
         # ABBYY FineReader
-        abbyy_provider = _get_abbyy_provider()
-        if abbyy_provider:
-            providers["abbyy"] = abbyy_provider
+        if settings.OCR_ENABLE_ABBYY:
+            abbyy_provider = _get_abbyy_provider()
+            if abbyy_provider:
+                providers["abbyy"] = abbyy_provider
         
         return providers
     
@@ -133,10 +140,42 @@ class OCRFactory:
         for name, provider_class in providers.items():
             try:
                 provider = provider_class()
-                if provider.is_available():
+                if provider.is_available() and name not in available:
                     available.append(name)
             except Exception:
                 pass
+
+        # If no providers are available, try to verify the default provider actually works
+        if not available:
+            default_provider = settings.OCR_PROVIDER.lower()
+            if default_provider in providers:
+                try:
+                    # Actually test if the default provider is available
+                    provider = providers[default_provider]()
+                    if provider.is_available():
+                        available.append(default_provider)
+                    else:
+                        # If default provider is not available, try to find any working provider
+                        for name, provider_class in providers.items():
+                            try:
+                                test_provider = provider_class()
+                                if test_provider.is_available():
+                                    available.append(name)
+                                    break
+                            except Exception:
+                                pass
+                except Exception:
+                    # If we can't instantiate the default provider, try others
+                    for name, provider_class in providers.items():
+                        if name != default_provider:
+                            try:
+                                test_provider = provider_class()
+                                if test_provider.is_available():
+                                    available.append(name)
+                                    break
+                            except Exception:
+                                pass
+
         return available
 
 def get_ocr_provider(provider_name: Optional[str] = None) -> OCRProvider:
