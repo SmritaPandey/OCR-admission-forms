@@ -417,6 +417,105 @@ export const apiService = {
     const response = await api.get<StudentProfile[]>('/api/students/search/results', { params });
     return response.data;
   },
+
+  // Batch upload operations
+  batchUploadForms: async (
+    files: File[],
+    ocrProvider?: string,
+    pagesPerForm: number = 3
+  ): Promise<{ job_id: string; total_files: number; status: string; message: string }> => {
+    const formData = new FormData();
+    files.forEach((file) => {
+      formData.append('files', file);
+    });
+    if (ocrProvider) formData.append('ocr_provider', ocrProvider);
+    formData.append('pages_per_form', pagesPerForm.toString());
+    
+    const response = await api.post('/api/batch-upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+
+  getBatchJobStatus: async (jobId: string): Promise<any> => {
+    const response = await api.get(`/api/batch-upload/${jobId}/status`);
+    return response.data;
+  },
+
+  getBatchJobResults: async (jobId: string, page: number = 1, limit: number = 50): Promise<any> => {
+    const response = await api.get(`/api/batch-upload/${jobId}/results`, {
+      params: { page, limit },
+    });
+    return response.data;
+  },
+
+  cancelBatchJob: async (jobId: string): Promise<void> => {
+    await api.delete(`/api/batch-upload/${jobId}`);
+  },
+
+  listBatchJobs: async (status?: string, limit: number = 20): Promise<any> => {
+    const response = await api.get('/api/batch-upload/jobs/list', {
+      params: { status, limit },
+    });
+    return response.data;
+  },
+
+  // Document download/preview
+  downloadDocument: async (documentId: number): Promise<Blob> => {
+    const response = await api.get(`/api/documents/${documentId}/download`, {
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+
+  previewDocument: async (documentId: number): Promise<Blob> => {
+    const response = await api.get(`/api/documents/${documentId}/preview`, {
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+
+  bulkUploadDocuments: async (
+    files: File[],
+    documentCategory: DocumentCategory,
+    studentProfileId?: number,
+    formId?: number
+  ): Promise<Document[]> => {
+    const formData = new FormData();
+    files.forEach((file) => {
+      formData.append('files', file);
+    });
+    formData.append('document_category', documentCategory);
+    if (studentProfileId) formData.append('student_profile_id', studentProfileId.toString());
+    if (formId) formData.append('form_id', formId.toString());
+    
+    const response = await api.post<Document[]>('/api/documents/bulk-upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+
+  // Annotation operations
+  saveAnnotation: async (formId: number, annotation: any): Promise<any> => {
+    const response = await api.post(`/api/annotate/${formId}`, annotation);
+    return response.data;
+  },
+
+  getAnnotation: async (formId: number): Promise<any> => {
+    const response = await api.get(`/api/annotate/${formId}`);
+    return response.data;
+  },
+
+  exportTrainingData: async (format: 'json' | 'coco' | 'yolo' = 'json'): Promise<any> => {
+    const response = await api.get('/api/export/training-data', {
+      params: { format },
+    });
+    return response.data;
+  },
 };
 
 export default api;

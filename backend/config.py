@@ -7,11 +7,12 @@ class Settings(BaseSettings):
     # Default to SQLite for easy setup, can be overridden with PostgreSQL
     DATABASE_URL: str = "sqlite:///./admission_forms.db"
     
-    # OCR Provider (tesseract, google, azure, abbyy)
-    OCR_PROVIDER: str = "tesseract"
+    # OCR Provider (tesseract, google, azure, abbyy, tesseract-google-combined, combined)
+    OCR_PROVIDER: str = "tesseract-google-combined"
     OCR_ENABLE_TESSERACT: bool = Field(True, description="Enable local Tesseract OCR provider.")
-    OCR_ENABLE_GOOGLE_VISION: bool = Field(False, description="Enable Google Cloud Vision OCR provider.")
+    OCR_ENABLE_GOOGLE_VISION: bool = Field(True, description="Enable Google Cloud Vision OCR provider.")
     OCR_ENABLE_GOOGLE_DOCUMENT_AI: bool = Field(False, description="Enable Google Document AI OCR provider.")
+    OCR_ENABLE_TESSERACT_GOOGLE_COMBINED: bool = Field(True, description="Enable combined Tesseract+Google Vision provider (requires both Tesseract and Google Vision enabled).")
     OCR_ENABLE_AZURE_VISION: bool = Field(False, description="Enable Azure Computer Vision OCR provider.")
     OCR_ENABLE_AZURE_FORM_RECOGNIZER: bool = Field(False, description="Enable Azure Form Recognizer provider.")
     OCR_ENABLE_AWS_TEXTRACT: bool = Field(False, description="Enable AWS Textract OCR provider.")
@@ -89,6 +90,25 @@ class Settings(BaseSettings):
     ABBYY_PASSWORD: str = ""
     ABBYY_SERVER_URL: str = ""  # For FineReader Server
     
+    # OpenAI GPT-4 Vision
+    OPENAI_API_KEY: str = ""
+    OPENAI_VISION_MODEL: str = "gpt-4-vision-preview"
+    
+    # Anthropic Claude Vision
+    ANTHROPIC_API_KEY: str = ""
+    CLAUDE_VISION_MODEL: str = "claude-3-5-sonnet-20241022"
+    
+    # Ollama (Local Vision Models)
+    OLLAMA_BASE_URL: str = "http://localhost:11434"
+    OLLAMA_VISION_MODEL: str = "llama3.2-vision"
+    
+    # Batch Processing
+    BATCH_MAX_CONCURRENT: int = 5
+    BATCH_QUEUE_BACKEND: str = "memory"  # memory, redis
+    
+    # OCR Caching
+    OCR_CACHE_ENABLED: bool = True
+    
     # File Upload
     UPLOAD_DIR: str = "uploads"
     MAX_FILE_SIZE: int = 10 * 1024 * 1024  # 10MB
@@ -108,6 +128,9 @@ class Settings(BaseSettings):
             enabled_map.add("tesseract")
         if values.OCR_ENABLE_GOOGLE_VISION:
             enabled_map.update({"google-vision", "google"})
+        if (values.OCR_ENABLE_TESSERACT_GOOGLE_COMBINED and 
+            values.OCR_ENABLE_TESSERACT and values.OCR_ENABLE_GOOGLE_VISION):
+            enabled_map.update({"tesseract-google-combined", "combined"})
         if values.OCR_ENABLE_GOOGLE_DOCUMENT_AI:
             enabled_map.add("google-documentai")
         if values.OCR_ENABLE_AZURE_VISION:

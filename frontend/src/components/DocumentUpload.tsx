@@ -16,9 +16,9 @@ function DocumentUpload({ formId, studentProfileId, onUploadComplete }: Document
   const [error, setError] = useState<string | null>(null);
   const [categories, setCategories] = useState<{ value: string; name: string }[]>([]);
 
-  useState(() => {
+  useEffect(() => {
     loadCategories();
-  });
+  }, []);
 
   const loadCategories = async () => {
     try {

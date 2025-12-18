@@ -1,10 +1,12 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Query, Form
+from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Query, Form, Response
+from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_
 from typing import Optional, List
 from backend.database import get_db, StudentDocument, AdmissionForm, StudentProfile, DocumentCategory
 from backend.models.document import DocumentResponse, DocumentDetailResponse
 from backend.utils.file_handler import save_document_file
+from backend.utils.document_manager import document_manager
 from backend.config import settings
 from pathlib import Path
 import os
@@ -197,4 +199,137 @@ async def get_document_categories():
     return {
         "categories": [{"value": cat.value, "name": cat.value} for cat in DocumentCategory]
     }
+
+@router.get("/{document_id}/download")
+async def download_document(document_id: int, db: Session = Depends(get_db)):
+    """Download a document file"""
+    document = db.query(StudentDocument).filter(StudentDocument.id == document_id).first()
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    upload_dir = Path(settings.UPLOAD_DIR).resolve()
+    file_path = upload_dir / document.file_path
+    
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Document file not found")
+    
+    return FileResponse(
+        path=str(file_path),
+        filename=document.filename,
+        media_type="application/octet-stream"
+    )
+
+@router.get("/{document_id}/preview")
+async def preview_document(document_id: int, db: Session = Depends(get_db)):
+    """Preview a document (for images/PDFs)"""
+    document = db.query(StudentDocument).filter(StudentDocument.id == document_id).first()
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    upload_dir = Path(settings.UPLOAD_DIR).resolve()
+    file_path = upload_dir / document.file_path
+    
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Document file not found")
+    
+    # Determine media type based on extension
+    ext = file_path.suffix.lower()
+    media_types = {
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.png': 'image/png',
+        '.pdf': 'application/pdf',
+        '.gif': 'image/gif',
+        '.bmp': 'image/bmp',
+        '.tiff': 'image/tiff'
+    }
+    
+    media_type = media_types.get(ext, 'application/octet-stream')
+    
+    return FileResponse(
+        path=str(file_path),
+        media_type=media_type
+    )
+
+@router.post("/bulk-upload", response_model=List[DocumentResponse], status_code=201)
+async def bulk_upload_documents(
+    files: List[UploadFile] = File(...),
+    document_category: str = Form(...),
+    student_profile_id: Optional[int] = Form(None),
+    form_id: Optional[int] = Form(None),
+    db: Session = Depends(get_db)
+):
+    """Upload multiple documents at once"""
+    if not files:
+        raise HTTPException(status_code=400, detail="No files provided")
+    
+    # Validate category
+    try:
+        category = DocumentCategory(document_category)
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid document category. Must be one of: {[c.value for c in DocumentCategory]}"
+        )
+    
+    # Validate that at least one link is provided
+    if not form_id and not student_profile_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Either form_id or student_profile_id must be provided"
+        )
+    
+    # Validate form_id if provided
+    if form_id:
+        form = db.query(AdmissionForm).filter(AdmissionForm.id == form_id).first()
+        if not form:
+            raise HTTPException(status_code=404, detail="Form not found")
+    
+    # Validate student_profile_id if provided
+    if student_profile_id:
+        profile = db.query(StudentProfile).filter(StudentProfile.id == student_profile_id).first()
+        if not profile:
+            raise HTTPException(status_code=404, detail="Student profile not found")
+    
+    uploaded_documents = []
+    errors = []
+    
+    for file in files:
+        try:
+            # Save file
+            file_path, relative_path, file_size = await save_document_file(file)
+            
+            # Create document record
+            document = StudentDocument(
+                filename=file.filename or relative_path,
+                file_path=relative_path,
+                document_category=category,
+                file_size=file_size,
+                form_id=form_id,
+                student_profile_id=student_profile_id
+            )
+            db.add(document)
+            db.flush()  # Flush to get ID but don't commit yet
+            uploaded_documents.append(document)
+            
+        except Exception as e:
+            errors.append({"filename": file.filename, "error": str(e)})
+            continue
+    
+    # Commit all successful uploads
+    if uploaded_documents:
+        db.commit()
+        for doc in uploaded_documents:
+            db.refresh(doc)
+    
+    if errors and not uploaded_documents:
+        raise HTTPException(status_code=400, detail=f"All uploads failed: {errors}")
+    
+    response = [DocumentResponse.model_validate(doc) for doc in uploaded_documents]
+    
+    if errors:
+        # Return partial success with errors
+        return response  # Could include errors in response if needed
+    
+    return response
 
