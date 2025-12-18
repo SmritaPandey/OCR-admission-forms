@@ -41,6 +41,24 @@ A comprehensive software system for digitizing handwritten student admission for
 - **Node.js 16+** with npm
 - **Tesseract OCR** (for free OCR option)
 
+### Quick Installation
+
+Install all dependencies automatically:
+
+**macOS / Linux:**
+```bash
+chmod +x setup_complete.sh && ./setup_complete.sh
+```
+
+**Windows:**
+```batch
+install_training_dependencies.bat
+```
+
+For detailed installation instructions, see:
+- **QUICK_INSTALL.md** - Fast installation guide
+- **INSTALL_ALL_DEPENDENCIES.md** - Complete dependency guide
+
 ### Recommended for Best Handwriting Recognition
 - **Google Cloud Document AI** (Best accuracy for handwriting) - See [SETUP_OCR.md](SETUP_OCR.md)
 - **Azure Form Recognizer** (Best for structured forms) - See [SETUP_OCR.md](SETUP_OCR.md)
