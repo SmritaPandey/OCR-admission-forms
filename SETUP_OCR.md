@@ -34,6 +34,14 @@ This guide will help you set up the best OCR providers for handwritten form digi
    - No cloud costs
    - **Already configured and working**
 
+6. **Tesseract + Google Vision Combined** ⭐⭐⭐⭐⭐ (BEST for complex layouts)
+   - Combines Tesseract's excellent layout detection with Google Vision's superior character recognition
+   - Ideal for documents with columns, complex layouts, historical fonts, or diacritics
+   - Best of both worlds: accurate layout structure + accurate character recognition
+   - Based on Programming Historian methodology
+   - Cost: Google Vision pricing applies (first 1000 units free per month)
+   - **Requires both Tesseract and Google Vision to be enabled**
+
 ---
 
 ## Setup Instructions
@@ -211,7 +219,64 @@ This guide will help you set up the best OCR providers for handwritten form digi
 
 ---
 
-### Option 5: Tesseract OCR (FREE, Already Working)
+### Option 5: Tesseract + Google Vision Combined (BEST for Complex Layouts)
+
+This provider combines Tesseract's superior layout detection with Google Vision's excellent character recognition, ideal for documents with columns, complex layouts, or challenging fonts (historical fonts, diacritics, ligatures).
+
+Based on the methodology from [Programming Historian: OCR with Google Vision and Tesseract](https://programminghistorian.org/en/lessons/ocr-with-google-vision-and-tesseract).
+
+#### Prerequisites
+- Both Tesseract and Google Cloud Vision must be set up (see Options 4 and 5)
+- Tesseract must be installed (already included)
+- Google Cloud Vision API access
+
+#### Steps
+
+1. **Ensure Tesseract is Installed**
+   - Tesseract should already be working (see Option 5 below)
+   - Verify: `tesseract --version`
+
+2. **Ensure Google Vision is Configured**
+   - Follow Option 4 above to set up Google Cloud Vision
+   - Verify credentials are in place
+
+3. **Configure Environment Variables**
+   
+   Add to `.env` file:
+   ```env
+   # Enable both providers
+   OCR_ENABLE_TESSERACT=true
+   OCR_ENABLE_GOOGLE_VISION=true
+   OCR_ENABLE_TESSERACT_GOOGLE_COMBINED=true
+   
+   # Google Cloud Vision Configuration (from Option 4)
+   GOOGLE_CLOUD_PROJECT_ID=your-project-id
+   GOOGLE_APPLICATION_CREDENTIALS=/absolute/path/to/ocr-key.json
+   
+   # Set default OCR provider (optional)
+   OCR_PROVIDER=tesseract-google-combined
+   # or use alias:
+   OCR_PROVIDER=combined
+   ```
+
+4. **How It Works**
+   - **Tesseract** identifies text regions (layout detection)
+   - **Google Vision** recognizes characters within those regions (character recognition)
+   - Words from Google Vision are matched to Tesseract regions using coordinate matching
+   - Result: Accurate layout structure + accurate character recognition
+
+5. **When to Use This Provider**
+   - Documents with multiple columns
+   - Forms with complex layouts
+   - Historical documents with unusual fonts
+   - Documents with diacritics, ligatures, or special characters
+   - When layout accuracy AND character accuracy are both important
+
+**Note:** This provider uses Google Vision's `document_text_detection` API, which counts toward your Google Cloud Vision quota.
+
+---
+
+### Option 6: Tesseract OCR (FREE, Already Working)
 
 Tesseract is already installed and configured! To improve accuracy:
 
@@ -239,6 +304,11 @@ Tesseract is already installed and configured! To improve accuracy:
 
 ### For Highest Accuracy:
 **Recommended:** Use multiple providers and compare results
+
+### For Complex Layouts (Columns, Tables, Multi-column Forms):
+**Recommended:** Tesseract + Google Vision Combined provider
+- Best layout detection (Tesseract) + best character recognition (Google Vision)
+- Ideal for historical documents or forms with complex structures
 
 ---
 
