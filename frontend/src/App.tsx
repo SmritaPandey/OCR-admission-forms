@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import Dashboard from './components/Dashboard';
 import UploadForm from './components/UploadForm';
+import BatchUpload from './components/BatchUpload';
 import VerificationView from './components/VerificationView';
 import SearchInterface from './components/SearchInterface';
 import StudentProfile from './components/StudentProfile';
@@ -13,9 +14,14 @@ function NavLinks() {
     { to: '/search', label: 'Search' },
   ];
 
+  const allLinks = [
+    ...links,
+    { to: '/batch-upload', label: 'Batch Upload' }
+  ];
+
   return (
     <div className="nav-menu">
-      {links.map((link) => (
+      {allLinks.map((link) => (
         <Link
           key={link.to}
           to={link.to}
@@ -58,6 +64,7 @@ function App() {
             <Routes>
               <Route path="/" element={<Dashboard />} />
               <Route path="/upload" element={<UploadForm />} />
+              <Route path="/batch-upload" element={<BatchUpload />} />
               <Route path="/forms/:id" element={<VerificationView />} />
               <Route path="/students/:id" element={<StudentProfile />} />
               <Route path="/search" element={<SearchInterface />} />

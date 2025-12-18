@@ -46,6 +46,34 @@ def _get_abbyy_provider():
     except ImportError:
         return None
 
+def _get_gpt4_vision_provider():
+    try:
+        from backend.ocr.gpt4_vision_provider import GPT4VisionProvider
+        return GPT4VisionProvider
+    except ImportError:
+        return None
+
+def _get_claude_vision_provider():
+    try:
+        from backend.ocr.claude_vision_provider import ClaudeVisionProvider
+        return ClaudeVisionProvider
+    except ImportError:
+        return None
+
+def _get_ollama_provider():
+    try:
+        from backend.ocr.ollama_provider import OllamaProvider
+        return OllamaProvider
+    except ImportError:
+        return None
+
+def _get_tesseract_google_combined_provider():
+    try:
+        from backend.ocr.tesseract_google_combined_provider import TesseractGoogleCombinedProvider
+        return TesseractGoogleCombinedProvider
+    except ImportError:
+        return None
+
 class OCRFactory:
     """Factory class for creating OCR provider instances"""
     
@@ -63,6 +91,14 @@ class OCRFactory:
             if google_vision:
                 providers["google-vision"] = google_vision
                 providers["google"] = google_vision  # Alias for backward compatibility
+        
+        # Combined Tesseract + Google Vision (best of both worlds)
+        if (settings.OCR_ENABLE_TESSERACT and settings.OCR_ENABLE_GOOGLE_VISION and 
+            settings.OCR_ENABLE_TESSERACT_GOOGLE_COMBINED):
+            combined_provider = _get_tesseract_google_combined_provider()
+            if combined_provider:
+                providers["tesseract-google-combined"] = combined_provider
+                providers["combined"] = combined_provider  # Alias
         
         # Google Cloud Document AI - Best for handwriting
         if settings.OCR_ENABLE_GOOGLE_DOCUMENT_AI:
@@ -94,6 +130,18 @@ class OCRFactory:
             abbyy_provider = _get_abbyy_provider()
             if abbyy_provider:
                 providers["abbyy"] = abbyy_provider
+        
+        gpt4_vision_provider = _get_gpt4_vision_provider()
+        if gpt4_vision_provider:
+            providers["gpt4-vision"] = gpt4_vision_provider
+        
+        claude_vision_provider = _get_claude_vision_provider()
+        if claude_vision_provider:
+            providers["claude-vision"] = claude_vision_provider
+        
+        ollama_provider = _get_ollama_provider()
+        if ollama_provider:
+            providers["ollama"] = ollama_provider
         
         return providers
     

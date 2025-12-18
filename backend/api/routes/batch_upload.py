@@ -1,0 +1,213 @@
+"""
+Batch Upload API Routes
+Handle batch processing of multiple forms (especially 3-page forms)
+"""
+from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Query, Form
+from sqlalchemy.orm import Session
+from typing import List, Optional
+from backend.database import get_db, AdmissionForm, FormStatus
+from backend.utils.file_handler import save_uploaded_file, load_all_pdf_pages
+from backend.utils.multi_page_handler import MultiPageFormHandler
+from backend.utils.batch_processor import batch_processor, JobStatus
+from backend.ocr import get_ocr_provider
+from backend.config import settings
+from backend.models.form import FormResponse
+from pathlib import Path
+import os
+
+router = APIRouter()
+
+@router.post("/batch-upload", status_code=202)
+async def batch_upload_forms(
+    files: List[UploadFile] = File(...),
+    ocr_provider: Optional[str] = Form(None),
+    pages_per_form: int = Form(3),
+    db: Session = Depends(get_db)  # Not used in function, but kept for consistency
+):
+    """
+    Upload multiple forms in batch for processing.
+    Each form should be a PDF with specified number of pages (default: 3).
+    Returns a job ID for tracking progress.
+    """
+    if not files:
+        raise HTTPException(status_code=400, detail="No files provided")
+    
+    # Validate files are PDFs
+    for file in files:
+        file_ext = file.filename.split('.')[-1].lower() if file.filename else ""
+        if file_ext != 'pdf':
+            raise HTTPException(
+                status_code=400,
+                detail=f"All files must be PDFs. Found: {file_ext}"
+            )
+    
+    # Determine OCR provider
+    provider_name = ocr_provider or "tesseract"
+    
+    # Initialize multi-page handler
+    multi_page_handler = MultiPageFormHandler(pages_per_form=pages_per_form)
+    
+    async def process_form(file_item: UploadFile) -> dict:
+        """Process a single form file"""
+        # Create new DB session for this task
+        from backend.database import SessionLocal
+        local_db = SessionLocal()
+        try:
+            # Save file
+            file_path, filename = await save_uploaded_file(file_item)
+            
+            # Load all pages from PDF
+            pages = load_all_pdf_pages(file_path)
+            
+            # Validate page count
+            if len(pages) != pages_per_form:
+                return {
+                    "filename": file_item.filename,
+                    "status": "error",
+                    "error": f"Expected {pages_per_form} pages, found {len(pages)}"
+                }
+            
+            # Get OCR provider
+            provider = get_ocr_provider(provider_name)
+            
+            # Process multi-page form
+            ocr_result = await multi_page_handler.process_multi_page_form(
+                pages=pages,
+                ocr_provider=provider,
+                language=None
+            )
+            
+            # Create form record
+            upload_dir = Path(settings.UPLOAD_DIR).resolve()
+            file_path_obj = Path(file_path).resolve()
+            relative_path = os.path.relpath(file_path_obj, upload_dir)
+            
+            form = AdmissionForm(
+                filename=file_item.filename or filename,
+                file_path=relative_path,
+                ocr_provider=provider_name,
+                status=FormStatus.EXTRACTED,
+                extracted_data={
+                    "raw_text": ocr_result.get("raw_text", ""),
+                    "confidence": ocr_result.get("confidence", 0),
+                    "structured_data": ocr_result.get("structured_data", {}),
+                    "pages": ocr_result.get("pages", []),
+                    "total_pages": ocr_result.get("total_pages", 0)
+                }
+            )
+            local_db.add(form)
+            local_db.commit()
+            local_db.refresh(form)
+            
+            form_id = form.id
+            
+            return {
+                "filename": file_item.filename,
+                "form_id": form_id,
+                "status": "success",
+                "confidence": ocr_result.get("confidence", 0)
+            }
+            
+        except Exception as e:
+            return {
+                "filename": file_item.filename,
+                "status": "error",
+                "error": str(e)
+            }
+        finally:
+            local_db.close()
+    
+    # Start batch processing
+    job_id = await batch_processor.process_batch(files, process_func=process_form)
+    
+    return {
+        "job_id": job_id,
+        "total_files": len(files),
+        "status": "processing",
+        "message": f"Batch upload started. Use /api/batch-upload/{job_id}/status to check progress"
+    }
+
+@router.get("/batch-upload/{job_id}/status")
+async def get_batch_job_status(job_id: str):
+    """Get status of a batch upload job"""
+    job = batch_processor.get_job_status(job_id)
+    
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    return {
+        "job_id": job.job_id,
+        "status": job.status.value,
+        "total_items": job.total_items,
+        "processed_items": job.processed_items,
+        "successful_items": job.successful_items,
+        "failed_items": job.failed_items,
+        "progress_percentage": job.progress_percentage,
+        "created_at": job.created_at.isoformat(),
+        "started_at": job.started_at.isoformat() if job.started_at else None,
+        "completed_at": job.completed_at.isoformat() if job.completed_at else None,
+        "errors": job.errors[:10] if job.errors else [],  # Limit errors in response
+        "results": job.results[-10:] if job.results else []  # Last 10 results
+    }
+
+@router.get("/batch-upload/{job_id}/results")
+async def get_batch_job_results(job_id: str, page: int = Query(1, ge=1), limit: int = Query(50, ge=1, le=100)):
+    """Get detailed results from a batch upload job"""
+    job = batch_processor.get_job_status(job_id)
+    
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    skip = (page - 1) * limit
+    results = job.results[skip:skip + limit] if job.results else []
+    
+    return {
+        "job_id": job.job_id,
+        "status": job.status.value,
+        "total_results": len(job.results) if job.results else 0,
+        "page": page,
+        "limit": limit,
+        "results": results
+    }
+
+@router.delete("/batch-upload/{job_id}")
+async def cancel_batch_job(job_id: str):
+    """Cancel a batch upload job"""
+    success = batch_processor.cancel_job(job_id)
+    
+    if not success:
+        raise HTTPException(
+            status_code=400,
+            detail="Job not found or cannot be cancelled"
+        )
+    
+    return {
+        "job_id": job_id,
+        "status": "cancelled",
+        "message": "Job cancelled successfully"
+    }
+
+@router.get("/batch-upload/jobs/list")
+async def list_batch_jobs(
+    status: Optional[str] = Query(None),
+    limit: int = Query(20, ge=1, le=100)
+):
+    """List all batch upload jobs"""
+    all_jobs = batch_processor.get_all_jobs()
+    
+    # Filter by status if provided
+    if status:
+        try:
+            status_enum = JobStatus(status.lower())
+            all_jobs = [j for j in all_jobs if j.get("status") == status_enum.value]
+        except ValueError:
+            pass
+    
+    # Sort by created_at (newest first) and limit
+    all_jobs.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+    all_jobs = all_jobs[:limit]
+    
+    return {
+        "total_jobs": len(all_jobs),
+        "jobs": all_jobs
+    }

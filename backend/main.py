@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from backend.config import settings
 from backend.database import engine, Base
-from backend.api.routes import upload, forms, export, files, documents, students
+from backend.api.routes import upload, forms, export, files, documents, students, batch_upload, annotation, training, auto_label
 import os
 
 # Create database tables (optional - will fail if DB not available)
@@ -38,6 +38,10 @@ app.include_router(export.router, prefix="/api/forms", tags=["export"])
 app.include_router(files.router, prefix="/api", tags=["files"])
 app.include_router(documents.router, prefix="/api/documents", tags=["documents"])
 app.include_router(students.router, prefix="/api/students", tags=["students"])
+app.include_router(batch_upload.router, prefix="/api", tags=["batch-upload"])
+app.include_router(annotation.router, prefix="/api", tags=["annotation"])
+app.include_router(training.router, prefix="/api", tags=["training"])
+app.include_router(auto_label.router, prefix="/api", tags=["auto-label"])
 
 # Serve uploaded files
 app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")

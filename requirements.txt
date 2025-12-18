@@ -12,6 +12,22 @@ PyMuPDF==1.24.13
 opencv-python==4.10.0.84
 numpy==2.1.3
 pdf2image==1.16.3
+aiohttp==3.9.1
+
+# AI Vision-Language Model Providers (optional - install as needed)
+# openai==1.12.0  # For GPT-4 Vision
+# anthropic==0.18.1  # For Claude Vision
+# ollama==0.1.7  # For Ollama local models
+
+# Training and ML (optional - uncomment to use)
+# transformers>=4.36.0  # For TrOCR/Donut training
+# torch>=2.1.0  # For local model inference and training
+# datasets>=2.16.0  # For training data management
+# accelerate>=0.25.0  # For distributed training
+
+# Batch Processing (optional)
+# redis==5.0.1  # For Redis queue backend
+# celery==5.3.4  # For Celery task queue (alternative to batch_processor)
 
 # OCR Providers (Install based on your choice)
 # Google Cloud Document AI - BEST for handwriting and forms
