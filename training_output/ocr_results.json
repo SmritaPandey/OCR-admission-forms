@@ -1,0 +1,345 @@
+{
+  "processed_at": "2025-12-18T18:21:13.874785",
+  "method": "method_two",
+  "total_pdfs": 14,
+  "results": [
+    {
+      "pdf_path": "data/samples/pdfs/UN-03-243550516046-KARAN YADAV.pdf",
+      "total_pages": 20,
+      "method": "method_two",
+      "pages": [
+        {
+          "page_number": 1,
+          "error": "Method II OCR error: 403 This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry. [reason: \"BILLING_DISABLED\"\ndomain: \"googleapis.com\"\nmetadata {\n  key: \"service\"\n  value: \"vision.googleapis.com\"\n}\nmetadata {\n  key: \"containerInfo\"\n  value: \"695035022990\"\n}\nmetadata {\n  key: \"consumer\"\n  value: \"projects/695035022990\"\n}\n, locale: \"en-US\"\nmessage: \"This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry.\"\n, links {\n  description: \"Google developers console billing\"\n  url: \"https://console.developers.google.com/billing/enable?project=695035022990\"\n}\n]",
+          "raw_text": "",
+          "confidence": 0.0
+        },
+        {
+          "page_number": 2,
+          "error": "Method II OCR error: 403 This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry. [reason: \"BILLING_DISABLED\"\ndomain: \"googleapis.com\"\nmetadata {\n  key: \"service\"\n  value: \"vision.googleapis.com\"\n}\nmetadata {\n  key: \"containerInfo\"\n  value: \"695035022990\"\n}\nmetadata {\n  key: \"consumer\"\n  value: \"projects/695035022990\"\n}\n, locale: \"en-US\"\nmessage: \"This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry.\"\n, links {\n  description: \"Google developers console billing\"\n  url: \"https://console.developers.google.com/billing/enable?project=695035022990\"\n}\n]",
+          "raw_text": "",
+          "confidence": 0.0
+        },
+        {
+          "page_number": 3,
+          "error": "Method II OCR error: 403 This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry. [reason: \"BILLING_DISABLED\"\ndomain: \"googleapis.com\"\nmetadata {\n  key: \"service\"\n  value: \"vision.googleapis.com\"\n}\nmetadata {\n  key: \"containerInfo\"\n  value: \"695035022990\"\n}\nmetadata {\n  key: \"consumer\"\n  value: \"projects/695035022990\"\n}\n, locale: \"en-US\"\nmessage: \"This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry.\"\n, links {\n  description: \"Google developers console billing\"\n  url: \"https://console.developers.google.com/billing/enable?project=695035022990\"\n}\n]",
+          "raw_text": "",
+          "confidence": 0.0
+        },
+        {
+          "page_number": 4,
+          "error": "Method II OCR error: 403 This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry. [reason: \"BILLING_DISABLED\"\ndomain: \"googleapis.com\"\nmetadata {\n  key: \"service\"\n  value: \"vision.googleapis.com\"\n}\nmetadata {\n  key: \"containerInfo\"\n  value: \"695035022990\"\n}\nmetadata {\n  key: \"consumer\"\n  value: \"projects/695035022990\"\n}\n, locale: \"en-US\"\nmessage: \"This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry.\"\n, links {\n  description: \"Google developers console billing\"\n  url: \"https://console.developers.google.com/billing/enable?project=695035022990\"\n}\n]",
+          "raw_text": "",
+          "confidence": 0.0
+        },
+        {
+          "page_number": 5,
+          "error": "Method II OCR error: 403 This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry. [reason: \"BILLING_DISABLED\"\ndomain: \"googleapis.com\"\nmetadata {\n  key: \"service\"\n  value: \"vision.googleapis.com\"\n}\nmetadata {\n  key: \"containerInfo\"\n  value: \"695035022990\"\n}\nmetadata {\n  key: \"consumer\"\n  value: \"projects/695035022990\"\n}\n, locale: \"en-US\"\nmessage: \"This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry.\"\n, links {\n  description: \"Google developers console billing\"\n  url: \"https://console.developers.google.com/billing/enable?project=695035022990\"\n}\n]",
+          "raw_text": "",
+          "confidence": 0.0
+        },
+        {
+          "page_number": 6,
+          "error": "Method II OCR error: 403 This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry. [reason: \"BILLING_DISABLED\"\ndomain: \"googleapis.com\"\nmetadata {\n  key: \"service\"\n  value: \"vision.googleapis.com\"\n}\nmetadata {\n  key: \"containerInfo\"\n  value: \"695035022990\"\n}\nmetadata {\n  key: \"consumer\"\n  value: \"projects/695035022990\"\n}\n, locale: \"en-US\"\nmessage: \"This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry.\"\n, links {\n  description: \"Google developers console billing\"\n  url: \"https://console.developers.google.com/billing/enable?project=695035022990\"\n}\n]",
+          "raw_text": "",
+          "confidence": 0.0
+        },
+        {
+          "page_number": 7,
+          "error": "Method II OCR error: 403 This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry. [reason: \"BILLING_DISABLED\"\ndomain: \"googleapis.com\"\nmetadata {\n  key: \"service\"\n  value: \"vision.googleapis.com\"\n}\nmetadata {\n  key: \"containerInfo\"\n  value: \"695035022990\"\n}\nmetadata {\n  key: \"consumer\"\n  value: \"projects/695035022990\"\n}\n, locale: \"en-US\"\nmessage: \"This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry.\"\n, links {\n  description: \"Google developers console billing\"\n  url: \"https://console.developers.google.com/billing/enable?project=695035022990\"\n}\n]",
+          "raw_text": "",
+          "confidence": 0.0
+        },
+        {
+          "page_number": 8,
+          "error": "Method II OCR error: 403 This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry. [reason: \"BILLING_DISABLED\"\ndomain: \"googleapis.com\"\nmetadata {\n  key: \"service\"\n  value: \"vision.googleapis.com\"\n}\nmetadata {\n  key: \"containerInfo\"\n  value: \"695035022990\"\n}\nmetadata {\n  key: \"consumer\"\n  value: \"projects/695035022990\"\n}\n, locale: \"en-US\"\nmessage: \"This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry.\"\n, links {\n  description: \"Google developers console billing\"\n  url: \"https://console.developers.google.com/billing/enable?project=695035022990\"\n}\n]",
+          "raw_text": "",
+          "confidence": 0.0
+        },
+        {
+          "page_number": 9,
+          "error": "Method II OCR error: 403 This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry. [reason: \"BILLING_DISABLED\"\ndomain: \"googleapis.com\"\nmetadata {\n  key: \"service\"\n  value: \"vision.googleapis.com\"\n}\nmetadata {\n  key: \"containerInfo\"\n  value: \"695035022990\"\n}\nmetadata {\n  key: \"consumer\"\n  value: \"projects/695035022990\"\n}\n, locale: \"en-US\"\nmessage: \"This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry.\"\n, links {\n  description: \"Google developers console billing\"\n  url: \"https://console.developers.google.com/billing/enable?project=695035022990\"\n}\n]",
+          "raw_text": "",
+          "confidence": 0.0
+        },
+        {
+          "page_number": 10,
+          "error": "Method II OCR error: 403 This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry. [reason: \"BILLING_DISABLED\"\ndomain: \"googleapis.com\"\nmetadata {\n  key: \"service\"\n  value: \"vision.googleapis.com\"\n}\nmetadata {\n  key: \"containerInfo\"\n  value: \"695035022990\"\n}\nmetadata {\n  key: \"consumer\"\n  value: \"projects/695035022990\"\n}\n, locale: \"en-US\"\nmessage: \"This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry.\"\n, links {\n  description: \"Google developers console billing\"\n  url: \"https://console.developers.google.com/billing/enable?project=695035022990\"\n}\n]",
+          "raw_text": "",
+          "confidence": 0.0
+        },
+        {
+          "page_number": 11,
+          "error": "Method II OCR error: 403 This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry. [reason: \"BILLING_DISABLED\"\ndomain: \"googleapis.com\"\nmetadata {\n  key: \"service\"\n  value: \"vision.googleapis.com\"\n}\nmetadata {\n  key: \"containerInfo\"\n  value: \"695035022990\"\n}\nmetadata {\n  key: \"consumer\"\n  value: \"projects/695035022990\"\n}\n, locale: \"en-US\"\nmessage: \"This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry.\"\n, links {\n  description: \"Google developers console billing\"\n  url: \"https://console.developers.google.com/billing/enable?project=695035022990\"\n}\n]",
+          "raw_text": "",
+          "confidence": 0.0
+        },
+        {
+          "page_number": 12,
+          "error": "Method II OCR error: 403 This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry. [reason: \"BILLING_DISABLED\"\ndomain: \"googleapis.com\"\nmetadata {\n  key: \"service\"\n  value: \"vision.googleapis.com\"\n}\nmetadata {\n  key: \"containerInfo\"\n  value: \"695035022990\"\n}\nmetadata {\n  key: \"consumer\"\n  value: \"projects/695035022990\"\n}\n, locale: \"en-US\"\nmessage: \"This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry.\"\n, links {\n  description: \"Google developers console billing\"\n  url: \"https://console.developers.google.com/billing/enable?project=695035022990\"\n}\n]",
+          "raw_text": "",
+          "confidence": 0.0
+        },
+        {
+          "page_number": 13,
+          "error": "Method II OCR error: 403 This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry. [reason: \"BILLING_DISABLED\"\ndomain: \"googleapis.com\"\nmetadata {\n  key: \"service\"\n  value: \"vision.googleapis.com\"\n}\nmetadata {\n  key: \"containerInfo\"\n  value: \"695035022990\"\n}\nmetadata {\n  key: \"consumer\"\n  value: \"projects/695035022990\"\n}\n, locale: \"en-US\"\nmessage: \"This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry.\"\n, links {\n  description: \"Google developers console billing\"\n  url: \"https://console.developers.google.com/billing/enable?project=695035022990\"\n}\n]",
+          "raw_text": "",
+          "confidence": 0.0
+        },
+        {
+          "page_number": 14,
+          "error": "Method II OCR error: 403 This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry. [reason: \"BILLING_DISABLED\"\ndomain: \"googleapis.com\"\nmetadata {\n  key: \"service\"\n  value: \"vision.googleapis.com\"\n}\nmetadata {\n  key: \"containerInfo\"\n  value: \"695035022990\"\n}\nmetadata {\n  key: \"consumer\"\n  value: \"projects/695035022990\"\n}\n, locale: \"en-US\"\nmessage: \"This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry.\"\n, links {\n  description: \"Google developers console billing\"\n  url: \"https://console.developers.google.com/billing/enable?project=695035022990\"\n}\n]",
+          "raw_text": "",
+          "confidence": 0.0
+        },
+        {
+          "page_number": 15,
+          "error": "Method II OCR error: 403 This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry. [reason: \"BILLING_DISABLED\"\ndomain: \"googleapis.com\"\nmetadata {\n  key: \"service\"\n  value: \"vision.googleapis.com\"\n}\nmetadata {\n  key: \"containerInfo\"\n  value: \"695035022990\"\n}\nmetadata {\n  key: \"consumer\"\n  value: \"projects/695035022990\"\n}\n, locale: \"en-US\"\nmessage: \"This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry.\"\n, links {\n  description: \"Google developers console billing\"\n  url: \"https://console.developers.google.com/billing/enable?project=695035022990\"\n}\n]",
+          "raw_text": "",
+          "confidence": 0.0
+        },
+        {
+          "page_number": 16,
+          "error": "Method II OCR error: 403 This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry. [reason: \"BILLING_DISABLED\"\ndomain: \"googleapis.com\"\nmetadata {\n  key: \"service\"\n  value: \"vision.googleapis.com\"\n}\nmetadata {\n  key: \"containerInfo\"\n  value: \"695035022990\"\n}\nmetadata {\n  key: \"consumer\"\n  value: \"projects/695035022990\"\n}\n, locale: \"en-US\"\nmessage: \"This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry.\"\n, links {\n  description: \"Google developers console billing\"\n  url: \"https://console.developers.google.com/billing/enable?project=695035022990\"\n}\n]",
+          "raw_text": "",
+          "confidence": 0.0
+        },
+        {
+          "page_number": 17,
+          "error": "Method II OCR error: 403 This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry. [reason: \"BILLING_DISABLED\"\ndomain: \"googleapis.com\"\nmetadata {\n  key: \"service\"\n  value: \"vision.googleapis.com\"\n}\nmetadata {\n  key: \"containerInfo\"\n  value: \"695035022990\"\n}\nmetadata {\n  key: \"consumer\"\n  value: \"projects/695035022990\"\n}\n, locale: \"en-US\"\nmessage: \"This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry.\"\n, links {\n  description: \"Google developers console billing\"\n  url: \"https://console.developers.google.com/billing/enable?project=695035022990\"\n}\n]",
+          "raw_text": "",
+          "confidence": 0.0
+        },
+        {
+          "page_number": 18,
+          "error": "Method II OCR error: 403 This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry. [reason: \"BILLING_DISABLED\"\ndomain: \"googleapis.com\"\nmetadata {\n  key: \"service\"\n  value: \"vision.googleapis.com\"\n}\nmetadata {\n  key: \"containerInfo\"\n  value: \"695035022990\"\n}\nmetadata {\n  key: \"consumer\"\n  value: \"projects/695035022990\"\n}\n, locale: \"en-US\"\nmessage: \"This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry.\"\n, links {\n  description: \"Google developers console billing\"\n  url: \"https://console.developers.google.com/billing/enable?project=695035022990\"\n}\n]",
+          "raw_text": "",
+          "confidence": 0.0
+        },
+        {
+          "page_number": 19,
+          "error": "Method II OCR error: 403 This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry. [reason: \"BILLING_DISABLED\"\ndomain: \"googleapis.com\"\nmetadata {\n  key: \"service\"\n  value: \"vision.googleapis.com\"\n}\nmetadata {\n  key: \"containerInfo\"\n  value: \"695035022990\"\n}\nmetadata {\n  key: \"consumer\"\n  value: \"projects/695035022990\"\n}\n, locale: \"en-US\"\nmessage: \"This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry.\"\n, links {\n  description: \"Google developers console billing\"\n  url: \"https://console.developers.google.com/billing/enable?project=695035022990\"\n}\n]",
+          "raw_text": "",
+          "confidence": 0.0
+        },
+        {
+          "page_number": 20,
+          "error": "Method II OCR error: 403 This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry. [reason: \"BILLING_DISABLED\"\ndomain: \"googleapis.com\"\nmetadata {\n  key: \"service\"\n  value: \"vision.googleapis.com\"\n}\nmetadata {\n  key: \"containerInfo\"\n  value: \"695035022990\"\n}\nmetadata {\n  key: \"consumer\"\n  value: \"projects/695035022990\"\n}\n, locale: \"en-US\"\nmessage: \"This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry.\"\n, links {\n  description: \"Google developers console billing\"\n  url: \"https://console.developers.google.com/billing/enable?project=695035022990\"\n}\n]",
+          "raw_text": "",
+          "confidence": 0.0
+        }
+      ],
+      "combined_text": [],
+      "all_confidences": [],
+      "full_text": "",
+      "avg_confidence": 0.0
+    },
+    {
+      "pdf_path": "data/samples/pdfs/UN-01-243550037803-NAVYA RAJ.pdf",
+      "error": "Error processing PDF data/samples/pdfs/UN-01-243550037803-NAVYA RAJ.pdf: [Errno 32] Broken pipe"
+    },
+    {
+      "pdf_path": "data/samples/pdfs/UN-04-243550774198-DEVESH VERMA.pdf",
+      "error": "Error processing PDF data/samples/pdfs/UN-04-243550774198-DEVESH VERMA.pdf: [Errno 32] Broken pipe"
+    },
+    {
+      "pdf_path": "data/samples/pdfs/sara hanfi.pdf",
+      "total_pages": 4,
+      "method": "method_two",
+      "pages": [
+        {
+          "page_number": 1,
+          "error": "Method II OCR error: 403 This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry. [reason: \"BILLING_DISABLED\"\ndomain: \"googleapis.com\"\nmetadata {\n  key: \"service\"\n  value: \"vision.googleapis.com\"\n}\nmetadata {\n  key: \"containerInfo\"\n  value: \"695035022990\"\n}\nmetadata {\n  key: \"consumer\"\n  value: \"projects/695035022990\"\n}\n, locale: \"en-US\"\nmessage: \"This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry.\"\n, links {\n  description: \"Google developers console billing\"\n  url: \"https://console.developers.google.com/billing/enable?project=695035022990\"\n}\n]",
+          "raw_text": "",
+          "confidence": 0.0
+        },
+        {
+          "page_number": 2,
+          "error": "Method II OCR error: 403 This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry. [reason: \"BILLING_DISABLED\"\ndomain: \"googleapis.com\"\nmetadata {\n  key: \"service\"\n  value: \"vision.googleapis.com\"\n}\nmetadata {\n  key: \"containerInfo\"\n  value: \"695035022990\"\n}\nmetadata {\n  key: \"consumer\"\n  value: \"projects/695035022990\"\n}\n, locale: \"en-US\"\nmessage: \"This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry.\"\n, links {\n  description: \"Google developers console billing\"\n  url: \"https://console.developers.google.com/billing/enable?project=695035022990\"\n}\n]",
+          "raw_text": "",
+          "confidence": 0.0
+        },
+        {
+          "page_number": 3,
+          "error": "Method II OCR error: 403 This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry. [reason: \"BILLING_DISABLED\"\ndomain: \"googleapis.com\"\nmetadata {\n  key: \"service\"\n  value: \"vision.googleapis.com\"\n}\nmetadata {\n  key: \"containerInfo\"\n  value: \"695035022990\"\n}\nmetadata {\n  key: \"consumer\"\n  value: \"projects/695035022990\"\n}\n, locale: \"en-US\"\nmessage: \"This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry.\"\n, links {\n  description: \"Google developers console billing\"\n  url: \"https://console.developers.google.com/billing/enable?project=695035022990\"\n}\n]",
+          "raw_text": "",
+          "confidence": 0.0
+        },
+        {
+          "page_number": 4,
+          "error": "Method II OCR error: 403 This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry. [reason: \"BILLING_DISABLED\"\ndomain: \"googleapis.com\"\nmetadata {\n  key: \"service\"\n  value: \"vision.googleapis.com\"\n}\nmetadata {\n  key: \"containerInfo\"\n  value: \"695035022990\"\n}\nmetadata {\n  key: \"consumer\"\n  value: \"projects/695035022990\"\n}\n, locale: \"en-US\"\nmessage: \"This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry.\"\n, links {\n  description: \"Google developers console billing\"\n  url: \"https://console.developers.google.com/billing/enable?project=695035022990\"\n}\n]",
+          "raw_text": "",
+          "confidence": 0.0
+        }
+      ],
+      "combined_text": [],
+      "all_confidences": [],
+      "full_text": "",
+      "avg_confidence": 0.0
+    },
+    {
+      "pdf_path": "data/samples/pdfs/ravi chaudhary.pdf",
+      "error": "Error processing PDF data/samples/pdfs/ravi chaudhary.pdf: [Errno 32] Broken pipe"
+    },
+    {
+      "pdf_path": "data/samples/pdfs/jatin.pdf",
+      "total_pages": 4,
+      "method": "method_two",
+      "pages": [
+        {
+          "page_number": 1,
+          "error": "Method II OCR error: 403 This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry. [reason: \"BILLING_DISABLED\"\ndomain: \"googleapis.com\"\nmetadata {\n  key: \"service\"\n  value: \"vision.googleapis.com\"\n}\nmetadata {\n  key: \"containerInfo\"\n  value: \"695035022990\"\n}\nmetadata {\n  key: \"consumer\"\n  value: \"projects/695035022990\"\n}\n, locale: \"en-US\"\nmessage: \"This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry.\"\n, links {\n  description: \"Google developers console billing\"\n  url: \"https://console.developers.google.com/billing/enable?project=695035022990\"\n}\n]",
+          "raw_text": "",
+          "confidence": 0.0
+        },
+        {
+          "page_number": 2,
+          "error": "Method II OCR error: 403 This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry. [reason: \"BILLING_DISABLED\"\ndomain: \"googleapis.com\"\nmetadata {\n  key: \"service\"\n  value: \"vision.googleapis.com\"\n}\nmetadata {\n  key: \"containerInfo\"\n  value: \"695035022990\"\n}\nmetadata {\n  key: \"consumer\"\n  value: \"projects/695035022990\"\n}\n, locale: \"en-US\"\nmessage: \"This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry.\"\n, links {\n  description: \"Google developers console billing\"\n  url: \"https://console.developers.google.com/billing/enable?project=695035022990\"\n}\n]",
+          "raw_text": "",
+          "confidence": 0.0
+        },
+        {
+          "page_number": 3,
+          "error": "Method II OCR error: 403 This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry. [reason: \"BILLING_DISABLED\"\ndomain: \"googleapis.com\"\nmetadata {\n  key: \"service\"\n  value: \"vision.googleapis.com\"\n}\nmetadata {\n  key: \"containerInfo\"\n  value: \"695035022990\"\n}\nmetadata {\n  key: \"consumer\"\n  value: \"projects/695035022990\"\n}\n, locale: \"en-US\"\nmessage: \"This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry.\"\n, links {\n  description: \"Google developers console billing\"\n  url: \"https://console.developers.google.com/billing/enable?project=695035022990\"\n}\n]",
+          "raw_text": "",
+          "confidence": 0.0
+        },
+        {
+          "page_number": 4,
+          "error": "Method II OCR error: 403 This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry. [reason: \"BILLING_DISABLED\"\ndomain: \"googleapis.com\"\nmetadata {\n  key: \"service\"\n  value: \"vision.googleapis.com\"\n}\nmetadata {\n  key: \"containerInfo\"\n  value: \"695035022990\"\n}\nmetadata {\n  key: \"consumer\"\n  value: \"projects/695035022990\"\n}\n, locale: \"en-US\"\nmessage: \"This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry.\"\n, links {\n  description: \"Google developers console billing\"\n  url: \"https://console.developers.google.com/billing/enable?project=695035022990\"\n}\n]",
+          "raw_text": "",
+          "confidence": 0.0
+        }
+      ],
+      "combined_text": [],
+      "all_confidences": [],
+      "full_text": "",
+      "avg_confidence": 0.0
+    },
+    {
+      "pdf_path": "data/samples/pdfs/UN-251-243550620879-KHUSHI MEENA.pdf",
+      "error": "Error processing PDF data/samples/pdfs/UN-251-243550620879-KHUSHI MEENA.pdf: [Errno 32] Broken pipe"
+    },
+    {
+      "pdf_path": "data/samples/pdfs/UN-05-243550336680-PESHL KUMAR.pdf",
+      "error": "Error processing PDF data/samples/pdfs/UN-05-243550336680-PESHL KUMAR.pdf: [Errno 32] Broken pipe"
+    },
+    {
+      "pdf_path": "data/samples/pdfs/UN-02-243550630824-ARYAN.pdf",
+      "error": "Error processing PDF data/samples/pdfs/UN-02-243550630824-ARYAN.pdf: [Errno 32] Broken pipe"
+    },
+    {
+      "pdf_path": "data/samples/pdfs/ujjwal kumar.pdf",
+      "total_pages": 4,
+      "method": "method_two",
+      "pages": [
+        {
+          "page_number": 1,
+          "error": "Method II OCR error: 403 This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry. [reason: \"BILLING_DISABLED\"\ndomain: \"googleapis.com\"\nmetadata {\n  key: \"service\"\n  value: \"vision.googleapis.com\"\n}\nmetadata {\n  key: \"containerInfo\"\n  value: \"695035022990\"\n}\nmetadata {\n  key: \"consumer\"\n  value: \"projects/695035022990\"\n}\n, locale: \"en-US\"\nmessage: \"This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry.\"\n, links {\n  description: \"Google developers console billing\"\n  url: \"https://console.developers.google.com/billing/enable?project=695035022990\"\n}\n]",
+          "raw_text": "",
+          "confidence": 0.0
+        },
+        {
+          "page_number": 2,
+          "error": "Method II OCR error: 403 This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry. [reason: \"BILLING_DISABLED\"\ndomain: \"googleapis.com\"\nmetadata {\n  key: \"service\"\n  value: \"vision.googleapis.com\"\n}\nmetadata {\n  key: \"containerInfo\"\n  value: \"695035022990\"\n}\nmetadata {\n  key: \"consumer\"\n  value: \"projects/695035022990\"\n}\n, locale: \"en-US\"\nmessage: \"This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry.\"\n, links {\n  description: \"Google developers console billing\"\n  url: \"https://console.developers.google.com/billing/enable?project=695035022990\"\n}\n]",
+          "raw_text": "",
+          "confidence": 0.0
+        },
+        {
+          "page_number": 3,
+          "error": "Method II OCR error: 403 This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry. [reason: \"BILLING_DISABLED\"\ndomain: \"googleapis.com\"\nmetadata {\n  key: \"service\"\n  value: \"vision.googleapis.com\"\n}\nmetadata {\n  key: \"containerInfo\"\n  value: \"695035022990\"\n}\nmetadata {\n  key: \"consumer\"\n  value: \"projects/695035022990\"\n}\n, locale: \"en-US\"\nmessage: \"This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry.\"\n, links {\n  description: \"Google developers console billing\"\n  url: \"https://console.developers.google.com/billing/enable?project=695035022990\"\n}\n]",
+          "raw_text": "",
+          "confidence": 0.0
+        },
+        {
+          "page_number": 4,
+          "error": "Method II OCR error: 403 This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry. [reason: \"BILLING_DISABLED\"\ndomain: \"googleapis.com\"\nmetadata {\n  key: \"service\"\n  value: \"vision.googleapis.com\"\n}\nmetadata {\n  key: \"containerInfo\"\n  value: \"695035022990\"\n}\nmetadata {\n  key: \"consumer\"\n  value: \"projects/695035022990\"\n}\n, locale: \"en-US\"\nmessage: \"This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry.\"\n, links {\n  description: \"Google developers console billing\"\n  url: \"https://console.developers.google.com/billing/enable?project=695035022990\"\n}\n]",
+          "raw_text": "",
+          "confidence": 0.0
+        }
+      ],
+      "combined_text": [],
+      "all_confidences": [],
+      "full_text": "",
+      "avg_confidence": 0.0
+    },
+    {
+      "pdf_path": "data/samples/pdfs/UN-250-243551539583-DIYA.pdf",
+      "error": "Error processing PDF data/samples/pdfs/UN-250-243551539583-DIYA.pdf: [Errno 32] Broken pipe"
+    },
+    {
+      "pdf_path": "data/samples/pdfs/paridhi kiran.pdf",
+      "total_pages": 4,
+      "method": "method_two",
+      "pages": [
+        {
+          "page_number": 1,
+          "error": "Method II OCR error: 403 This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry. [reason: \"BILLING_DISABLED\"\ndomain: \"googleapis.com\"\nmetadata {\n  key: \"service\"\n  value: \"vision.googleapis.com\"\n}\nmetadata {\n  key: \"containerInfo\"\n  value: \"695035022990\"\n}\nmetadata {\n  key: \"consumer\"\n  value: \"projects/695035022990\"\n}\n, locale: \"en-US\"\nmessage: \"This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry.\"\n, links {\n  description: \"Google developers console billing\"\n  url: \"https://console.developers.google.com/billing/enable?project=695035022990\"\n}\n]",
+          "raw_text": "",
+          "confidence": 0.0
+        },
+        {
+          "page_number": 2,
+          "error": "Method II OCR error: 403 This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry. [reason: \"BILLING_DISABLED\"\ndomain: \"googleapis.com\"\nmetadata {\n  key: \"service\"\n  value: \"vision.googleapis.com\"\n}\nmetadata {\n  key: \"containerInfo\"\n  value: \"695035022990\"\n}\nmetadata {\n  key: \"consumer\"\n  value: \"projects/695035022990\"\n}\n, locale: \"en-US\"\nmessage: \"This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry.\"\n, links {\n  description: \"Google developers console billing\"\n  url: \"https://console.developers.google.com/billing/enable?project=695035022990\"\n}\n]",
+          "raw_text": "",
+          "confidence": 0.0
+        },
+        {
+          "page_number": 3,
+          "error": "Method II OCR error: 403 This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry. [reason: \"BILLING_DISABLED\"\ndomain: \"googleapis.com\"\nmetadata {\n  key: \"service\"\n  value: \"vision.googleapis.com\"\n}\nmetadata {\n  key: \"containerInfo\"\n  value: \"695035022990\"\n}\nmetadata {\n  key: \"consumer\"\n  value: \"projects/695035022990\"\n}\n, locale: \"en-US\"\nmessage: \"This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry.\"\n, links {\n  description: \"Google developers console billing\"\n  url: \"https://console.developers.google.com/billing/enable?project=695035022990\"\n}\n]",
+          "raw_text": "",
+          "confidence": 0.0
+        },
+        {
+          "page_number": 4,
+          "error": "Method II OCR error: 403 This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry. [reason: \"BILLING_DISABLED\"\ndomain: \"googleapis.com\"\nmetadata {\n  key: \"service\"\n  value: \"vision.googleapis.com\"\n}\nmetadata {\n  key: \"containerInfo\"\n  value: \"695035022990\"\n}\nmetadata {\n  key: \"consumer\"\n  value: \"projects/695035022990\"\n}\n, locale: \"en-US\"\nmessage: \"This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry.\"\n, links {\n  description: \"Google developers console billing\"\n  url: \"https://console.developers.google.com/billing/enable?project=695035022990\"\n}\n]",
+          "raw_text": "",
+          "confidence": 0.0
+        }
+      ],
+      "combined_text": [],
+      "all_confidences": [],
+      "full_text": "",
+      "avg_confidence": 0.0
+    },
+    {
+      "pdf_path": "data/samples/pdfs/SRCC DATA FORM-1-4.pdf",
+      "error": "Error processing PDF data/samples/pdfs/SRCC DATA FORM-1-4.pdf: [Errno 32] Broken pipe"
+    },
+    {
+      "pdf_path": "data/samples/pdfs/student data form scanned.pdf",
+      "total_pages": 4,
+      "method": "method_two",
+      "pages": [
+        {
+          "page_number": 1,
+          "error": "Method II OCR error: 403 This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry. [reason: \"BILLING_DISABLED\"\ndomain: \"googleapis.com\"\nmetadata {\n  key: \"service\"\n  value: \"vision.googleapis.com\"\n}\nmetadata {\n  key: \"containerInfo\"\n  value: \"695035022990\"\n}\nmetadata {\n  key: \"consumer\"\n  value: \"projects/695035022990\"\n}\n, locale: \"en-US\"\nmessage: \"This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry.\"\n, links {\n  description: \"Google developers console billing\"\n  url: \"https://console.developers.google.com/billing/enable?project=695035022990\"\n}\n]",
+          "raw_text": "",
+          "confidence": 0.0
+        },
+        {
+          "page_number": 2,
+          "error": "Method II OCR error: 403 This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry. [reason: \"BILLING_DISABLED\"\ndomain: \"googleapis.com\"\nmetadata {\n  key: \"service\"\n  value: \"vision.googleapis.com\"\n}\nmetadata {\n  key: \"containerInfo\"\n  value: \"695035022990\"\n}\nmetadata {\n  key: \"consumer\"\n  value: \"projects/695035022990\"\n}\n, locale: \"en-US\"\nmessage: \"This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry.\"\n, links {\n  description: \"Google developers console billing\"\n  url: \"https://console.developers.google.com/billing/enable?project=695035022990\"\n}\n]",
+          "raw_text": "",
+          "confidence": 0.0
+        },
+        {
+          "page_number": 3,
+          "error": "Method II OCR error: 403 This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry. [reason: \"BILLING_DISABLED\"\ndomain: \"googleapis.com\"\nmetadata {\n  key: \"service\"\n  value: \"vision.googleapis.com\"\n}\nmetadata {\n  key: \"containerInfo\"\n  value: \"695035022990\"\n}\nmetadata {\n  key: \"consumer\"\n  value: \"projects/695035022990\"\n}\n, locale: \"en-US\"\nmessage: \"This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry.\"\n, links {\n  description: \"Google developers console billing\"\n  url: \"https://console.developers.google.com/billing/enable?project=695035022990\"\n}\n]",
+          "raw_text": "",
+          "confidence": 0.0
+        },
+        {
+          "page_number": 4,
+          "error": "Method II OCR error: 403 This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry. [reason: \"BILLING_DISABLED\"\ndomain: \"googleapis.com\"\nmetadata {\n  key: \"service\"\n  value: \"vision.googleapis.com\"\n}\nmetadata {\n  key: \"containerInfo\"\n  value: \"695035022990\"\n}\nmetadata {\n  key: \"consumer\"\n  value: \"projects/695035022990\"\n}\n, locale: \"en-US\"\nmessage: \"This API method requires billing to be enabled. Please enable billing on project #695035022990 by visiting https://console.developers.google.com/billing/enable?project=695035022990 then retry. If you enabled billing for this project recently, wait a few minutes for the action to propagate to our systems and retry.\"\n, links {\n  description: \"Google developers console billing\"\n  url: \"https://console.developers.google.com/billing/enable?project=695035022990\"\n}\n]",
+          "raw_text": "",
+          "confidence": 0.0
+        }
+      ],
+      "combined_text": [],
+      "all_confidences": [],
+      "full_text": "",
+      "avg_confidence": 0.0
+    }
+  ]
+}

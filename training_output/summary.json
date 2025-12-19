@@ -1,0 +1,8 @@
+{
+  "total_pdfs_processed": 14,
+  "total_pages": 40,
+  "total_fields_extracted": 0,
+  "average_confidence": 0,
+  "method_used": "method_two",
+  "output_directory": "training_output"
+}
