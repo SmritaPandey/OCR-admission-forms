@@ -263,10 +263,29 @@ const apiService = {
         const response = await api.get(`/api/annotate/${formId}`);
         return response.data;
     },
-    exportTrainingData: async (format = 'json')=>{
-        const response = await api.get('/api/export/training-data', {
+    getTrainingStats: async ()=>{
+        const response = await api.get('/api/training/stats');
+        return response.data;
+    },
+    prepareTrainingData: async (params)=>{
+        const response = await api.post('/api/training/prepare-data', null, {
+            params
+        });
+        return response.data;
+    },
+    startTraining: async (config)=>{
+        const response = await api.post('/api/training/start', config);
+        return response.data;
+    },
+    getTrainingJobStatus: async (jobId)=>{
+        const response = await api.get(`/api/training/job/${jobId}`);
+        return response.data;
+    },
+    exportTrainingData: async (format = 'json', includeImages = false)=>{
+        const response = await api.post('/api/training/export-annotations', null, {
             params: {
-                format
+                format,
+                include_images: includeImages
             }
         });
         return response.data;
