@@ -20,9 +20,9 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # Environment variables
-.env
-.env.local
-.env.*.local
+# .env # Removed by Orchids to allow .env files
+# .env.local # Removed by Orchids to allow .env files
+# .env.*.local # Removed by Orchids to allow .env files
 
 # Database
 *.db
