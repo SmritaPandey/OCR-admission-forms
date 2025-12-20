@@ -6,10 +6,10 @@ import {
   Upload,
   Search,
   BookOpen,
-  FileText,
-  BrainCircuit,
-  FileUp,
-} from "lucide-react";
+    FileText,
+    Brain,
+    FileUp,
+  } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
