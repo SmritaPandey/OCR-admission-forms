@@ -29,7 +29,8 @@ import {
   Plus,
   Search as SearchIcon,
   Trash2,
-  Eye
+  Eye,
+  BrainCircuit
 } from "lucide-react";
 import { toast } from "sonner";
 
