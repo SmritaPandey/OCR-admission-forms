@@ -338,6 +338,48 @@ async def verify_form(
             # Log error but don't fail the verification
             print(f"Warning: Could not link form to student profile: {e}")
     
+    # Track corrections for continuous improvement
+    try:
+        from backend.utils.continuous_improvement import ContinuousImprovementManager
+        
+        improvement_manager = ContinuousImprovementManager()
+        
+        # Compare verified values with original extracted values to find corrections
+        extracted_data = form.extracted_data or {}
+        structured_data = extracted_data.get('structured_data', {})
+        
+        # Track corrections for each field
+        for field_name in ['student_name', 'date_of_birth', 'gender', 'category', 
+                          'nationality', 'religion', 'aadhar_number', 'blood_group',
+                          'permanent_address', 'correspondence_address', 'pincode', 
+                          'city', 'state', 'phone_number', 'alternate_phone', 'email',
+                          'emergency_contact_name', 'emergency_contact_phone',
+                          'father_name', 'father_occupation', 'father_phone',
+                          'mother_name', 'mother_occupation', 'mother_phone',
+                          'guardian_name', 'guardian_relation', 'guardian_phone',
+                          'annual_income', 'tenth_board', 'tenth_year', 'tenth_percentage',
+                          'tenth_school', 'twelfth_board', 'twelfth_year', 
+                          'twelfth_percentage', 'twelfth_school', 'previous_qualification',
+                          'graduation_details', 'course_applied', 'application_number',
+                          'enrollment_number', 'admission_date']:
+            
+            verified_value = getattr(verification, field_name, None)
+            original_value = structured_data.get(field_name) or getattr(form, field_name, None)
+            
+            # Record correction if values differ
+            if verified_value and original_value and str(verified_value).strip() != str(original_value).strip():
+                confidence = extracted_data.get('confidence', 0) / 100.0 if extracted_data.get('confidence') else None
+                improvement_manager.record_correction(
+                    form_id=form_id,
+                    field_name=field_name,
+                    original_value=str(original_value),
+                    corrected_value=str(verified_value),
+                    confidence=confidence
+                )
+    except Exception as e:
+        # Log but don't fail verification if improvement tracking fails
+        logger.warning(f"Failed to track corrections for continuous improvement: {e}")
+    
     # Automatically create annotation from verified data for training
     try:
         from backend.api.routes.annotation import AnnotationField, AnnotationCheckbox

@@ -1,6 +1,7 @@
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings
 from typing import List, Union, Optional
+import os
 
 class Settings(BaseSettings):
     # Database
@@ -104,6 +105,16 @@ class Settings(BaseSettings):
     # Ollama (Local Vision Models)
     OLLAMA_BASE_URL: str = "http://localhost:11434"
     OLLAMA_VISION_MODEL: str = "llama3.2-vision"
+    
+    # Custom Trained Model Paths
+    TROCR_CUSTOM_MODEL_PATH: Optional[str] = Field(
+        default=None,
+        description="Path to custom fine-tuned TrOCR model"
+    )
+    CRAFT_MODEL_PATH: Optional[str] = Field(
+        default=None,
+        description="Path to custom CRAFT model (optional)"
+    )
     
     # Batch Processing
     BATCH_MAX_CONCURRENT: int = 5

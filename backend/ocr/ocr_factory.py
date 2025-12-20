@@ -74,6 +74,27 @@ def _get_tesseract_google_combined_provider():
     except ImportError:
         return None
 
+def _get_craft_trocr_provider():
+    try:
+        from backend.ocr.craft_trocr_provider import CraftTrocrProvider
+        return CraftTrocrProvider
+    except ImportError:
+        return None
+
+def _get_craft_provider():
+    try:
+        from backend.ocr.craft_provider import CraftProvider
+        return CraftProvider
+    except ImportError:
+        return None
+
+def _get_trocr_provider():
+    try:
+        from backend.ocr.trocr_provider import TrocrProvider
+        return TrocrProvider
+    except ImportError:
+        return None
+
 class OCRFactory:
     """Factory class for creating OCR provider instances"""
     
@@ -142,6 +163,24 @@ class OCRFactory:
         ollama_provider = _get_ollama_provider()
         if ollama_provider:
             providers["ollama"] = ollama_provider
+        
+        # CRAFT + TrOCR (Best for handwritten forms)
+        if settings.OCR_ENABLE_CRAFT_TROCR:
+            craft_trocr_provider = _get_craft_trocr_provider()
+            if craft_trocr_provider:
+                providers["craft-trocr"] = craft_trocr_provider
+        
+        # CRAFT only (Text detection)
+        if settings.OCR_ENABLE_CRAFT:
+            craft_provider = _get_craft_provider()
+            if craft_provider:
+                providers["craft"] = craft_provider
+        
+        # TrOCR only (Text recognition)
+        if settings.OCR_ENABLE_TROCR:
+            trocr_provider = _get_trocr_provider()
+            if trocr_provider:
+                providers["trocr"] = trocr_provider
         
         return providers
     

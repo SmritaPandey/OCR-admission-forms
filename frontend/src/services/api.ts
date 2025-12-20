@@ -516,6 +516,57 @@ export const apiService = {
     });
     return response.data;
   },
+
+  // Training operations
+  getTrainingStats: async (): Promise<any> => {
+    const response = await api.get('/api/training/stats');
+    return response.data;
+  },
+
+  prepareTrainingData: async (format: 'trocr' | 'donut' | 'both' = 'both', split: boolean = true): Promise<any> => {
+    const response = await api.post('/api/training/prepare-data', null, {
+      params: { format, split },
+    });
+    return response.data;
+  },
+
+  startTraining: async (config: {
+    model_type?: string;
+    base_model?: string;
+    epochs?: number;
+    batch_size?: number;
+    learning_rate?: number;
+  }): Promise<any> => {
+    const response = await api.post('/api/training/start', config);
+    return response.data;
+  },
+
+  getTrainingJobStatus: async (jobId: string): Promise<any> => {
+    const response = await api.get(`/api/training/job/${jobId}`);
+    return response.data;
+  },
+
+  getUnannotatedForms: async (limit: number = 50, offset: number = 0): Promise<any> => {
+    const response = await api.get('/api/training/forms/unannotated', {
+      params: { limit, offset },
+    });
+    return response.data;
+  },
+
+  getImprovementStats: async (): Promise<any> => {
+    const response = await api.get('/api/training/improvement-stats');
+    return response.data;
+  },
+
+  triggerRetraining: async (config: {
+    epochs?: number;
+    batch_size?: number;
+    learning_rate?: number;
+    base_model?: string;
+  }): Promise<any> => {
+    const response = await api.post('/api/training/trigger-retraining', config);
+    return response.data;
+  },
 };
 
 export default api;

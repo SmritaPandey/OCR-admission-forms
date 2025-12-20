@@ -352,6 +352,45 @@ async def get_unannotated_forms(
     }
 
 
+@router.get("/training/improvement-stats")
+async def get_improvement_stats():
+    """Get continuous improvement statistics"""
+    from backend.utils.continuous_improvement import ContinuousImprovementManager
+    
+    manager = ContinuousImprovementManager()
+    stats = manager.get_improvement_stats()
+    
+    return stats
+
+
+@router.post("/training/trigger-retraining")
+async def trigger_retraining(
+    epochs: int = Body(5, ge=1, le=20),
+    batch_size: int = Body(8, ge=1, le=32),
+    learning_rate: float = Body(3e-5, ge=1e-6, le=1e-2),
+    base_model: Optional[str] = Body(None),
+    db: Session = Depends(get_db)
+):
+    """
+    Trigger model retraining with accumulated corrections
+    
+    This will retrain the model using corrections made since last training.
+    """
+    from backend.utils.continuous_improvement import ContinuousImprovementManager
+    
+    manager = ContinuousImprovementManager()
+    
+    result = manager.trigger_retraining(
+        db=db,
+        base_model=base_model,
+        epochs=epochs,
+        batch_size=batch_size,
+        learning_rate=learning_rate
+    )
+    
+    return result
+
+
 @router.post("/training/bulk-annotate")
 async def bulk_annotate_forms(
     form_ids: List[int] = Body(..., embed=True),
