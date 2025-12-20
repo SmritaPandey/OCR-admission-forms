@@ -6,10 +6,10 @@ import {
   Upload,
   Search,
   BookOpen,
-    FileText,
-    Brain,
-    FileUp,
-  } from "lucide-react";
+  FileText,
+  BrainCircuit,
+  FileUp,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -53,10 +53,10 @@ const items = [
     icon: BookOpen,
   },
   {
-      title: "OCR Training",
-      url: "/training",
-      icon: Brain,
-    },
+    title: "OCR Training",
+    url: "/training",
+    icon: BrainCircuit,
+  },
 ];
 
 export function AppSidebar() {

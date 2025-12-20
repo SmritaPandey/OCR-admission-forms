@@ -13,7 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsTrigger, TabsList } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TableList, TabsTrigger, TabsList } from "@/components/ui/tabs";
 import { 
   CheckCircle2, 
   RefreshCw, 

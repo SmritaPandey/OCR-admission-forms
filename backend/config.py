@@ -117,9 +117,6 @@ class Settings(BaseSettings):
     MAX_FILE_SIZE: int = 10 * 1024 * 1024  # 10MB
     ALLOWED_EXTENSIONS: List[str] = ["jpg", "jpeg", "png", "pdf", "tiff", "bmp"]
     
-    # Environment
-    ENVIRONMENT: str = "development"
-    
     # CORS
     CORS_ORIGINS: str | List[str] = Field(
         default="http://localhost:3000,http://localhost:5173",
@@ -145,7 +142,6 @@ class Settings(BaseSettings):
     
     class Config:
         env_file = ".env"
-        extra = "allow" # Allow extra fields like ENVIRONMENT if they exist in .env
         case_sensitive = True
 
     @model_validator(mode="after")
@@ -204,3 +200,4 @@ class Settings(BaseSettings):
         return values
 
 settings = Settings()
+
