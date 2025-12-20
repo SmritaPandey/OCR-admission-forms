@@ -2,6 +2,8 @@
 
 This guide covers deploying the Student Records Management System to production.
 
+> **🚀 Quick Start**: For the fastest deployment, see [DEPLOYMENT_COMPLETE.md](DEPLOYMENT_COMPLETE.md) which includes Docker Compose setup and automated scripts.
+
 ## Table of Contents
 1. [Production Checklist](#production-checklist)
 2. [Backend Deployment](#backend-deployment)

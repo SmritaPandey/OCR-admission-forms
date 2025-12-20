@@ -24,12 +24,15 @@ app = FastAPI(
 
 # CORS middleware for frontend
 # Configure based on environment
-if settings.ENVIRONMENT == "production":
+if hasattr(settings, 'ENVIRONMENT') and settings.ENVIRONMENT == "production":
     # Production: Use configured CORS origins
-    origins = settings.CORS_ORIGINS if isinstance(settings.CORS_ORIGINS, list) else settings.CORS_ORIGINS.split(",")
+    if isinstance(settings.CORS_ORIGINS, list):
+        origins = settings.CORS_ORIGINS
+    else:
+        origins = [origin.strip() for origin in settings.CORS_ORIGINS.split(",")]
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[origin.strip() for origin in origins],
+        allow_origins=origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

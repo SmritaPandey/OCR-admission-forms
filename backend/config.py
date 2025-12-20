@@ -121,7 +121,19 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
     
     # CORS
-    CORS_ORIGINS: List[str] = [
+    CORS_ORIGINS: str | List[str] = Field(
+        default="http://localhost:3000,http://localhost:5173",
+        description="Allowed CORS origins (comma-separated string or list)."
+    )
+    
+    # Environment
+    ENVIRONMENT: str = Field(
+        default="development",
+        description="Environment: development, staging, or production"
+    )
+    
+    # Legacy CORS (for backward compatibility)
+    _CORS_ORIGINS_LEGACY: List[str] = [
         "http://localhost:3000", 
         "http://localhost:5173",
         "http://localhost:5174",
