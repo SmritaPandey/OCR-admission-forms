@@ -420,8 +420,30 @@ export const apiService = {
     return response.data;
   },
 
-  exportTrainingData: async (format: 'json' | 'coco' | 'yolo' = 'json'): Promise<any> => {
-    const response = await api.get('/api/export/training-data', { params: { format } });
+  getTrainingStats: async (): Promise<any> => {
+    const response = await api.get('/api/training/stats');
+    return response.data;
+  },
+
+  prepareTrainingData: async (params?: any): Promise<any> => {
+    const response = await api.post('/api/training/prepare-data', null, { params });
+    return response.data;
+  },
+
+  startTraining: async (config: any): Promise<any> => {
+    const response = await api.post('/api/training/start', config);
+    return response.data;
+  },
+
+  getTrainingJobStatus: async (jobId: string): Promise<any> => {
+    const response = await api.get(`/api/training/job/${jobId}`);
+    return response.data;
+  },
+
+  exportTrainingData: async (format: 'json' | 'coco' | 'yolo' | 'trocr' | 'donut' = 'json', includeImages: boolean = false): Promise<any> => {
+    const response = await api.post('/api/training/export-annotations', null, { 
+      params: { format, include_images: includeImages } 
+    });
     return response.data;
   },
 };
