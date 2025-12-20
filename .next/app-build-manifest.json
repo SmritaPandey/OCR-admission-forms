@@ -1,3 +1,24 @@
 {
-  "pages": {}
+  "pages": {
+    "/page": [
+      "static/chunks/1cfed_next_dist_b7870d52._.js",
+      "static/chunks/Projects_OCR-admission-forms_src_app_favicon_ico_mjs_c6b695f7._.js",
+      "static/chunks/[root-of-the-server]__e5522bfd._.css",
+      "static/chunks/Projects_OCR-admission-forms_src_e4039af7._.js",
+      "static/chunks/1cfed_ff336011._.js",
+      "static/chunks/Projects_OCR-admission-forms_src_app_layout_tsx_ec1c9583._.js",
+      "static/chunks/Projects_OCR-admission-forms_src_d9b798a5._.js",
+      "static/chunks/Projects_OCR-admission-forms_src_app_global-error_tsx_2311e209._.js",
+      "static/chunks/Projects_OCR-admission-forms_src_80e437a8._.js",
+      "static/chunks/1cfed_15720652._.js",
+      "static/chunks/Projects_OCR-admission-forms_src_app_page_tsx_2311e209._.js",
+      "static/chunks/[turbopack]_browser_dev_hmr-client_hmr-client_ts_199366e1._.js",
+      "static/chunks/1cfed_next_dist_compiled_1ee3f34a._.js",
+      "static/chunks/1cfed_next_dist_client_d7d36a91._.js",
+      "static/chunks/1cfed_next_dist_2481b098._.js",
+      "static/chunks/1cfed_@swc_helpers_cjs_b27e056c._.js",
+      "static/chunks/Projects_OCR-admission-forms_e69f0d32._.js",
+      "static/chunks/Projects_OCR-admission-forms_40b1bc3b._.js"
+    ]
+  }
 }
