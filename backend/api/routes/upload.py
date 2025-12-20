@@ -55,16 +55,25 @@ async def upload_form(
             if is_pdf:
                 # Load all pages from PDF
                 from backend.utils.file_handler import load_all_pdf_pages
-                pages = load_all_pdf_pages(file_path)
+                import fitz  # PyMuPDF
+                from pathlib import Path
                 
-                # Process each page with OCR and combine results
+                all_pages = load_all_pdf_pages(file_path)
+                total_pages = len(all_pages)
+                
+                # Split: first 4 pages = form, rest = documents
+                FORM_PAGES = 4
+                form_pages = all_pages[:FORM_PAGES] if total_pages > FORM_PAGES else all_pages
+                document_pages = all_pages[FORM_PAGES:] if total_pages > FORM_PAGES else []
+                
+                # Process form pages (first 4) with OCR
                 all_raw_text = []
                 all_confidences = []
                 page_results = []
                 
                 provider = get_ocr_provider(provider_name) if provider_name != "best" else None
                 
-                for page_num, page_image in enumerate(pages):
+                for page_num, page_image in enumerate(form_pages):
                     try:
                         # Handle multi-provider "best" mode
                         if provider_name == "best":
@@ -106,9 +115,55 @@ async def upload_form(
                     "confidence": round(avg_confidence, 2),
                     "structured_data": None,
                     "provider": form.ocr_provider,
-                    "pages_processed": len(pages),
+                    "pages_processed": len(form_pages),
+                    "total_pages": total_pages,
+                    "document_pages_count": len(document_pages),
                     "page_results": page_results
                 }
+                
+                # Save remaining pages as attached documents
+                if document_pages:
+                    try:
+                        from backend.database import StudentDocument, DocumentCategory
+                        from backend.utils.file_handler import save_document_file
+                        from datetime import datetime
+                        
+                        # Open original PDF to extract pages
+                        pdf_document = fitz.open(file_path)
+                        
+                        # Create a new PDF with remaining pages
+                        doc_pdf = fitz.open()
+                        for page_idx in range(FORM_PAGES, len(pdf_document)):
+                            doc_pdf.insert_pdf(pdf_document, from_page=page_idx, to_page=page_idx)
+                        
+                        # Save the document PDF
+                        upload_dir = Path(settings.UPLOAD_DIR)
+                        doc_filename = f"{Path(file_path).stem}_pages_{FORM_PAGES + 1}-{total_pages}.pdf"
+                        doc_path = upload_dir / "documents" / doc_filename
+                        doc_path.parent.mkdir(parents=True, exist_ok=True)
+                        doc_pdf.save(str(doc_path))
+                        doc_pdf.close()
+                        pdf_document.close()
+                        
+                        # Calculate file size
+                        doc_file_size = doc_path.stat().st_size
+                        doc_relative_path = os.path.relpath(doc_path, upload_dir)
+                        
+                        # Create document record
+                        document = StudentDocument(
+                            filename=doc_filename,
+                            file_path=doc_relative_path,
+                            document_category=DocumentCategory.OTHER,
+                            description=f"Pages {FORM_PAGES + 1}-{total_pages} from uploaded form",
+                            file_size=doc_file_size,
+                            form_id=form.id
+                        )
+                        db.add(document)
+                        db.commit()
+                        
+                    except Exception as doc_error:
+                        # Log error but don't fail the form upload
+                        print(f"Warning: Failed to save document pages: {str(doc_error)}")
             else:
                 # Single image file - process normally
                 image = load_image(file_path)

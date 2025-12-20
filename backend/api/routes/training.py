@@ -92,16 +92,41 @@ async def prepare_training_data(
     format: str = Query("both", pattern="^(trocr|donut|both)$"),
     split: bool = Query(True),
     output_dir: Optional[str] = Query(None),
+    use_images: bool = Query(True),  # Use converted images if available
     db: Session = Depends(get_db)
 ):
-    """Prepare training data from annotated forms"""
-    # Get all annotated forms
+    """Prepare training data from annotated forms or converted images"""
+    project_root = Path(__file__).parent.parent.parent.parent
+    images_training_data = project_root / "training_data" / "student_forms.json"
+    
+    # Check if we have training data from images
+    if use_images and images_training_data.exists():
+        import json
+        with open(images_training_data, 'r') as f:
+            data = json.load(f)
+        if data:
+            return {
+                "samples_extracted": len(data),
+                "output_dir": str(images_training_data.parent),
+                "datasets": {
+                    "trocr": {
+                        "path": str(images_training_data),
+                        "samples": len(data)
+                    }
+                },
+                "source": "converted_images"
+            }
+    
+    # Fallback to annotated forms
     forms = db.query(AdmissionForm).filter(
         AdmissionForm.additional_info.isnot(None)
     ).all()
     
     if not forms:
-        raise HTTPException(status_code=400, detail="No annotated forms found. Please annotate forms first.")
+        raise HTTPException(
+            status_code=400, 
+            detail="No annotated forms found. Using converted images instead. Run image conversion first."
+        )
     
     annotated_forms = []
     for form in forms:
@@ -262,22 +287,32 @@ async def start_training(
     training_dir = preparator.training_dir
     
     # Determine dataset path based on model type
+    # Check for training data in multiple locations
+    project_root = Path(__file__).parent.parent.parent.parent
+    possible_paths = [
+        training_dir / "train.json",
+        project_root / "training_data" / "student_forms.json",
+        project_root / "training_data" / "images_training_data.json"
+    ]
+    
+    train_data_path = None
+    for path in possible_paths:
+        if path.exists():
+            train_data_path = path
+            break
+    
+    if not train_data_path:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Training data not found. Checked: {[str(p) for p in possible_paths]}. Run /training/prepare-data first or ensure training_data/student_forms.json exists."
+        )
+    
     if config.model_type == "trocr":
-        train_data_path = training_dir / "train.json"
-        val_data_path = training_dir / "val.json"
         base_model = config.base_model or "microsoft/trocr-base-handwritten"
     elif config.model_type == "donut":
-        train_data_path = training_dir / "train.json"
-        val_data_path = training_dir / "val.json"
         base_model = config.base_model or "naver-clova-ix/donut-base"
     else:
         raise HTTPException(status_code=400, detail=f"Unknown model type: {config.model_type}")
-    
-    if not train_data_path.exists():
-        raise HTTPException(
-            status_code=400,
-            detail=f"Training data not found at {train_data_path}. Run /training/prepare-data first."
-        )
     
     # Create output directory
     if config.output_model_dir is None:
@@ -301,16 +336,42 @@ async def start_training(
         "output_dir": str(output_dir)
     }
     
-    # For now, return job info (in production, run training in background)
-    # TODO: Implement proper job queue (Redis, Celery, etc.)
+    # Run training in background
+    if background_tasks:
+        async def run_training():
+            try:
+                from backend.training.train_craft_trocr import train_craft_trocr
+                # Update job status to running
+                job_info["status"] = "running"
+                
+                # Run training
+                if config.model_type == "trocr":
+                    from backend.training.train_craft_trocr import train_craft_trocr
+                    train_craft_trocr(
+                        training_data_path=str(train_data_path),
+                        output_model_path=str(output_dir),
+                        epochs=config.epochs,
+                        batch_size=config.batch_size,
+                        learning_rate=config.learning_rate,
+                        base_model=base_model,
+                        image_dir=str(project_root)
+                    )
+                    job_info["status"] = "completed"
+                else:
+                    job_info["status"] = "error"
+                    job_info["error"] = f"Model type {config.model_type} training not yet implemented"
+            except Exception as e:
+                job_info["status"] = "error"
+                job_info["error"] = str(e)
+        
+        background_tasks.add_task(run_training)
     
     return {
         "job_id": job_id,
         "status": "queued",
-        "message": "Training job created. Use /training/job/{job_id} to check status.",
+        "message": "Training job started. Training runs in background.",
         "config": config.dict(),
-        "output_dir": str(output_dir),
-        "note": "Background training not yet implemented. Run training script manually."
+        "output_dir": str(output_dir)
     }
 
 

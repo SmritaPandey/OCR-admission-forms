@@ -16,6 +16,7 @@ const PROVIDER_LABELS: Record<string, string> = {
   'azure-form-recognizer': 'Azure Form Recognizer',
   'aws-textract': 'AWS Textract',
   abbyy: 'ABBYY FineReader',
+  'craft-trocr': 'CRAFT + TR-OCR (Handwritten)',
   multi: 'Automatic (Best)',
   best: 'Automatic (Best)',
 };
@@ -525,24 +526,36 @@ function VerificationView() {
                   </button>
                 </div>
                 <img
-                  src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/api/preview/${form.id}?page=${currentPage}`}
-                  alt={`Scanned form - Page ${currentPage}`}
+                  key={`page-${currentPage}`}
+                  src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/api/preview/${form.id}?page=${currentPage}&t=${Date.now()}`}
+                  alt={`Scanned form - Page ${currentPage} of ${totalPages}`}
+                  style={{ maxWidth: '100%', height: 'auto', border: '1px solid var(--border-color)', borderRadius: '4px' }}
                   onError={(e) => {
+                    console.error(`Failed to load page ${currentPage}`);
                     const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
                     const img = e.target as HTMLImageElement;
                     img.src = `${apiUrl}/uploads/${form.file_path}`;
+                  }}
+                  onLoad={() => {
+                    console.log(`Page ${currentPage} loaded successfully`);
                   }}
                 />
               </div>
             ) : form.filename?.toLowerCase().endsWith('.pdf') ? (
               // For single-page PDFs or first load
               <img
-                src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/api/preview/${form.id}?page=${currentPage}`}
-                alt="Scanned form"
+                key={`page-${currentPage}`}
+                src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/api/preview/${form.id}?page=${currentPage}&t=${Date.now()}`}
+                alt={`Scanned form - Page ${currentPage} of ${totalPages}`}
+                style={{ maxWidth: '100%', height: 'auto', border: '1px solid var(--border-color)', borderRadius: '4px' }}
                 onError={(e) => {
+                  console.error(`Failed to load page ${currentPage}`);
                   const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
                   const img = e.target as HTMLImageElement;
                   img.src = `${apiUrl}/uploads/${form.file_path}`;
+                }}
+                onLoad={() => {
+                  console.log(`Page ${currentPage} loaded successfully`);
                 }}
               />
             ) : (

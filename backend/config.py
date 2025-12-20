@@ -7,8 +7,8 @@ class Settings(BaseSettings):
     # Default to SQLite for easy setup, can be overridden with PostgreSQL
     DATABASE_URL: str = "sqlite:///./admission_forms.db"
     
-    # OCR Provider (tesseract, google, azure, abbyy, tesseract-google-combined, combined)
-    OCR_PROVIDER: str = "tesseract-google-combined"
+    # OCR Provider (tesseract, google, azure, abbyy, tesseract-google-combined, combined, craft-trocr)
+    OCR_PROVIDER: str = "craft-trocr"  # Default to CRAFT+TR-OCR for handwritten forms
     OCR_ENABLE_TESSERACT: bool = Field(True, description="Enable local Tesseract OCR provider.")
     OCR_ENABLE_GOOGLE_VISION: bool = Field(True, description="Enable Google Cloud Vision OCR provider.")
     OCR_ENABLE_GOOGLE_DOCUMENT_AI: bool = Field(False, description="Enable Google Document AI OCR provider.")
@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     OCR_ENABLE_AZURE_FORM_RECOGNIZER: bool = Field(False, description="Enable Azure Form Recognizer provider.")
     OCR_ENABLE_AWS_TEXTRACT: bool = Field(False, description="Enable AWS Textract OCR provider.")
     OCR_ENABLE_ABBYY: bool = Field(False, description="Enable ABBYY FineReader OCR provider.")
+    OCR_ENABLE_CRAFT_TROCR: bool = Field(True, description="Enable CRAFT+TR-OCR provider for handwritten text recognition.")
+    OCR_ENABLE_CRAFT: bool = Field(True, description="Enable CRAFT-only provider for text detection.")
+    OCR_ENABLE_TROCR: bool = Field(True, description="Enable TR-OCR-only provider for text recognition.")
     OCR_BENCHMARK_PROVIDERS: List[str] = Field(
         default_factory=list,
         description="Optional list of providers to benchmark; defaults to enabled providers."
@@ -115,7 +118,15 @@ class Settings(BaseSettings):
     ALLOWED_EXTENSIONS: List[str] = ["jpg", "jpeg", "png", "pdf", "tiff", "bmp"]
     
     # CORS
-    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:5173"]
+    CORS_ORIGINS: List[str] = [
+        "http://localhost:3000", 
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://localhost:5175",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:5174",
+        "http://127.0.0.1:5175"
+    ]
     
     class Config:
         env_file = ".env"
@@ -141,6 +152,12 @@ class Settings(BaseSettings):
             enabled_map.add("aws-textract")
         if values.OCR_ENABLE_ABBYY:
             enabled_map.add("abbyy")
+        if values.OCR_ENABLE_CRAFT_TROCR:
+            enabled_map.add("craft-trocr")
+        if values.OCR_ENABLE_CRAFT:
+            enabled_map.add("craft")
+        if values.OCR_ENABLE_TROCR:
+            enabled_map.add("trocr")
 
         if len(enabled_map) >= 2:
             enabled_map.update({"multi", "best"})

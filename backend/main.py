@@ -23,9 +23,11 @@ app = FastAPI(
 )
 
 # CORS middleware for frontend
+# For development, allow all localhost origins using regex pattern
+# This allows any port on localhost (5173, 5174, 5175, etc.)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
+    allow_origin_regex=r"http://(localhost|127\.0\.0\.1):\d+",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

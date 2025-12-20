@@ -19,12 +19,20 @@ function UploadForm() {
   const loadProviders = async () => {
     try {
       const providers = await apiService.getProviders();
-      setAvailableProviders(providers.providers);
-      if (providers.providers.length > 0) {
+      if (providers && providers.providers && providers.providers.length > 0) {
+        setAvailableProviders(providers.providers);
         setOcrProvider(providers.default || providers.providers[0]);
+      } else {
+        // Fallback to default providers if API fails
+        console.warn('No providers returned from API, using defaults');
+        setAvailableProviders(['tesseract']);
+        setOcrProvider('tesseract');
       }
     } catch (error) {
       console.error('Failed to load providers:', error);
+      // Fallback to default providers on error
+      setAvailableProviders(['tesseract']);
+      setOcrProvider('tesseract');
     }
   };
 
@@ -106,7 +114,11 @@ function UploadForm() {
         navigate(`/forms/${results[results.length - 1].id}`);
       }
     } catch (error: any) {
-      alert(`Upload failed: ${error.response?.data?.detail || error.message}`);
+      const errorMessage = error.response?.data?.detail || 
+                          error.message || 
+                          'Network error. Please check your connection and try again.';
+      console.error('Upload error:', error);
+      alert(`Upload failed: ${errorMessage}`);
     } finally {
       setUploading(false);
     }
@@ -211,18 +223,46 @@ function UploadForm() {
 
         <div className="form-group">
           <label htmlFor="ocr-provider">OCR Provider</label>
-          <select
-            id="ocr-provider"
-            value={ocrProvider}
-            onChange={(e) => setOcrProvider(e.target.value)}
-            className="form-select"
-          >
-            {availableProviders.map((provider) => (
-              <option key={provider} value={provider}>
-                {provider.charAt(0).toUpperCase() + provider.slice(1)}
-              </option>
-            ))}
-          </select>
+          {availableProviders.length > 0 ? (
+            <select
+              id="ocr-provider"
+              value={ocrProvider}
+              onChange={(e) => setOcrProvider(e.target.value)}
+              className="form-select"
+            >
+              {availableProviders.map((provider) => {
+                // Format provider names for display
+                const providerLabels: Record<string, string> = {
+                  'tesseract': 'Tesseract (Local)',
+                  'google-vision': 'Google Vision',
+                  'google': 'Google Vision',
+                  'google-documentai': 'Google Document AI',
+                  'azure-vision': 'Azure Vision',
+                  'azure': 'Azure Vision',
+                  'azure-form-recognizer': 'Azure Form Recognizer',
+                  'aws-textract': 'AWS Textract',
+                  'craft-trocr': 'CRAFT + TR-OCR (Handwritten) ⭐',
+                  'craft': 'CRAFT (Text Detection Only)',
+                  'trocr': 'TR-OCR (Text Recognition Only)',
+                  'best': 'Automatic (Best)',
+                  'multi': 'Automatic (Best)'
+                };
+                
+                const label = providerLabels[provider.toLowerCase()] || 
+                             provider.charAt(0).toUpperCase() + provider.slice(1).replace(/-/g, ' ');
+                
+                return (
+                  <option key={provider} value={provider}>
+                    {label}
+                  </option>
+                );
+              })}
+            </select>
+          ) : (
+            <div className="form-select" style={{ padding: '0.9rem 1rem', background: '#f5f5f5', color: '#666' }}>
+              Loading providers...
+            </div>
+          )}
           <small className="form-hint">
             Select the OCR provider to use for text extraction.
           </small>

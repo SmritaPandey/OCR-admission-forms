@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { apiService, FormDetail, Document, DocumentCategory, FormSearchQuery } from '../services/api';
+import StudentSearch from './StudentSearch';
 import './SearchInterface.css';
 
 const FILTER_LABELS: Record<string, string> = {
@@ -21,7 +22,7 @@ const STATUS_LABELS: Record<string, string> = {
   verified: 'Verified',
 };
 function SearchInterface() {
-  const [activeTab, setActiveTab] = useState<'forms' | 'documents'>('forms');
+  const [activeTab, setActiveTab] = useState<'students' | 'forms' | 'documents'>('students');
   const INITIAL_FORM_PARAMS: FormSearchQuery = {
     student_name: '',
     phone_number: '',
@@ -202,17 +203,18 @@ function SearchInterface() {
 
   return (
     <div className="search-interface">
-      <section className="search-hero">
-        <div className="hero-body">
-          <span className="page-eyebrow">Admissions Intelligence</span>
-          <h2>Search Applications &amp; Documents</h2>
-          <p>
-            Run precise queries across verified applicants, pending forms, and supporting documentation.
-            Filter by contact details, enrollment information, or course preferences to quickly locate
-            the records you need.
-          </p>
-          <div className="hero-actions">
+      {activeTab === 'students' ? (
+        <>
+          <div className="tab-navigation">
             <div className="tab-group" role="tablist" aria-label="Search filters">
+              <button
+                role="tab"
+                aria-selected={activeTab === 'students'}
+                className={`tab ${activeTab === 'students' ? 'active' : ''}`}
+                onClick={() => setActiveTab('students')}
+              >
+                Students
+              </button>
               <button
                 role="tab"
                 aria-selected={activeTab === 'forms'}
@@ -230,51 +232,91 @@ function SearchInterface() {
                 Supporting Documents
               </button>
             </div>
-            <div className="export-buttons">
-              <button
-                onClick={() => handleExport('csv')}
-                className="btn btn-secondary"
-                disabled={exporting || loading}
-              >
-                {exporting ? 'Exporting…' : 'Export CSV'}
-              </button>
-              <button
-                onClick={() => handleExport('json')}
-                className="btn btn-secondary"
-                disabled={exporting || loading}
-              >
-                {exporting ? 'Exporting…' : 'Export JSON'}
-              </button>
+          </div>
+          <StudentSearch />
+        </>
+      ) : (
+        <>
+          <section className="search-hero">
+            <div className="hero-body">
+              <span className="page-eyebrow">Admissions Intelligence</span>
+              <h2>Search Applications &amp; Documents</h2>
+              <p>
+                Run precise queries across verified applicants, pending forms, and supporting documentation.
+                Filter by contact details, enrollment information, or course preferences to quickly locate
+                the records you need.
+              </p>
+              <div className="hero-actions">
+                <div className="tab-group" role="tablist" aria-label="Search filters">
+                  <button
+                    role="tab"
+                    aria-selected={activeTab === 'students'}
+                    className={`tab ${activeTab === 'students' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('students')}
+                  >
+                    Students
+                  </button>
+                  <button
+                    role="tab"
+                    aria-selected={activeTab === 'forms'}
+                    className={`tab ${activeTab === 'forms' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('forms')}
+                  >
+                    Admission Forms
+                  </button>
+                  <button
+                    role="tab"
+                    aria-selected={activeTab === 'documents'}
+                    className={`tab ${activeTab === 'documents' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('documents')}
+                  >
+                    Supporting Documents
+                  </button>
+                </div>
+                <div className="export-buttons">
+                  <button
+                    onClick={() => handleExport('csv')}
+                    className="btn btn-secondary"
+                    disabled={exporting || loading}
+                  >
+                    {exporting ? 'Exporting…' : 'Export CSV'}
+                  </button>
+                  <button
+                    onClick={() => handleExport('json')}
+                    className="btn btn-secondary"
+                    disabled={exporting || loading}
+                  >
+                    {exporting ? 'Exporting…' : 'Export JSON'}
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-        <div className="search-glance">
-          <div className="glance-card">
-            <span className="glance-label">Form Matches</span>
-            <span className="glance-value">{searched ? formResultCount : '—'}</span>
-            <span className="glance-description">Results from the last query</span>
-          </div>
-          <div className="glance-card">
-            <span className="glance-label">Document Matches</span>
-            <span className="glance-value">{searched ? documentResultCount : '—'}</span>
-            <span className="glance-description">Filtered by category &amp; student</span>
-          </div>
-        </div>
-      </section>
+            <div className="search-glance">
+              <div className="glance-card">
+                <span className="glance-label">Form Matches</span>
+                <span className="glance-value">{searched ? formResultCount : '—'}</span>
+                <span className="glance-description">Results from the last query</span>
+              </div>
+              <div className="glance-card">
+                <span className="glance-label">Document Matches</span>
+                <span className="glance-value">{searched ? documentResultCount : '—'}</span>
+                <span className="glance-description">Filtered by category &amp; student</span>
+              </div>
+            </div>
+          </section>
+        <section className="search-card">
+          <header className="search-card-header">
+            <div>
+              <h3>{activeTab === 'forms' ? 'Filter Admission Forms' : 'Filter Supporting Documents'}</h3>
+              <p>
+                {activeTab === 'forms'
+                  ? 'Combine student details, enrollment IDs, or application numbers to narrow down submissions.'
+                  : 'Locate documentation tied to specific students or categories for rapid follow-up.'}
+              </p>
+            </div>
+          </header>
 
-      <section className="search-card">
-        <header className="search-card-header">
-          <div>
-            <h3>{activeTab === 'forms' ? 'Filter Admission Forms' : 'Filter Supporting Documents'}</h3>
-            <p>
-              {activeTab === 'forms'
-                ? 'Combine student details, enrollment IDs, or application numbers to narrow down submissions.'
-                : 'Locate documentation tied to specific students or categories for rapid follow-up.'}
-            </p>
-          </div>
-        </header>
-
-        {activeTab === 'forms' ? (
+          {activeTab === 'forms' ? (
           <form onSubmit={handleSearch} className="search-form">
             <div className="search-grid">
               <div className="form-group">
@@ -423,7 +465,9 @@ function SearchInterface() {
             </div>
           </form>
         )}
-      </section>
+        </section>
+        </>
+      )}
 
       {searched && (
         <section className="search-results">

@@ -7,7 +7,43 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 120000, // 120 second timeout for OCR processing
 });
+
+// Add request interceptor for debugging
+api.interceptors.request.use(
+  (config) => {
+    console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`);
+    return config;
+  },
+  (error) => {
+    console.error('API Request Error:', error);
+    return Promise.reject(error);
+  }
+);
+
+// Add response interceptor for error handling
+api.interceptors.response.use(
+  (response) => {
+    return response;
+  },
+  (error) => {
+    if (error.code === 'ECONNABORTED') {
+      console.error('API Request timeout');
+      error.message = 'Request timeout. Please try again.';
+    } else if (error.response) {
+      // Server responded with error status
+      console.error('API Error Response:', error.response.status, error.response.data);
+    } else if (error.request) {
+      // Request made but no response received
+      console.error('API Network Error:', error.request);
+      error.message = 'Network error. Please check if the backend server is running.';
+    } else {
+      console.error('API Error:', error.message);
+    }
+    return Promise.reject(error);
+  }
+);
 
 export interface OCRProvider {
   providers: string[];
@@ -71,6 +107,7 @@ export interface StudentProfile {
   id: number;
   student_name: string;
   aadhar_number?: string;
+  roll_number?: string;
   created_date: string;
   updated_date: string;
   forms_count: number;
@@ -227,8 +264,17 @@ export const apiService = {
 
   // Get available OCR providers
   getProviders: async (): Promise<OCRProvider> => {
-    const response = await api.get<OCRProvider>('/api/providers');
-    return response.data;
+    try {
+      const response = await api.get<OCRProvider>('/api/providers');
+      return response.data;
+    } catch (error: any) {
+      console.error('Failed to fetch OCR providers:', error);
+      // Return default provider if API fails
+      return {
+        providers: ['tesseract'],
+        default: 'tesseract'
+      };
+    }
   },
 
   // List forms
@@ -378,13 +424,38 @@ export const apiService = {
   // Student profile operations
   listStudentProfiles: async (
     skip: number = 0,
-    limit: number = 20,
+    limit: number = 100,
     studentName?: string,
-    aadharNumber?: string
+    rollNumber?: string,
+    aadharNumber?: string,
+    filters?: {
+      phone_number?: string;
+      email?: string;
+      enrollment_number?: string;
+      application_number?: string;
+      course_applied?: string;
+      gender?: string;
+      category?: string;
+      father_name?: string;
+      mother_name?: string;
+      city?: string;
+      state?: string;
+      pincode?: string;
+    }
   ): Promise<StudentProfile[]> => {
-    const response = await api.get<StudentProfile[]>('/api/students/', {
-      params: { skip, limit, student_name: studentName, aadhar_number: aadharNumber },
-    });
+    const params: any = { 
+      skip, 
+      limit, 
+      student_name: studentName, 
+      roll_number: rollNumber,
+      aadhar_number: aadharNumber 
+    };
+    
+    if (filters) {
+      Object.assign(params, filters);
+    }
+    
+    const response = await api.get<StudentProfile[]>('/api/students/', { params });
     return response.data;
   },
 
@@ -410,7 +481,20 @@ export const apiService = {
 
   searchStudentProfiles: async (params: {
     student_name?: string;
+    roll_number?: string;
     aadhar_number?: string;
+    phone_number?: string;
+    email?: string;
+    enrollment_number?: string;
+    application_number?: string;
+    course_applied?: string;
+    gender?: string;
+    category?: string;
+    father_name?: string;
+    mother_name?: string;
+    city?: string;
+    state?: string;
+    pincode?: string;
     page?: number;
     limit?: number;
   }): Promise<StudentProfile[]> => {

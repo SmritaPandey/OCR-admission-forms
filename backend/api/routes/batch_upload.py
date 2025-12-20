@@ -41,11 +41,8 @@ async def batch_upload_forms(
                 detail=f"All files must be PDFs. Found: {file_ext}"
             )
     
-    # Determine OCR provider
-    provider_name = ocr_provider or "tesseract"
-    
-    # Initialize multi-page handler
-    multi_page_handler = MultiPageFormHandler(pages_per_form=pages_per_form)
+    # Determine OCR provider (default to craft-trocr for handwritten forms)
+    provider_name = ocr_provider or "craft-trocr"
     
     async def process_form(file_item: UploadFile) -> dict:
         """Process a single form file"""
@@ -59,23 +56,107 @@ async def batch_upload_forms(
             # Load all pages from PDF
             pages = load_all_pdf_pages(file_path)
             
-            # Validate page count
-            if len(pages) != pages_per_form:
+            # Validate minimum page count (at least 1 page for form)
+            if len(pages) < 1:
                 return {
                     "filename": file_item.filename,
                     "status": "error",
-                    "error": f"Expected {pages_per_form} pages, found {len(pages)}"
+                    "error": "PDF has no pages"
                 }
             
-            # Get OCR provider
-            provider = get_ocr_provider(provider_name)
+            # Note: We process first 4 pages as form, rest as documents
+            # So we don't strictly require exact page count
             
-            # Process multi-page form
-            ocr_result = await multi_page_handler.process_multi_page_form(
-                pages=pages,
-                ocr_provider=provider,
-                language=None
-            )
+            # Get OCR provider (support all providers including craft, trocr, craft-trocr)
+            if provider_name == "best":
+                from backend.ocr.multi_provider import MultiProviderOCR
+                multi_ocr = MultiProviderOCR()
+                # Process first 4 pages as form
+                FORM_PAGES = 4
+                form_pages = pages[:FORM_PAGES] if len(pages) > FORM_PAGES else pages
+                
+                # Process form pages with best provider
+                all_raw_text = []
+                all_confidences = []
+                page_results = []
+                
+                for page_num, page_image in enumerate(form_pages, 1):
+                    try:
+                        page_result = await multi_ocr.extract_with_best_provider(page_image)
+                        if page_result.get('raw_text'):
+                            all_raw_text.append(f"\n--- Page {page_num} ---\n{page_result['raw_text']}")
+                            if page_result.get('confidence'):
+                                all_confidences.append(page_result['confidence'])
+                        
+                        page_results.append({
+                            'page': page_num,
+                            'raw_text': page_result.get('raw_text', ''),
+                            'confidence': page_result.get('confidence', 0.0),
+                            'provider': page_result.get('provider_used', 'multi')
+                        })
+                    except Exception as e:
+                        print(f"Error processing page {page_num}: {e}")
+                        continue
+                
+                combined_text = "\n".join(all_raw_text)
+                avg_confidence = sum(all_confidences) / len(all_confidences) if all_confidences else 0.0
+                
+                ocr_result = {
+                    "raw_text": combined_text,
+                    "confidence": round(avg_confidence, 2),
+                    "provider": "multi",
+                    "pages_processed": len(form_pages),
+                    "total_pages": len(pages),
+                    "document_pages_count": max(0, len(pages) - FORM_PAGES),
+                    "page_results": page_results
+                }
+            else:
+                provider = get_ocr_provider(provider_name)
+                
+                # Process first 4 pages as form, rest as documents
+                FORM_PAGES = 4
+                form_pages = pages[:FORM_PAGES] if len(pages) > FORM_PAGES else pages
+                
+                # Process form pages with selected provider
+                all_raw_text = []
+                all_confidences = []
+                page_results = []
+                
+                for page_num, page_image in enumerate(form_pages, 1):
+                    try:
+                        # Use preprocessing for tesseract
+                        if provider_name == "tesseract":
+                            page_result = await provider.extract_text(page_image, preprocess=True)
+                        else:
+                            page_result = await provider.extract_text(page_image)
+                        
+                        if page_result.get('raw_text'):
+                            all_raw_text.append(f"\n--- Page {page_num} ---\n{page_result['raw_text']}")
+                            if page_result.get('confidence'):
+                                all_confidences.append(page_result['confidence'])
+                        
+                        page_results.append({
+                            'page': page_num,
+                            'raw_text': page_result.get('raw_text', ''),
+                            'confidence': page_result.get('confidence', 0.0),
+                            'provider': page_result.get('provider', provider_name)
+                        })
+                    except Exception as e:
+                        print(f"Error processing page {page_num}: {e}")
+                        continue
+                
+                combined_text = "\n".join(all_raw_text)
+                avg_confidence = sum(all_confidences) / len(all_confidences) if all_confidences else 0.0
+                
+                ocr_result = {
+                    "raw_text": combined_text,
+                    "confidence": round(avg_confidence, 2),
+                    "provider": provider_name,
+                    "pages_processed": len(form_pages),
+                    "total_pages": len(pages),
+                    "document_pages_count": max(0, len(pages) - FORM_PAGES),
+                    "page_results": page_results
+                }
             
             # Create form record
             upload_dir = Path(settings.UPLOAD_DIR).resolve()
@@ -85,14 +166,16 @@ async def batch_upload_forms(
             form = AdmissionForm(
                 filename=file_item.filename or filename,
                 file_path=relative_path,
-                ocr_provider=provider_name,
+                ocr_provider=ocr_result.get("provider", provider_name),
                 status=FormStatus.EXTRACTED,
                 extracted_data={
                     "raw_text": ocr_result.get("raw_text", ""),
                     "confidence": ocr_result.get("confidence", 0),
                     "structured_data": ocr_result.get("structured_data", {}),
-                    "pages": ocr_result.get("pages", []),
-                    "total_pages": ocr_result.get("total_pages", 0)
+                    "pages_processed": ocr_result.get("pages_processed", len(pages)),
+                    "total_pages": ocr_result.get("total_pages", len(pages)),
+                    "document_pages_count": ocr_result.get("document_pages_count", 0),
+                    "page_results": ocr_result.get("page_results", [])
                 }
             )
             local_db.add(form)

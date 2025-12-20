@@ -36,6 +36,7 @@ class StudentProfile(Base):
     id = Column(Integer, primary_key=True, index=True)
     student_name = Column(String, nullable=False, index=True)
     aadhar_number = Column(String, nullable=True, index=True)
+    roll_number = Column(String, nullable=True, index=True)  # Student roll number for search
     created_date = Column(DateTime, default=datetime.utcnow)
     updated_date = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -45,6 +46,7 @@ class StudentProfile(Base):
     
     __table_args__ = (
         Index('idx_student_name_aadhar', 'student_name', 'aadhar_number'),
+        Index('idx_student_roll', 'roll_number'),
     )
 
 class AdmissionForm(Base):

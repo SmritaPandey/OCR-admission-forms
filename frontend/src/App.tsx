@@ -5,6 +5,7 @@ import BatchUpload from './components/BatchUpload';
 import VerificationView from './components/VerificationView';
 import SearchInterface from './components/SearchInterface';
 import StudentProfile from './components/StudentProfile';
+import TrainingInterface from './components/TrainingInterface';
 import './App.css';
 
 function NavLinks() {
@@ -16,7 +17,8 @@ function NavLinks() {
 
   const allLinks = [
     ...links,
-    { to: '/batch-upload', label: 'Batch Upload' }
+    { to: '/batch-upload', label: 'Batch Upload' },
+    { to: '/training', label: 'Training' }
   ];
 
   return (
@@ -65,6 +67,7 @@ function App() {
               <Route path="/" element={<Dashboard />} />
               <Route path="/upload" element={<UploadForm />} />
               <Route path="/batch-upload" element={<BatchUpload />} />
+              <Route path="/training" element={<TrainingInterface />} />
               <Route path="/forms/:id" element={<VerificationView />} />
               <Route path="/students/:id" element={<StudentProfile />} />
               <Route path="/search" element={<SearchInterface />} />

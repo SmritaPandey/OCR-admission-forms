@@ -26,6 +26,12 @@ aiohttp==3.9.1
 # datasets>=2.16.0  # For training data management
 # accelerate>=0.25.0  # For distributed training
 
+# CRAFT + TR-OCR for Handwritten Text Recognition (optional - install as needed)
+# transformers>=4.36.0  # Required for TR-OCR
+# torch>=2.1.0  # Required for CRAFT and TR-OCR
+# torchvision>=0.16.0  # Required for image processing
+# craft-text-detector>=0.4.2  # CRAFT text detection model
+
 # Batch Processing (optional)
 # redis==5.0.1  # For Redis queue backend
 # celery==5.3.4  # For Celery task queue (alternative to batch_processor)

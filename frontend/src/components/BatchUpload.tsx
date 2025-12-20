@@ -17,9 +17,9 @@ interface BatchJob {
 
 function BatchUpload() {
   const [files, setFiles] = useState<File[]>([]);
-  const [ocrProvider, setOcrProvider] = useState<string>('tesseract');
+  const [ocrProvider, setOcrProvider] = useState<string>('craft-trocr');
   const [availableProviders, setAvailableProviders] = useState<string[]>([]);
-  const [pagesPerForm, setPagesPerForm] = useState<number>(3);
+  const [pagesPerForm, setPagesPerForm] = useState<number>(4); // First 4 pages = form
   const [uploading, setUploading] = useState(false);
   const [currentJob, setCurrentJob] = useState<BatchJob | null>(null);
   const [jobStatusInterval, setJobStatusInterval] = useState<NodeJS.Timeout | null>(null);
@@ -127,34 +127,57 @@ function BatchUpload() {
     <div className="batch-upload">
       <h2>Batch Upload Forms</h2>
       <p className="description">
-        Upload multiple PDF forms at once. Each form should be a PDF with {pagesPerForm} pages.
+        Upload multiple PDF forms at once. First {pagesPerForm} pages will be processed as admission form, remaining pages will be saved as attached documents.
         Perfect for processing large volumes of admission forms.
       </p>
 
       <div className="upload-section">
         <div className="form-group">
-          <label>Pages per Form:</label>
+          <label>Form Pages (first N pages):</label>
           <input
             type="number"
             min="1"
             max="10"
             value={pagesPerForm}
-            onChange={(e) => setPagesPerForm(parseInt(e.target.value) || 3)}
+            onChange={(e) => setPagesPerForm(parseInt(e.target.value) || 4)}
           />
+          <small style={{ display: 'block', marginTop: '0.25rem', color: '#666' }}>
+            First {pagesPerForm} pages will be processed as admission form. Remaining pages will be saved as documents.
+          </small>
         </div>
 
         <div className="form-group">
           <label>OCR Provider:</label>
           <select value={ocrProvider} onChange={(e) => setOcrProvider(e.target.value)}>
-            <option value="tesseract">Tesseract (Default)</option>
-            {availableProviders.map(provider => (
-              <option key={provider} value={provider}>
-                {provider.charAt(0).toUpperCase() + provider.slice(1)}
-              </option>
-            ))}
-            <option value="gpt4-vision">GPT-4 Vision (AI)</option>
-            <option value="claude-vision">Claude Vision (AI)</option>
-            <option value="ollama">Ollama (Local AI)</option>
+            {availableProviders.map((provider) => {
+              const providerLabels: Record<string, string> = {
+                'tesseract': 'Tesseract (Local)',
+                'google-vision': 'Google Vision',
+                'google': 'Google Vision',
+                'google-documentai': 'Google Document AI',
+                'azure-vision': 'Azure Vision',
+                'azure': 'Azure Vision',
+                'azure-form-recognizer': 'Azure Form Recognizer',
+                'aws-textract': 'AWS Textract',
+                'craft-trocr': 'CRAFT + TR-OCR (Handwritten) ⭐',
+                'craft': 'CRAFT (Text Detection Only)',
+                'trocr': 'TR-OCR (Text Recognition Only)',
+                'best': 'Automatic (Best)',
+                'multi': 'Automatic (Best)',
+                'gpt4-vision': 'GPT-4 Vision (AI)',
+                'claude-vision': 'Claude Vision (AI)',
+                'ollama': 'Ollama (Local AI)'
+              };
+              
+              const label = providerLabels[provider.toLowerCase()] || 
+                           provider.charAt(0).toUpperCase() + provider.slice(1).replace(/-/g, ' ');
+              
+              return (
+                <option key={provider} value={provider}>
+                  {label}
+                </option>
+              );
+            })}
           </select>
         </div>
 
