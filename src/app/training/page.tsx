@@ -132,9 +132,9 @@ export default function TrainingPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="md:col-span-2">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BrainCircuit className="h-5 w-5 text-primary" /> Model Fine-Tuning
-            </CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Brain className="h-5 w-5 text-primary" /> Model Fine-Tuning
+              </CardTitle>
             <CardDescription>
               Retrain the TR-OCR model on your specific handwriting samples to improve extraction accuracy.
             </CardDescription>
