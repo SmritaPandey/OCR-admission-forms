@@ -9,9 +9,10 @@ __turbopack_context__.s({
     "apiService": (()=>apiService),
     "default": (()=>__TURBOPACK__default__export__)
 });
+var __TURBOPACK__imported__module__$5b$project$5d2f$user$2f$app$2f$node_modules$2f$next$2f$dist$2f$build$2f$polyfills$2f$process$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/user/app/node_modules/next/dist/build/polyfills/process.js [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$user$2f$app$2f$node_modules$2f$axios$2f$lib$2f$axios$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/user/app/node_modules/axios/lib/axios.js [app-client] (ecmascript)");
 ;
-const API_BASE_URL = '';
+const API_BASE_URL = __TURBOPACK__imported__module__$5b$project$5d2f$user$2f$app$2f$node_modules$2f$next$2f$dist$2f$build$2f$polyfills$2f$process$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 const api = __TURBOPACK__imported__module__$5b$project$5d2f$user$2f$app$2f$node_modules$2f$axios$2f$lib$2f$axios$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].create({
     baseURL: API_BASE_URL,
     headers: {
@@ -262,29 +263,10 @@ const apiService = {
         const response = await api.get(`/api/annotate/${formId}`);
         return response.data;
     },
-    getTrainingStats: async ()=>{
-        const response = await api.get('/api/training/stats');
-        return response.data;
-    },
-    prepareTrainingData: async (params)=>{
-        const response = await api.post('/api/training/prepare-data', null, {
-            params
-        });
-        return response.data;
-    },
-    startTraining: async (config)=>{
-        const response = await api.post('/api/training/start', config);
-        return response.data;
-    },
-    getTrainingJobStatus: async (jobId)=>{
-        const response = await api.get(`/api/training/job/${jobId}`);
-        return response.data;
-    },
-    exportTrainingData: async (format = 'json', includeImages = false)=>{
-        const response = await api.post('/api/training/export-annotations', null, {
+    exportTrainingData: async (format = 'json')=>{
+        const response = await api.get('/api/export/training-data', {
             params: {
-                format,
-                include_images: includeImages
+                format
             }
         });
         return response.data;
