@@ -17,11 +17,12 @@ import {
   Database, 
   Play, 
   History, 
-  AlertCircle,
-  FileJson,
-  CheckCircle2,
-  Cpu
-} from "lucide-react";
+    AlertCircle,
+    FileJson,
+    CheckCircle2,
+    Cpu,
+    RefreshCw
+  } from "lucide-react";
 import { toast } from "sonner";
 
 export default function TrainingPage() {
