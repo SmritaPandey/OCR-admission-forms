@@ -20,17 +20,15 @@ aiohttp==3.9.1
 # anthropic==0.18.1  # For Claude Vision
 # ollama==0.1.7  # For Ollama local models
 
-# Training and ML (optional - uncomment to use)
-# transformers>=4.36.0  # For TrOCR/Donut training
-# torch>=2.1.0  # For local model inference and training
-# datasets>=2.16.0  # For training data management
-# accelerate>=0.25.0  # For distributed training
-
-# CRAFT + TR-OCR for Handwritten Text Recognition (optional - install as needed)
-# transformers>=4.36.0  # Required for TR-OCR
-# torch>=2.1.0  # Required for CRAFT and TR-OCR
-# torchvision>=0.16.0  # Required for image processing
-# craft-text-detector>=0.4.2  # CRAFT text detection model
+# Training and ML
+transformers>=4.36.0  # For TrOCR/Donut training
+torch>=2.1.0  # For local model inference and training
+datasets>=2.16.0  # For training data management
+accelerate>=0.25.0  # For distributed training
+torchvision>=0.16.0  # Required for image processing
+craft-text-detector>=0.4.2  # CRAFT text detection model
+tqdm>=4.65.0
+scikit-learn>=1.3.0
 
 # Batch Processing (optional)
 # redis==5.0.1  # For Redis queue backend
