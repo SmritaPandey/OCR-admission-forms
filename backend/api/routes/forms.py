@@ -312,7 +312,7 @@ async def verify_form(
     for field in ['course_applied', 'application_number', 'enrollment_number', 'admission_date']:
         setattr(form, field, getattr(verification, field, None))
     
-    form.additional_info = verification.additional_info
+    form.additional_info = verification.additional_info or {}
     
     # Validate required field: student_name
     if not verification.student_name or not verification.student_name.strip():
@@ -337,6 +337,85 @@ async def verify_form(
         except Exception as e:
             # Log error but don't fail the verification
             print(f"Warning: Could not link form to student profile: {e}")
+    
+    # Automatically create annotation from verified data for training
+    try:
+        from backend.api.routes.annotation import AnnotationField, AnnotationCheckbox
+        
+        annotation_fields = []
+        # Create annotation fields from verified data
+        field_mapping = {
+            'student_name': 'student_name',
+            'date_of_birth': 'date_of_birth',
+            'gender': 'gender',
+            'category': 'category',
+            'nationality': 'nationality',
+            'religion': 'religion',
+            'aadhar_number': 'aadhar_number',
+            'blood_group': 'blood_group',
+            'permanent_address': 'permanent_address',
+            'correspondence_address': 'correspondence_address',
+            'pincode': 'pincode',
+            'city': 'city',
+            'state': 'state',
+            'phone_number': 'phone_number',
+            'alternate_phone': 'alternate_phone',
+            'email': 'email',
+            'emergency_contact_name': 'emergency_contact_name',
+            'emergency_contact_phone': 'emergency_contact_phone',
+            'father_name': 'father_name',
+            'father_occupation': 'father_occupation',
+            'father_phone': 'father_phone',
+            'mother_name': 'mother_name',
+            'mother_occupation': 'mother_occupation',
+            'mother_phone': 'mother_phone',
+            'guardian_name': 'guardian_name',
+            'guardian_relation': 'guardian_relation',
+            'guardian_phone': 'guardian_phone',
+            'annual_income': 'annual_income',
+            'tenth_board': 'tenth_board',
+            'tenth_year': 'tenth_year',
+            'tenth_percentage': 'tenth_percentage',
+            'tenth_school': 'tenth_school',
+            'twelfth_board': 'twelfth_board',
+            'twelfth_year': 'twelfth_year',
+            'twelfth_percentage': 'twelfth_percentage',
+            'twelfth_school': 'twelfth_school',
+            'previous_qualification': 'previous_qualification',
+            'graduation_details': 'graduation_details',
+            'course_applied': 'course_applied',
+            'application_number': 'application_number',
+            'enrollment_number': 'enrollment_number',
+            'admission_date': 'admission_date',
+        }
+        
+        for field_key, field_name in field_mapping.items():
+            value = getattr(verification, field_key, None)
+            if value and str(value).strip():
+                annotation_fields.append(AnnotationField(
+                    field_name=field_name,
+                    value=str(value).strip(),
+                    page_number=1,
+                    confidence=1.0  # Verified data has 100% confidence
+                ))
+        
+        # Create key-value pairs for training
+        key_value_pairs = {f.field_name: f.value for f in annotation_fields}
+        
+        # Store annotation in additional_info
+        form.additional_info['annotation'] = {
+            'fields': [f.dict() for f in annotation_fields],
+            'checkboxes': [],
+            'key_value_pairs': key_value_pairs,
+            'notes': 'Auto-created from verified form data',
+            'annotated_at': datetime.utcnow().isoformat(),
+            'annotated_by': 'verification-api'
+        }
+        
+        logger.info(f"Created annotation for form {form_id} with {len(annotation_fields)} fields")
+    except Exception as e:
+        # Log error but don't fail verification
+        logger.warning(f"Failed to create annotation for form {form_id}: {e}")
     
     db.commit()
     db.refresh(form)
@@ -380,13 +459,70 @@ async def update_form(
             setattr(form, field, value)
 
     if verification.additional_info is not None:
-        form.additional_info = verification.additional_info
+        if form.additional_info is None:
+            form.additional_info = {}
+        form.additional_info.update(verification.additional_info)
     
     # Update status if student_name is provided (mark as verified)
     if verification.student_name:
         form.status = FormStatus.VERIFIED
         if not form.verified_date:
             form.verified_date = datetime.utcnow()
+        
+        # Automatically create annotation from verified data (same as verify_form)
+        try:
+            from backend.api.routes.annotation import AnnotationField
+            
+            annotation_fields = []
+            field_mapping = {
+                'student_name': 'student_name', 'date_of_birth': 'date_of_birth',
+                'gender': 'gender', 'category': 'category', 'nationality': 'nationality',
+                'religion': 'religion', 'aadhar_number': 'aadhar_number',
+                'blood_group': 'blood_group', 'permanent_address': 'permanent_address',
+                'correspondence_address': 'correspondence_address', 'pincode': 'pincode',
+                'city': 'city', 'state': 'state', 'phone_number': 'phone_number',
+                'alternate_phone': 'alternate_phone', 'email': 'email',
+                'emergency_contact_name': 'emergency_contact_name',
+                'emergency_contact_phone': 'emergency_contact_phone',
+                'father_name': 'father_name', 'father_occupation': 'father_occupation',
+                'father_phone': 'father_phone', 'mother_name': 'mother_name',
+                'mother_occupation': 'mother_occupation', 'mother_phone': 'mother_phone',
+                'guardian_name': 'guardian_name', 'guardian_relation': 'guardian_relation',
+                'guardian_phone': 'guardian_phone', 'annual_income': 'annual_income',
+                'tenth_board': 'tenth_board', 'tenth_year': 'tenth_year',
+                'tenth_percentage': 'tenth_percentage', 'tenth_school': 'tenth_school',
+                'twelfth_board': 'twelfth_board', 'twelfth_year': 'twelfth_year',
+                'twelfth_percentage': 'twelfth_percentage', 'twelfth_school': 'twelfth_school',
+                'previous_qualification': 'previous_qualification',
+                'graduation_details': 'graduation_details', 'course_applied': 'course_applied',
+                'application_number': 'application_number', 'enrollment_number': 'enrollment_number',
+                'admission_date': 'admission_date',
+            }
+            
+            for field_key, field_name in field_mapping.items():
+                value = getattr(verification, field_key, None)
+                if value and str(value).strip():
+                    annotation_fields.append(AnnotationField(
+                        field_name=field_name,
+                        value=str(value).strip(),
+                        page_number=1,
+                        confidence=1.0
+                    ))
+            
+            if annotation_fields:
+                key_value_pairs = {f.field_name: f.value for f in annotation_fields}
+                if form.additional_info is None:
+                    form.additional_info = {}
+                form.additional_info['annotation'] = {
+                    'fields': [f.dict() for f in annotation_fields],
+                    'checkboxes': [],
+                    'key_value_pairs': key_value_pairs,
+                    'notes': 'Auto-created from verified form data',
+                    'annotated_at': datetime.utcnow().isoformat(),
+                    'annotated_by': 'update-api'
+                }
+        except Exception as e:
+            logger.warning(f"Failed to create annotation for form {form_id}: {e}")
     
     db.commit()
     db.refresh(form)
