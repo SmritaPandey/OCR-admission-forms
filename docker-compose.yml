@@ -1,29 +1,98 @@
+version: '3.8'
+
 services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: ocr-admission-postgres
+    environment:
+      POSTGRES_DB: admission_forms
+      POSTGRES_USER: student_admin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_me_in_production}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backups:/backups
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U student_admin"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - ocr-network
+
   backend:
     build:
       context: .
       dockerfile: Dockerfile.backend
+    container_name: ocr-admission-backend
     ports:
       - "8000:8000"
     volumes:
       - ./uploads:/app/uploads
+      - ./training_data:/app/training_data
+      - ./models:/app/models
       - ./admission_forms.db:/app/admission_forms.db
     environment:
-      - DATABASE_URL=sqlite:///./admission_forms.db
-      - OCR_PROVIDER=craft-trocr
+      - DATABASE_URL=${DATABASE_URL:-postgresql://student_admin:${POSTGRES_PASSWORD:-change_me_in_production}@postgres:5432/admission_forms}
+      - OCR_PROVIDER=${OCR_PROVIDER:-craft-trocr}
+      - OCR_ENABLE_TESSERACT=${OCR_ENABLE_TESSERACT:-true}
+      - OCR_ENABLE_CRAFT_TROCR=${OCR_ENABLE_CRAFT_TROCR:-true}
+      - OCR_ENABLE_CRAFT=${OCR_ENABLE_CRAFT:-true}
+      - OCR_ENABLE_TROCR=${OCR_ENABLE_TROCR:-true}
+      - OCR_ENABLE_GOOGLE_VISION=${OCR_ENABLE_GOOGLE_VISION:-false}
+      - OCR_ENABLE_GOOGLE_DOCUMENT_AI=${OCR_ENABLE_GOOGLE_DOCUMENT_AI:-false}
+      - OCR_ENABLE_AZURE_VISION=${OCR_ENABLE_AZURE_VISION:-false}
+      - OCR_ENABLE_AZURE_FORM_RECOGNIZER=${OCR_ENABLE_AZURE_FORM_RECOGNIZER:-false}
+      - OCR_ENABLE_AWS_TEXTRACT=${OCR_ENABLE_AWS_TEXTRACT:-false}
+      - GOOGLE_CLOUD_PROJECT_ID=${GOOGLE_CLOUD_PROJECT_ID:-}
+      - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS:-}
+      - AZURE_VISION_KEY=${AZURE_VISION_KEY:-}
+      - AZURE_VISION_ENDPOINT=${AZURE_VISION_ENDPOINT:-}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
+      - TROCR_CUSTOM_MODEL_PATH=${TROCR_CUSTOM_MODEL_PATH:-}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://localhost:5173}
+      - MAX_FILE_SIZE=${MAX_FILE_SIZE:-10485760}
       - ENVIRONMENT=production
-    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - ocr-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   frontend:
     build:
       context: .
       dockerfile: Dockerfile.frontend
       args:
-        - NEXT_PUBLIC_API_URL=http://localhost:8000
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+    container_name: ocr-admission-frontend
     ports:
-      - "3000:3000"
+      - "3000:80"
     depends_on:
       - backend
-    environment:
-      - NODE_ENV=production
-    restart: always
+    restart: unless-stopped
+    networks:
+      - ocr-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  ocr-network:
+    driver: bridge

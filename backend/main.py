@@ -23,15 +23,27 @@ app = FastAPI(
 )
 
 # CORS middleware for frontend
-# For development, allow all localhost origins using regex pattern
-# This allows any port on localhost (5173, 5174, 5175, etc.)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origin_regex=r"http://(localhost|127\.0\.0\.1):\d+",
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Configure based on environment
+if settings.ENVIRONMENT == "production":
+    # Production: Use configured CORS origins
+    origins = settings.CORS_ORIGINS if isinstance(settings.CORS_ORIGINS, list) else settings.CORS_ORIGINS.split(",")
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[origin.strip() for origin in origins],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+else:
+    # Development: Allow all localhost origins using regex pattern
+    # This allows any port on localhost (5173, 5174, 5175, etc.)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origin_regex=r"http://(localhost|127\.0\.0\.1):\d+",
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 # Include routers
 app.include_router(upload.router, prefix="/api", tags=["upload"])
