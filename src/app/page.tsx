@@ -273,7 +273,7 @@ export default function Dashboard() {
                 <Button variant="outline" className="justify-start h-auto py-3 px-4" asChild>
                   <Link href="/training">
                     <div className="flex flex-col items-start gap-1">
-                      <BrainCircuit className="h-4 w-4" />
+                      <Brain className="h-4 w-4" />
                       <span className="text-xs font-bold">Tune Model</span>
                     </div>
                   </Link>
