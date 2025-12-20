@@ -113,11 +113,14 @@ class Settings(BaseSettings):
     OCR_CACHE_ENABLED: bool = True
     
     # File Upload
-    UPLOAD_DIR: str = "uploads"
-    MAX_FILE_SIZE: int = 10 * 1024 * 1024  # 10MB
-    ALLOWED_EXTENSIONS: List[str] = ["jpg", "jpeg", "png", "pdf", "tiff", "bmp"]
-    
-    # CORS
+UPLOAD_DIR: str = "uploads"
+MAX_FILE_SIZE: int = 10 * 1024 * 1024  # 10MB
+ALLOWED_EXTENSIONS: List[str] = ["jpg", "jpeg", "png", "pdf", "tiff", "bmp"]
+
+# Environment
+ENVIRONMENT: str = "development"
+
+# CORS
     CORS_ORIGINS: List[str] = [
         "http://localhost:3000", 
         "http://localhost:5173",
