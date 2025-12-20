@@ -53,10 +53,10 @@ const items = [
     icon: BookOpen,
   },
   {
-    title: "OCR Training",
-    url: "/training",
-    icon: BrainCircuit,
-  },
+      title: "OCR Training",
+      url: "/training",
+      icon: Brain,
+    },
 ];
 
 export function AppSidebar() {
