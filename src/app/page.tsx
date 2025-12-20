@@ -30,7 +30,7 @@ import {
   Search as SearchIcon,
   Trash2,
   Eye,
-  Brain
+  BrainCircuit
 } from "lucide-react";
 import { toast } from "sonner";
 
