@@ -10,12 +10,16 @@ from datetime import datetime
 from pathlib import Path
 import json
 import os
+import threading
 
 from backend.database import get_db, AdmissionForm
 from backend.utils.training_data_manager import TrainingDataManager
 from backend.training.prepare_data import TrainingDataPreparator
 
 router = APIRouter()
+
+# In-memory job storage (in production, use Redis or database)
+_training_jobs: Dict[str, Dict[str, Any]] = {}
 
 
 class BulkAnnotationRequest(BaseModel):
@@ -246,6 +250,9 @@ async def export_training_annotations(
     }
 
 
+# In-memory job storage (in production, use Redis or database)
+_training_jobs: Dict[str, Dict[str, Any]] = {}
+
 @router.post("/training/start")
 async def start_training(
     config: TrainingConfig = Body(...),
@@ -254,8 +261,8 @@ async def start_training(
 ):
     """Start training a model with prepared data"""
     import uuid
-    from backend.training.train_trocr import main as train_trocr
-    from backend.training.train_donut import main as train_donut
+    import subprocess
+    import threading
     
     # Check if training data exists
     preparator = TrainingDataPreparator()
@@ -264,11 +271,11 @@ async def start_training(
     # Determine dataset path based on model type
     if config.model_type == "trocr":
         train_data_path = training_dir / "train.json"
-        val_data_path = training_dir / "val.json"
+        val_data_path = training_dir / "val.json" if (training_dir / "val.json").exists() else None
         base_model = config.base_model or "microsoft/trocr-base-handwritten"
     elif config.model_type == "donut":
         train_data_path = training_dir / "train.json"
-        val_data_path = training_dir / "val.json"
+        val_data_path = training_dir / "val.json" if (training_dir / "val.json").exists() else None
         base_model = config.base_model or "naver-clova-ix/donut-base"
     else:
         raise HTTPException(status_code=400, detail=f"Unknown model type: {config.model_type}")
@@ -291,38 +298,91 @@ async def start_training(
     # Create job ID
     job_id = str(uuid.uuid4())
     
-    # Store job info (in production, use Redis or database)
+    # Store job info
     job_info = {
         "job_id": job_id,
         "status": "queued",
         "model_type": config.model_type,
         "config": config.dict(),
         "created_at": datetime.utcnow().isoformat(),
-        "output_dir": str(output_dir)
+        "output_dir": str(output_dir),
+        "progress": {
+            "epoch": 0,
+            "total_epochs": config.epochs,
+            "step": 0,
+            "loss": None
+        }
     }
     
-    # For now, return job info (in production, run training in background)
-    # TODO: Implement proper job queue (Redis, Celery, etc.)
+    _training_jobs[job_id] = job_info
+    
+    # Start training in background thread
+    def run_training():
+        try:
+            _training_jobs[job_id]["status"] = "running"
+            _training_jobs[job_id]["started_at"] = datetime.utcnow().isoformat()
+            
+            # Import training function
+            if config.model_type == "trocr":
+                from backend.training.train_craft_trocr import train_craft_trocr
+                train_craft_trocr(
+                    training_data_path=str(train_data_path),
+                    output_model_path=str(output_dir),
+                    epochs=config.epochs,
+                    batch_size=config.batch_size,
+                    learning_rate=config.learning_rate,
+                    val_data_path=str(val_data_path) if val_data_path else None,
+                    base_model=base_model
+                )
+            elif config.model_type == "donut":
+                from backend.training.train_donut import train_donut
+                train_donut(
+                    training_data_path=str(train_data_path),
+                    output_model_path=str(output_dir),
+                    epochs=config.epochs,
+                    batch_size=config.batch_size,
+                    learning_rate=config.learning_rate,
+                    val_data_path=str(val_data_path) if val_data_path else None,
+                    base_model=base_model
+                )
+            
+            _training_jobs[job_id]["status"] = "completed"
+            _training_jobs[job_id]["completed_at"] = datetime.utcnow().isoformat()
+            _training_jobs[job_id]["progress"]["epoch"] = config.epochs
+            
+        except Exception as e:
+            _training_jobs[job_id]["status"] = "failed"
+            _training_jobs[job_id]["error"] = str(e)
+            _training_jobs[job_id]["failed_at"] = datetime.utcnow().isoformat()
+    
+    # Start training thread
+    training_thread = threading.Thread(target=run_training, daemon=True)
+    training_thread.start()
     
     return {
         "job_id": job_id,
         "status": "queued",
-        "message": "Training job created. Use /training/job/{job_id} to check status.",
+        "message": "Training job started. Use /training/job/{job_id} to check status.",
         "config": config.dict(),
-        "output_dir": str(output_dir),
-        "note": "Background training not yet implemented. Run training script manually."
+        "output_dir": str(output_dir)
     }
 
 
 @router.get("/training/job/{job_id}")
 async def get_training_job_status(job_id: str):
     """Get training job status"""
-    # TODO: Implement job tracking (Redis, database, etc.)
-    return {
-        "job_id": job_id,
-        "status": "not_implemented",
-        "message": "Job tracking not yet implemented"
-    }
+    if job_id not in _training_jobs:
+        raise HTTPException(status_code=404, detail=f"Training job {job_id} not found")
+    
+    job_info = _training_jobs[job_id].copy()
+    
+    # Calculate elapsed time
+    if "started_at" in job_info:
+        started = datetime.fromisoformat(job_info["started_at"])
+        elapsed = (datetime.utcnow() - started).total_seconds()
+        job_info["elapsed_seconds"] = int(elapsed)
+    
+    return job_info
 
 
 @router.get("/training/forms/unannotated")
