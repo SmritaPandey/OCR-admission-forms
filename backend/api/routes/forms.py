@@ -223,26 +223,40 @@ async def re_extract_form(
             )
             ocr_result.setdefault("provider", selected_provider)
         
-        # Parse structured data from OCR text for SRCC forms
+        # Parse structured data from OCR text - ALWAYS parse (not just SRCC forms)
         if ocr_result.get('raw_text'):
             from backend.utils.form_parser import parse_form_text
-            is_srcc_form = 'srcc' in (form.filename or '').lower() or 'data form' in (form.filename or '').lower()
-            if is_srcc_form:
-                structured_data = parse_form_text(ocr_result['raw_text'], form_type='srcc')
-                ocr_result['structured_data'] = structured_data
-                # Auto-fill all form fields if available
-                for field in ['student_name', 'date_of_birth', 'gender', 'category', 'nationality', 
-                             'religion', 'aadhar_number', 'blood_group', 'permanent_address', 
-                             'correspondence_address', 'pincode', 'city', 'state', 'phone_number', 
-                             'alternate_phone', 'email', 'emergency_contact_name', 'emergency_contact_phone',
-                             'father_name', 'father_occupation', 'father_phone', 'mother_name', 
-                             'mother_occupation', 'mother_phone', 'guardian_name', 'guardian_relation', 
-                             'guardian_phone', 'annual_income', 'tenth_board', 'tenth_year', 
-                             'tenth_percentage', 'tenth_school', 'twelfth_board', 'twelfth_year', 
-                             'twelfth_percentage', 'twelfth_school', 'previous_qualification', 
-                             'graduation_details', 'course_applied', 'application_number', 'enrollment_number', 'admission_date']:
-                    if structured_data.get(field):
-                        setattr(form, field, structured_data[field])
+            from backend.utils.ai_form_parser import AIFormParser
+            
+            # Parse using form parser
+            structured_data = parse_form_text(ocr_result['raw_text'])
+            
+            # Also use AI form parser for additional extraction
+            ai_parser = AIFormParser()
+            if ocr_result.get('structured_data'):
+                ai_parsed = ai_parser.parse_from_ai_result(ocr_result)
+                structured_data.update(ai_parsed)
+            
+            # Parse from raw text as well
+            text_parsed = ai_parser.parse_from_text(ocr_result['raw_text'])
+            structured_data.update(text_parsed)
+            
+            # Store structured data
+            ocr_result['structured_data'] = structured_data
+            
+            # Auto-fill all form fields if available
+            for field in ['student_name', 'date_of_birth', 'gender', 'category', 'nationality', 
+                         'religion', 'aadhar_number', 'blood_group', 'permanent_address', 
+                         'correspondence_address', 'pincode', 'city', 'state', 'phone_number', 
+                         'alternate_phone', 'email', 'emergency_contact_name', 'emergency_contact_phone',
+                         'father_name', 'father_occupation', 'father_phone', 'mother_name', 
+                         'mother_occupation', 'mother_phone', 'guardian_name', 'guardian_relation', 
+                         'guardian_phone', 'annual_income', 'tenth_board', 'tenth_year', 
+                         'tenth_percentage', 'tenth_school', 'twelfth_board', 'twelfth_year', 
+                         'twelfth_percentage', 'twelfth_school', 'previous_qualification', 
+                         'graduation_details', 'course_applied', 'application_number', 'enrollment_number', 'admission_date']:
+                if structured_data.get(field):
+                    setattr(form, field, structured_data[field])
         
         # Check if form is empty (template)
         from backend.utils.empty_form_detector import EmptyFormDetector

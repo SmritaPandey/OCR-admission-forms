@@ -10,6 +10,7 @@ import torch
 
 from backend.ocr.base_provider import OCRProvider
 from backend.config import settings
+from backend.utils.best_trocr_models import get_best_trocr_model
 
 try:
     from transformers import TrOCRProcessor, VisionEncoderDecoderModel
@@ -39,7 +40,8 @@ class TrocrProvider(OCRProvider):
             device: Device to use ('cuda', 'cpu', or None for auto)
         """
         self.trocr_model_path = trocr_model_path or getattr(settings, 'TROCR_CUSTOM_MODEL_PATH', None)
-        self.trocr_base_model = trocr_base_model or "microsoft/trocr-base-handwritten"
+        # Use best available TrOCR model from HuggingFace
+        self.trocr_base_model = trocr_base_model or get_best_trocr_model("accuracy")
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
         
         # Initialize models lazily
