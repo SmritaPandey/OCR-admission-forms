@@ -244,9 +244,27 @@ async def re_extract_form(
                     if structured_data.get(field):
                         setattr(form, field, structured_data[field])
         
+        # Check if form is empty (template)
+        from backend.utils.empty_form_detector import EmptyFormDetector
+        empty_detector = EmptyFormDetector()
+        empty_check = empty_detector.detect_empty(ocr_result)
+        
+        # Add empty form detection to extracted_data
+        ocr_result['empty_form_detection'] = empty_check
+        
         form.extracted_data = ocr_result
         form.ocr_provider = selected_provider
         form.status = FormStatus.EXTRACTED
+        
+        # Add warning to additional_info if empty
+        if empty_check.get('is_empty') and empty_check.get('confidence', 0) > 0.7:
+            if form.additional_info is None:
+                form.additional_info = {}
+            form.additional_info['empty_form_warning'] = {
+                'message': empty_detector.get_empty_form_message(),
+                'detection': empty_check
+            }
+        
         db.commit()
 
         logger.info(

@@ -372,6 +372,10 @@ function VerificationView() {
     return <div className="error">Form not found</div>;
   }
 
+  // Check for empty form detection
+  const emptyFormDetection = form.extracted_data?.empty_form_detection;
+  const isEmptyForm = emptyFormDetection?.is_empty === true;
+
   return (
     <div className="verification-view">
       <div className="verification-header">
@@ -388,6 +392,43 @@ function VerificationView() {
           </button>
         </div>
       </div>
+
+      {/* Empty Form Warning */}
+      {isEmptyForm && (
+        <div className="empty-form-warning" style={{
+          background: '#fff3cd',
+          border: '2px solid #ffc107',
+          borderRadius: '8px',
+          padding: '1rem',
+          marginBottom: '1.5rem',
+          marginTop: '1rem'
+        }}>
+          <h3 style={{ color: '#856404', marginTop: 0, marginBottom: '0.5rem' }}>⚠️ Empty Form Detected</h3>
+          <p style={{ color: '#856404', marginBottom: '0.5rem' }}>
+            {emptyFormDetection?.reason || 'This appears to be an empty form template.'}
+          </p>
+          {emptyFormDetection?.suggestions && emptyFormDetection.suggestions.length > 0 && (
+            <ul style={{ color: '#856404', marginBottom: '0.5rem', paddingLeft: '1.5rem' }}>
+              {emptyFormDetection.suggestions.map((suggestion: string, idx: number) => (
+                <li key={idx} style={{ marginBottom: '0.25rem' }}>{suggestion}</li>
+              ))}
+            </ul>
+          )}
+          {form.additional_info?.empty_form_warning?.message && (
+            <div style={{ 
+              marginTop: '0.75rem', 
+              padding: '0.75rem', 
+              background: 'white', 
+              borderRadius: '4px',
+              whiteSpace: 'pre-line',
+              color: '#856404',
+              fontSize: '0.9rem'
+            }}>
+              {form.additional_info.empty_form_warning.message}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="provider-toolbar">
         <div className="provider-summary">

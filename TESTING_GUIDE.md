@@ -191,22 +191,44 @@ pip install transformers torch torchvision
 
 ## Sample PDFs Available
 
+**⚠️ Important Note**: The PDFs in `data/samples/pdfs/` are **empty admission form templates** that students will fill out. They are not filled forms with student data.
+
 Located in `data/samples/pdfs/`:
 
-1. `SRCC DATA FORM-1-4.pdf` - Multi-page form
-2. `jatin.pdf` - Single student form
-3. `paridhi kiran.pdf` - Single student form
-4. `ravi chaudhary.pdf` - Single student form
-5. `sara hanfi.pdf` - Single student form
-6. `student data form scanned.pdf` - Scanned form
-7. `ujjwal kumar.pdf` - Single student form
-8. `UN-01-243550037803-NAVYA RAJ.pdf` - Numbered form
-9. `UN-02-243550630824-ARYAN.pdf` - Numbered form
-10. `UN-03-243550516046-KARAN YADAV.pdf` - Numbered form
-11. `UN-04-243550774198-DEVESH VERMA.pdf` - Numbered form
-12. `UN-05-243550336680-PESHL KUMAR.pdf` - Numbered form
-13. `UN-250-243551539583-DIYA.pdf` - Numbered form
-14. `UN-251-243550620879-KHUSHI MEENA.pdf` - Numbered form
+1. `SRCC DATA FORM-1-4.pdf` - Multi-page empty template
+2. `jatin.pdf` - Empty form template
+3. `paridhi kiran.pdf` - Empty form template
+4. `ravi chaudhary.pdf` - Empty form template
+5. `sara hanfi.pdf` - Empty form template
+6. `student data form scanned.pdf` - Empty scanned template
+7. `ujjwal kumar.pdf` - Empty form template
+8. `UN-01-243550037803-NAVYA RAJ.pdf` - Empty numbered template
+9. `UN-02-243550630824-ARYAN.pdf` - Empty numbered template
+10. `UN-03-243550516046-KARAN YADAV.pdf` - Empty numbered template
+11. `UN-04-243550774198-DEVESH VERMA.pdf` - Empty numbered template
+12. `UN-05-243550336680-PESHL KUMAR.pdf` - Empty numbered template
+13. `UN-250-243551539583-DIYA.pdf` - Empty numbered template
+14. `UN-251-243550620879-KHUSHI MEENA.pdf` - Empty numbered template
+
+### Testing Empty Forms
+
+The system includes empty form detection. Test it with:
+
+```bash
+python test_empty_forms.py
+```
+
+This will detect that these are empty templates and provide appropriate warnings.
+
+### For Real Testing
+
+To test with actual data:
+1. Print these empty templates
+2. Fill them out by hand
+3. Scan the filled forms
+4. Upload for processing
+
+See `EMPTY_FORMS_GUIDE.md` for more details.
 
 ## Performance Benchmarks
 
