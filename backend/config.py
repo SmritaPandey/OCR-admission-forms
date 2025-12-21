@@ -8,8 +8,8 @@ class Settings(BaseSettings):
     # Default to SQLite for easy setup, can be overridden with PostgreSQL
     DATABASE_URL: str = "sqlite:///./admission_forms.db"
     
-    # OCR Provider (tesseract, google, azure, abbyy, tesseract-google-combined, combined, craft-trocr)
-    OCR_PROVIDER: str = "craft-trocr"  # Default to CRAFT+TR-OCR for handwritten forms
+    # OCR Provider (tesseract, google, azure, abbyy, tesseract-google-combined, combined, craft-trocr, ollama)
+    OCR_PROVIDER: str = "tesseract"  # Default to Tesseract (always available), use craft-trocr when transformers/torch installed
     OCR_ENABLE_TESSERACT: bool = Field(True, description="Enable local Tesseract OCR provider.")
     OCR_ENABLE_GOOGLE_VISION: bool = Field(True, description="Enable Google Cloud Vision OCR provider.")
     OCR_ENABLE_GOOGLE_DOCUMENT_AI: bool = Field(False, description="Enable Google Document AI OCR provider.")
