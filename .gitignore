@@ -57,3 +57,12 @@ Thumbs.db
 # Cursor
 .cursor/
 
+
+# Secrets - never commit
+.env
+*.env
+.env.*
+!.env.example
+google-cloud-credentials.json
+admission-ocr-*.json
+
