@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { apiService, FormDetail, FormVerification } from '../services/api';
 import { parseOCRText } from '../utils/ocrParser';
+import { extractStructuredData } from '../utils/structuredDataParser';
 import DocumentUpload from './DocumentUpload';
 import DocumentList from './DocumentList';
 import './VerificationView.css';
@@ -16,13 +17,31 @@ const PROVIDER_LABELS: Record<string, string> = {
   'azure-form-recognizer': 'Azure Form Recognizer',
   'aws-textract': 'AWS Textract',
   abbyy: 'ABBYY FineReader',
-  'craft-trocr': 'CRAFT + TR-OCR (Handwritten)',
+  'craft-trocr': 'CRAFT + TrOCR',
+  'craft': 'CRAFT (Detection Only)',
+  'trocr': 'TrOCR (Recognition Only)',
+  'combined': 'Tesseract + Google Combined',
+  'tesseract-google-combined': 'Tesseract + Google Combined',
+  'ollama': 'Ollama (Local)',
   multi: 'Automatic (Best)',
   best: 'Automatic (Best)',
 };
 
 const FORM_FIELD_KEYS: (keyof FormVerification)[] = [
+  // Academic & Admission Details
+  'academic_session',
+  'course',
+  'admission_category',
+  'admission_category_other',
+  'du_portal_form_number',
+  'cuet_score',
+  'college_roll_no',
+  'date_of_admission',
+  // Personal Details
   'student_name',
+  'first_name',
+  'middle_name',
+  'surname',
   'date_of_birth',
   'gender',
   'category',
@@ -30,40 +49,127 @@ const FORM_FIELD_KEYS: (keyof FormVerification)[] = [
   'religion',
   'aadhar_number',
   'blood_group',
+  'below_poverty_line',
+  'minority_category',
+  // Address Details
   'permanent_address',
+  'permanent_address_line1',
+  'permanent_address_line2',
+  'permanent_address_line3',
+  'permanent_state',
+  'permanent_pincode',
   'correspondence_address',
+  'correspondence_address_line1',
+  'correspondence_address_line2',
+  'correspondence_address_line3',
+  'correspondence_state',
+  'correspondence_pincode',
   'pincode',
   'city',
   'state',
+  // Contact Details
   'phone_number',
   'alternate_phone',
   'email',
   'emergency_contact_name',
   'emergency_contact_phone',
+  // Parent Names
   'father_name',
-  'father_occupation',
-  'father_phone',
   'mother_name',
-  'mother_occupation',
-  'mother_phone',
-  'guardian_name',
-  'guardian_relation',
-  'guardian_phone',
-  'annual_income',
-  'tenth_board',
-  'tenth_year',
-  'tenth_percentage',
-  'tenth_school',
-  'twelfth_board',
+  // CUET Marks
+  'cuet_subject_1',
+  'cuet_total_score_1',
+  'cuet_score_obtained_1',
+  'cuet_subject_2',
+  'cuet_total_score_2',
+  'cuet_score_obtained_2',
+  'cuet_subject_3',
+  'cuet_total_score_3',
+  'cuet_score_obtained_3',
+  'cuet_subject_4',
+  'cuet_total_score_4',
+  'cuet_score_obtained_4',
+  'cuet_subject_5',
+  'cuet_total_score_5',
+  'cuet_score_obtained_5',
+  'cuet_subject_6',
+  'cuet_total_score_6',
+  'cuet_score_obtained_6',
+  'cuet_total_score',
+  // Qualifying Examination
   'twelfth_year',
-  'twelfth_percentage',
-  'twelfth_school',
-  'previous_qualification',
-  'graduation_details',
+  'twelfth_board',
+  'twelfth_roll_number',
+  'twelfth_institution',
+  'hindi_studied_upto',
+  // Personal Information
+  'annual_income',
+  // Mother's Occupational Details
+  'mother_occupation',
+  'mother_designation',
+  'mother_organization',
+  'mother_email',
+  'mother_mobile',
+  'mother_landline_code',
+  'mother_landline',
+  'mother_phone',
+  // Father's Occupational Details
+  'father_occupation',
+  'father_designation',
+  'father_organization',
+  'father_email',
+  'father_mobile',
+  'father_landline_code',
+  'father_landline',
+  'father_phone',
+  // Local Guardian's Details
+  'guardian_name',
+  'guardian_residential_address',
+  'guardian_organization',
+  'guardian_email',
+  'guardian_mobile',
+  'guardian_landline_code',
+  'guardian_landline',
+  'guardian_phone',
+  'guardian_relation',
+  // Other Information
+  'du_enrollment_number',
+  'hindi_medium_preference',
+  // Category Certificate
+  'category_certificate_authority',
+  'category_certificate_number',
+  'category_certificate_date',
+  'disability_percentage',
+  'disability_type',
+  'udid_number',
+  // Legacy/Backward Compatibility
   'course_applied',
   'application_number',
   'enrollment_number',
   'admission_date',
+  'tenth_board',
+  'tenth_year',
+  'tenth_percentage',
+  'tenth_school',
+  'twelfth_percentage',
+  'twelfth_school',
+  'previous_qualification',
+  'graduation_details',
+  // Document Checklist (Page 4)
+  'doc_admission_form',
+  'doc_undertaking_ragging',
+  'doc_photographs',
+  'doc_cuet_scorecard',
+  'doc_class_xii_marksheet',
+  'doc_class_x_certificate',
+  'doc_class_xii_certificate',
+  'doc_character_certificate',
+  'doc_transfer_certificate',
+  'doc_hindi_certificate',
+  'doc_caste_certificate',
+  'doc_sports_eca',
+  'doc_originals',
+  'doc_photo_id',
 ];
 
 const normalizeConfidence = (value?: number | null): number | undefined => {
@@ -95,12 +201,54 @@ const determineConfidenceClass = (value?: number): { label: string; className: s
   return { label: `Confidence: ${formatted}`, className: 'confidence-chip low' };
 };
 
-const formatProviderName = (provider?: string | null): string => {
-  if (!provider) {
-    return 'Not specified';
+// Helper to get the correct file URL
+const getFileUrl = (filePath: string | undefined, formId?: number, page?: number): string => {
+  const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+  
+  if (!filePath) {
+    // Fallback to preview endpoint if no file path
+    return formId ? `${apiUrl}/api/preview/${formId}${page ? `?page=${page}` : ''}` : '';
   }
-  const key = provider.toLowerCase();
-  return PROVIDER_LABELS[key] || provider.replace(/[-_]/g, ' ').replace(/\b\w/g, (ch) => ch.toUpperCase());
+  
+  // Normalize the file path - remove any leading 'uploads/' to avoid duplication
+  let normalizedPath = filePath;
+  if (normalizedPath.startsWith('uploads/')) {
+    normalizedPath = normalizedPath.substring(8);
+  }
+  if (normalizedPath.startsWith('/uploads/')) {
+    normalizedPath = normalizedPath.substring(9);
+  }
+  if (normalizedPath.startsWith('/')) {
+    normalizedPath = normalizedPath.substring(1);
+  }
+  
+  // Return the direct PDF URL - browser will handle page navigation via #page= anchor
+  return `${apiUrl}/uploads/${normalizedPath}`;
+};
+
+const formatProviderName = (provider?: string | null, modelInfo?: Record<string, any>): string => {
+  if (!provider) return 'Unknown';
+  
+  // Clean up the provider string (remove any "trained-" prefixes from backend)
+  let cleanProvider = provider.replace(/^trained-/, '');
+  
+  // Use known label or format the string
+  let label = PROVIDER_LABELS[cleanProvider] || 
+    cleanProvider.split(/[-_]/).map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+
+  // Add "Trained" badge if applicable
+  if (modelInfo && modelInfo[cleanProvider]?.is_finetuned) {
+    label = label + ' ⭐ (Trained)';
+  } else if (provider.startsWith('trained-')) {
+    // Fallback if modelInfo not available but provider name indicates training
+    if (cleanProvider === 'trocr') {
+      label = 'TrOCR (Fine-tuned) ⭐';
+    } else {
+      label = label + ' ⭐ (Trained)';
+    }
+  }
+  
+  return label;
 };
 
 const buildVerificationState = (data: FormDetail): FormVerification => {
@@ -149,63 +297,91 @@ function VerificationView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [form, setForm] = useState<FormDetail | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [verification, setVerification] = useState<FormVerification>({});
   const [initialVerification, setInitialVerification] = useState<FormVerification>({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [reExtracting, setReExtracting] = useState(false);
   const [reExtractProvider, setReExtractProvider] = useState<string>('');
   const [availableProviders, setAvailableProviders] = useState<string[]>([]);
-  const [reExtracting, setReExtracting] = useState(false);
+  const [providerModelInfo, setProviderModelInfo] = useState<Record<string, any>>({});
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [isPdf, setIsPdf] = useState(false);
-  const [showAllPages, setShowAllPages] = useState(false);
-
-  const currentProviderLabel = useMemo(
-    () => formatProviderName(form?.extracted_data?.provider || form?.ocr_provider),
-    [form?.extracted_data?.provider, form?.ocr_provider]
-  );
-
-  const normalizedConfidenceValue = useMemo(
-    () => normalizeConfidence(form?.extracted_data?.confidence ?? null),
-    [form?.extracted_data?.confidence]
-  );
-
-  const confidenceInfo = useMemo(
-    () => determineConfidenceClass(normalizedConfidenceValue),
-    [normalizedConfidenceValue]
-  );
-
-  const pageResults = useMemo(
-    () => form?.extracted_data?.page_results || [],
-    [form?.extracted_data?.page_results]
-  );
-
-  const pagesProcessed = useMemo(() => {
-    if (form?.extracted_data?.pages_processed) {
-      return form.extracted_data.pages_processed;
-    }
-    if (pageResults.length > 0) {
-      return pageResults.length;
-    }
-    return form ? 1 : 0;
-  }, [form, pageResults]);
-
-  const handleResetVerification = useCallback(() => {
-    setVerification(initialVerification);
-  }, [initialVerification]);
 
   const handleApplyParsedData = useCallback(() => {
-    if (!form?.extracted_data?.raw_text) {
+    if (!form?.extracted_data) {
+      alert('No OCR data available to autofill');
       return;
     }
-    const parsed = parseOCRText(form.extracted_data.raw_text);
-    const parsedData: Record<string, any> = { ...parsed };
-    if (parsed.address && !parsedData.permanent_address) {
-      parsedData.permanent_address = parsed.address;
+
+    // Count fields before updating state
+    let totalFieldsFilled = 0;
+    let fieldsFromStructured = 0;
+    let fieldsFromRawText = 0;
+
+    // First pass: count what will be filled
+    const newValues: Partial<FormVerification> = {};
+    
+    // Priority 1: Use structured_data from backend
+    if (form.extracted_data?.structured_data) {
+      const structuredData = extractStructuredData({ structured_data: form.extracted_data.structured_data });
+      console.log('[Auto-fill] Structured data:', structuredData);
+      
+      Object.entries(structuredData).forEach(([key, value]) => {
+        if (value && typeof value === 'string' && value.trim()) {
+          const fieldKey = key as keyof FormVerification;
+          if (FORM_FIELD_KEYS.includes(fieldKey)) {
+            newValues[fieldKey] = value.trim();
+            fieldsFromStructured++;
+          }
+        }
+      });
     }
-    setVerification((prev) => mergeIntoVerification(prev, parsedData, { overwrite: false }));
-  }, [form?.extracted_data?.raw_text]);
+
+    // Priority 2: Parse raw_text for any missing fields
+    if (form.extracted_data?.raw_text) {
+      const parsedFromText = parseOCRText(form.extracted_data.raw_text);
+      console.log('[Auto-fill] Parsed from text fields:', Object.keys(parsedFromText).filter(k => parsedFromText[k]).length);
+      
+      Object.entries(parsedFromText).forEach(([key, value]) => {
+        if (value && typeof value === 'string' && value.trim()) {
+          const fieldKey = key as keyof FormVerification;
+          // Only fill fields not already filled from structured data
+          if (FORM_FIELD_KEYS.includes(fieldKey) && !newValues[fieldKey]) {
+            newValues[fieldKey] = value.trim();
+            fieldsFromRawText++;
+          }
+        }
+      });
+    }
+
+    totalFieldsFilled = fieldsFromStructured + fieldsFromRawText;
+
+    // Now update the state
+    setVerification((prev) => {
+      const updated = { ...prev };
+      
+      Object.entries(newValues).forEach(([key, value]) => {
+        if (value) {
+          (updated as Record<string, string>)[key] = value;
+        }
+      });
+
+      console.log('[Auto-fill] Updated verification - student_name:', updated.student_name);
+      console.log('[Auto-fill] Updated verification - date_of_birth:', updated.date_of_birth);
+      console.log('[Auto-fill] Updated verification - gender:', updated.gender);
+      
+      return updated;
+    });
+    
+    // Show success message with field count
+    setTimeout(() => {
+      if (totalFieldsFilled > 0) {
+        alert(`✅ Auto-fill complete! ${totalFieldsFilled} field${totalFieldsFilled > 1 ? 's' : ''} filled from OCR data.`);
+      } else {
+        alert('ℹ️ No new fields to fill. All fields may already have values or no data was extracted.');
+      }
+    }, 100);
+  }, [form?.extracted_data]);
 
   useEffect(() => {
     if (id) {
@@ -217,25 +393,31 @@ function VerificationView() {
   const loadProviders = async () => {
     try {
       const providers = await apiService.getProviders();
+      console.log('Loaded providers:', providers);
+      
+      if (providers && providers.providers && providers.providers.length > 0) {
       const normalized = providers.providers.map((name) => name.toLowerCase());
       setAvailableProviders(normalized);
+      
+      // Store model info for display
+      if (providers.model_info) {
+        setProviderModelInfo(providers.model_info);
+      }
+      
       const defaultProvider = (providers.default || normalized[0] || '').toLowerCase();
       setReExtractProvider((current) => {
         const currentNormalized = current ? current.toLowerCase() : '';
-        if (currentNormalized && normalized.includes(currentNormalized)) {
-          return currentNormalized;
-        }
-        const adjustedDefault = defaultProvider === 'multi' ? 'best' : defaultProvider;
-        if (adjustedDefault && normalized.includes(adjustedDefault)) {
-          return adjustedDefault;
-        }
-        if (normalized.includes('best')) {
-          return 'best';
-        }
-        return normalized[0] || currentNormalized || '';
-      });
+          return normalized.includes(currentNormalized) ? currentNormalized : defaultProvider;
+        });
+      } else {
+        console.warn('No providers returned from API, using fallback');
+        // Fallback to default providers
+        setAvailableProviders(['tesseract', 'google-vision']);
+      }
     } catch (error) {
       console.error('Failed to load providers:', error);
+      // Fallback on error
+      setAvailableProviders(['tesseract', 'google-vision']);
     }
   };
 
@@ -244,57 +426,70 @@ function VerificationView() {
       setLoading(true);
       const data = await apiService.getForm(formId);
       setForm(data);
-      const normalizedProvider = data.ocr_provider ? data.ocr_provider.toLowerCase() : '';
-      const selection = normalizedProvider === 'multi' ? 'best' : normalizedProvider;
-      setReExtractProvider((prev) => selection || prev || '');
+
+      // Start with empty verification state
+      let nextVerification: FormVerification = {};
       
-      // Check if PDF and get page info
-      if (data.filename?.toLowerCase().endsWith('.pdf')) {
-        setIsPdf(true);
-        setCurrentPage(1); // Reset to first page
-        try {
-          const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
-          const response = await fetch(`${apiUrl}/api/preview/${formId}/pages`);
-          if (response.ok) {
-            const pageInfo = await response.json();
-            setTotalPages(pageInfo.total_pages || 1);
-            setIsPdf(pageInfo.is_pdf !== false);
-          } else {
-            // Fallback: assume it's a PDF even if endpoint fails
-            setTotalPages(1);
-            setIsPdf(true);
+      // Initialize all form field keys with empty strings
+      FORM_FIELD_KEYS.forEach((field) => {
+        nextVerification[field] = '';
+      });
+
+      // If form is already verified, use the saved data
+      if (data.status === 'verified') {
+        FORM_FIELD_KEYS.forEach((field) => {
+          const value = (data as Record<string, unknown>)[field];
+          if (value && typeof value === 'string') {
+            nextVerification[field] = value;
           }
-        } catch (error) {
-          console.error('Failed to get page info:', error);
-          // Fallback: assume it's a PDF
-          setTotalPages(1);
-          setIsPdf(true);
-        }
+        });
       } else {
-        setIsPdf(false);
-        setTotalPages(1);
-        setShowAllPages(false);
-      }
-      
-      // Pre-fill verification using stored values and optionally overlay OCR extraction
-      const baseVerification = buildVerificationState(data);
-      let nextVerification = baseVerification;
-
-      if (data.status !== 'verified') {
+        // For non-verified forms, extract data from OCR results
+        
+        // Priority 1: Use structured_data from backend (most reliable)
         if (data.extracted_data?.structured_data) {
-          nextVerification = mergeIntoVerification(nextVerification, data.extracted_data.structured_data, { overwrite: true });
-        } else if (data.extracted_data?.raw_text) {
-          const parsed = parseOCRText(data.extracted_data.raw_text);
-          const parsedData: Record<string, any> = { ...parsed };
-          if (parsed.address && !parsedData.permanent_address) {
-            parsedData.permanent_address = parsed.address;
-          }
-          nextVerification = mergeIntoVerification(nextVerification, parsedData, { overwrite: false });
+          const structuredData = extractStructuredData({ structured_data: data.extracted_data.structured_data });
+          console.log('[loadForm] Structured data fields:', Object.keys(structuredData).length);
+          
+          // Apply structured data to verification
+          Object.entries(structuredData).forEach(([key, value]) => {
+            if (value && typeof value === 'string' && value.trim()) {
+              const fieldKey = key as keyof FormVerification;
+              if (fieldKey in nextVerification) {
+                nextVerification[fieldKey] = value.trim();
+              }
+            }
+          });
+        }
+
+        // Priority 2: Parse raw_text to fill any missing fields
+        if (data.extracted_data?.raw_text) {
+          const parsedFromText = parseOCRText(data.extracted_data.raw_text);
+          console.log('[loadForm] Parsed from text fields:', Object.keys(parsedFromText).filter(k => parsedFromText[k]).length);
+          
+          // Apply parsed text data only for empty fields
+          Object.entries(parsedFromText).forEach(([key, value]) => {
+            if (value && typeof value === 'string' && value.trim()) {
+              const fieldKey = key as keyof FormVerification;
+              // Only fill if the field is empty
+              if (fieldKey in nextVerification && !nextVerification[fieldKey]) {
+                nextVerification[fieldKey] = value.trim();
+              }
+            }
+          });
         }
       }
 
-      setInitialVerification(nextVerification);
-      setVerification(nextVerification);
+      // Log key fields for debugging
+      console.log('[loadForm] Final verification state:');
+      console.log('  student_name:', nextVerification.student_name);
+      console.log('  date_of_birth:', nextVerification.date_of_birth);
+      console.log('  gender:', nextVerification.gender);
+      console.log('  email:', nextVerification.email);
+      console.log('  phone_number:', nextVerification.phone_number);
+
+      setInitialVerification({ ...nextVerification });
+      setVerification({ ...nextVerification });
     } catch (error) {
       console.error('Failed to load form:', error);
       alert('Failed to load form details');
@@ -318,55 +513,69 @@ function VerificationView() {
     }
   };
 
+  const handleSaveProgress = async () => {
+    if (!id) return;
+
+    try {
+      setSaving(true);
+      // Save without verifying (preserves current status)
+      await apiService.updateForm(parseInt(id), verification, false);
+      alert('Progress saved successfully! Form status unchanged.');
+      // Reload form to show updated data
+      loadForm(parseInt(id));
+    } catch (error: any) {
+      console.error('Failed to save progress:', error);
+      alert(`Failed to save: ${error.response?.data?.detail || error.message}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleSave = async () => {
     if (!id) return;
+
     try {
       setSaving(true);
-      await apiService.verifyForm(parseInt(id), verification);
-      alert('Form verified and saved successfully');
-      navigate('/');
+      // Save and verify (changes status to verified)
+      const updatedForm = await apiService.updateForm(parseInt(id), verification, true);
+
+      // Navigate to student profile if linked, otherwise show success message
+      if (updatedForm.student_profile_id) {
+        alert(`Form verified and saved successfully! Student profile created/updated.`);
+        navigate(`/students/${updatedForm.student_profile_id}`);
+      } else {
+        alert('Form verified and saved successfully!');
+        navigate('/students');
+      }
     } catch (error: any) {
-      alert(`Save failed: ${error.response?.data?.detail || error.message}`);
+      console.error('Failed to save verification:', error);
+      alert(`Failed to save: ${error.response?.data?.detail || error.message}`);
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handleUpdate = async () => {
-    if (!id) return;
-    try {
-      setSaving(true);
-      await apiService.updateForm(parseInt(id), verification);
-      await loadForm(parseInt(id));
-      alert('Form updated successfully');
-    } catch (error: any) {
-      alert(`Update failed: ${error.response?.data?.detail || error.message}`);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!id || !form) return;
-    if (!window.confirm(`Are you sure you want to delete "${form.filename}"? This action cannot be undone.`)) {
-      return;
-    }
-
-    try {
-      await apiService.deleteForm(parseInt(id));
-      alert('Form deleted successfully');
-      navigate('/');
-    } catch (error: any) {
-      alert(`Delete failed: ${error.response?.data?.detail || error.message}`);
     }
   };
 
   const handleChange = (field: keyof FormVerification, value: string) => {
-    setVerification(prev => ({ ...prev, [field]: value }));
+    setVerification((prev) => ({ ...prev, [field]: value }));
   };
 
+  const handleResetVerification = () => {
+    if (window.confirm('Are you sure you want to discard your changes and revert to the original extracted data?')) {
+      setVerification(initialVerification);
+    }
+  };
+
+  const isDirty = useMemo(() => {
+    return JSON.stringify(verification) !== JSON.stringify(initialVerification);
+  }, [verification, initialVerification]);
+
+  const pageResults = useMemo(() => {
+    if (!form?.extracted_data?.page_results) return [];
+    return form.extracted_data.page_results;
+  }, [form]);
+
   if (loading) {
-    return <div className="loading">Loading form...</div>;
+    return <div className="loading">Loading form data...</div>;
   }
 
   if (!form) {
@@ -376,204 +585,82 @@ function VerificationView() {
   return (
     <div className="verification-view">
       <div className="verification-header">
-        <h2>Verify Form: {form.filename}</h2>
+        <h2>Verify Form Data</h2>
         <div className="header-actions">
-          <button onClick={handleUpdate} className="btn btn-secondary" disabled={saving}>
-            {saving ? 'Updating...' : 'Update'}
-          </button>
-          <button onClick={handleDelete} className="btn btn-danger" disabled={saving}>
-            Delete
-          </button>
-          <button onClick={() => navigate('/')} className="btn btn-secondary">
-            Back
-          </button>
-        </div>
-      </div>
-
-      <div className="provider-toolbar">
-        <div className="provider-summary">
-          <span className="provider-chip">
-            Current provider: <strong>{currentProviderLabel}</strong>
-          </span>
-          <span className={confidenceInfo.className}>{confidenceInfo.label}</span>
-          {pagesProcessed ? <span className="summary-pill">Pages: {pagesProcessed}</span> : null}
-          {form.extracted_data?.word_count ? (
-            <span className="summary-pill">Words: {form.extracted_data.word_count}</span>
-          ) : null}
-          {form.extracted_data?.psm_mode ? (
-            <span className="summary-pill">PSM {form.extracted_data.psm_mode}</span>
-          ) : null}
-        </div>
-        <div className="provider-controls">
-          <label htmlFor="provider-select">Switch provider</label>
-          <div className="provider-actions">
-            <select
-              id="provider-select"
+          <div className="re-extract-control">
+            <select 
+              className="provider-select input"
               value={reExtractProvider}
-              onChange={(e) => setReExtractProvider(e.target.value.toLowerCase())}
-              disabled={availableProviders.length === 0}
+              onChange={(e) => setReExtractProvider(e.target.value)}
+              disabled={reExtracting}
             >
-              {availableProviders.map((provider) => (
-                <option key={provider} value={provider}>
-                  {formatProviderName(provider)}
-                </option>
-              ))}
+              <option value="">Auto Select Provider</option>
+              {availableProviders.length > 0 ? (
+                availableProviders.map(p => (
+                  <option key={p} value={p}>{formatProviderName(p, providerModelInfo)}</option>
+                ))
+              ) : (
+                <option value="tesseract">Tesseract (Fallback)</option>
+              )}
             </select>
             <button
               onClick={handleReExtract}
-              className="btn btn-primary"
-              disabled={reExtracting || !reExtractProvider}
+              disabled={reExtracting}
+              className="btn btn-secondary"
             >
-              {reExtracting ? 'Re-extracting...' : 'Run OCR'}
+              {reExtracting ? 'Extracting...' : 'Re-Extract'}
             </button>
           </div>
+          <button onClick={handleSave} className="btn btn-primary" disabled={saving}>
+            {saving ? 'Saving...' : 'Save & Verify'}
+          </button>
         </div>
       </div>
 
       <div className="verification-content">
-        <div className="image-section">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <h3>Scanned Form</h3>
-            {isPdf && totalPages > 1 && (
-              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+        <div className="form-preview">
+          <div className="page-controls">
                 <button
-                  onClick={() => setShowAllPages(!showAllPages)}
-                  className="btn btn-sm"
-                  style={{ 
-                    fontSize: '0.85rem', 
-                    padding: '0.4rem 0.8rem',
-                    backgroundColor: showAllPages ? 'var(--primary-color)' : 'var(--bg-secondary)',
-                    color: showAllPages ? 'white' : 'var(--text-primary)',
-                    border: '1px solid var(--border-color)'
-                  }}
-                >
-                  {showAllPages ? '📄 Single View' : '📑 View All Pages'}
-                </button>
-                {showAllPages && (
-                  <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                    Showing all {totalPages} pages
-                  </span>
-                )}
-              </div>
-            )}
-          </div>
-          <div className="image-container">
-            {isPdf && totalPages > 1 && showAllPages ? (
-              // Show all pages in a scrollable grid
-              <div className="all-pages-view" style={{ minHeight: '400px' }}>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
-                  <div key={pageNum} className="page-preview-item" style={{ marginBottom: '1.5rem' }}>
-                    <div className="page-header">
-                      <span className="page-number">Page {pageNum} of {totalPages}</span>
-                    </div>
-                    <img
-                      src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/api/preview/${form.id}?page=${pageNum}`}
-                      alt={`Scanned form - Page ${pageNum}`}
-                      className="page-preview-image"
-                      style={{ 
-                        width: '100%', 
-                        height: 'auto',
-                        display: 'block',
-                        marginTop: '0.5rem'
-                      }}
-                      onError={(e) => {
-                        console.error(`Failed to load page ${pageNum}:`, e);
-                        const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
-                        const img = e.target as HTMLImageElement;
-                        img.src = `${apiUrl}/uploads/${form.file_path}`;
-                      }}
-                    />
-                  </div>
-                ))}
-              </div>
-            ) : isPdf && totalPages > 1 ? (
-              // For multi-page PDFs, show page navigation
-              <div>
-                <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <button
+              disabled={currentPage <= 1}
                     onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                    disabled={currentPage === 1}
-                    className="btn btn-sm"
-                    style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem' }}
                   >
-                    ← Previous
+              Previous
                   </button>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-                      Page {currentPage} of {totalPages}
-                    </span>
-                    {totalPages > 1 && (
-                      <select
-                        value={currentPage}
-                        onChange={(e) => setCurrentPage(parseInt(e.target.value))}
-                        style={{ padding: '0.4rem 0.8rem', borderRadius: '4px', border: '1px solid var(--border-color)' }}
-                      >
-                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
-                          <option key={pageNum} value={pageNum}>
-                            Page {pageNum}
-                          </option>
-                        ))}
-                      </select>
-                    )}
-                  </div>
+            <span>Page {currentPage} of {form.extracted_data?.total_pages || form.extracted_data?.pages_processed || 1}</span>
                   <button
-                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                    disabled={currentPage === totalPages}
-                    className="btn btn-sm"
-                    style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem' }}
-                  >
-                    Next →
+              disabled={currentPage >= (form.extracted_data?.total_pages || form.extracted_data?.pages_processed || 1)}
+              onClick={() => {
+                const maxPages = form.extracted_data?.total_pages || form.extracted_data?.pages_processed || 1;
+                setCurrentPage(prev => Math.min(maxPages, prev + 1));
+              }}
+            >
+              Next
                   </button>
                 </div>
-                <img
-                  key={`page-${currentPage}`}
-                  src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/api/preview/${form.id}?page=${currentPage}&t=${Date.now()}`}
-                  alt={`Scanned form - Page ${currentPage} of ${totalPages}`}
-                  style={{ maxWidth: '100%', height: 'auto', border: '1px solid var(--border-color)', borderRadius: '4px' }}
-                  onError={(e) => {
-                    console.error(`Failed to load page ${currentPage}`);
-                    const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
-                    const img = e.target as HTMLImageElement;
-                    img.src = `${apiUrl}/uploads/${form.file_path}`;
-                  }}
-                  onLoad={() => {
-                    console.log(`Page ${currentPage} loaded successfully`);
-                  }}
-                />
-              </div>
-            ) : form.filename?.toLowerCase().endsWith('.pdf') ? (
-              // For single-page PDFs or first load
-              <img
-                key={`page-${currentPage}`}
-                src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/api/preview/${form.id}?page=${currentPage}&t=${Date.now()}`}
-                alt={`Scanned form - Page ${currentPage} of ${totalPages}`}
-                style={{ maxWidth: '100%', height: 'auto', border: '1px solid var(--border-color)', borderRadius: '4px' }}
-                onError={(e) => {
-                  console.error(`Failed to load page ${currentPage}`);
-                  const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
-                  const img = e.target as HTMLImageElement;
-                  img.src = `${apiUrl}/uploads/${form.file_path}`;
-                }}
-                onLoad={() => {
-                  console.log(`Page ${currentPage} loaded successfully`);
-                }}
+          <div className="image-container">
+            {form.file_path?.toLowerCase().endsWith('.pdf') ? (
+              // PDF files - use iframe for native PDF viewing with page navigation
+              // The #page= parameter works with most PDF viewers (Chrome, Firefox, Edge)
+              <iframe
+                key={`pdf-${form.id}-${currentPage}`}
+                src={`${getFileUrl(form.file_path, form.id)}#page=${currentPage}`}
+                title={`Scanned form page ${currentPage}`}
+                width="100%"
+                height="800px"
+                style={{ border: 'none', display: 'block' }}
+                allow="fullscreen"
               />
             ) : (
-              // For images, use direct path
+              // Image files
               <img
-                src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/uploads/${form.file_path}`}
+                src={getFileUrl(form.file_path, form.id)}
                 alt="Scanned form"
+                style={{ maxWidth: '100%', height: 'auto', display: 'block' }}
                 onError={(e) => {
-                  // Try alternative paths if the first one fails
-                  const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+                  // Fallback to preview endpoint
                   const img = e.target as HTMLImageElement;
-                  if (!img.src.includes('/uploads/')) {
-                    img.src = `${apiUrl}/uploads/${form.file_path}`;
-                  } else if (form.file_path) {
-                    img.src = `${apiUrl}/${form.file_path}`;
-                  } else {
-                    // Last resort: try preview endpoint
-                    img.src = `${apiUrl}/api/preview/${form.id}`;
+                  if (form.id && !img.src.includes('/api/preview/')) {
+                    img.src = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/api/preview/${form.id}`;
                   }
                 }}
               />
@@ -582,20 +669,16 @@ function VerificationView() {
         </div>
 
         <div className="data-section">
-          <h3>Extracted & Verified Data</h3>
-          
-          {form.extracted_data && (
-            <div className="extracted-text">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                <h4>Extracted Text (Raw)</h4>
-                <div className="extraction-actions">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <h3 style={{ margin: 0 }}>Verify Form Fields</h3>
+            <div className="extraction-actions" style={{ display: 'flex', gap: '0.5rem' }}>
                   {form.extracted_data?.raw_text && (
                     <button
                       onClick={handleApplyParsedData}
                       className="btn btn-sm btn-secondary"
                       style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem' }}
                     >
-                      🔄 Auto-fill Fields
+                  🔄 Auto-fill
                     </button>
                   )}
                   <button
@@ -603,88 +686,138 @@ function VerificationView() {
                     className="btn btn-sm"
                     style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem' }}
                   >
-                    ↩ Reset Changes
+                ↩ Reset
                   </button>
                 </div>
               </div>
-              <div className="raw-text-box">
+          
+          {form.extracted_data && (
+            <div style={{ marginBottom: '1rem', padding: '0.5rem', background: '#f8f9fa', borderRadius: '8px', fontSize: '0.85rem' }}>
+              <span style={{ fontWeight: 500 }}>Confidence: {formatConfidenceValue(form.extracted_data.confidence)}</span>
+              <details style={{ marginTop: '0.5rem' }}>
+                <summary style={{ cursor: 'pointer', color: '#667085', fontSize: '0.8rem' }}>View Raw Extracted Text</summary>
+                <div className="raw-text-box" style={{ marginTop: '0.5rem', maxHeight: '200px', overflow: 'auto', fontSize: '0.75rem' }}>
                 {form.extracted_data.raw_text || 'No text extracted'}
               </div>
-              {form.extracted_data && (
-                <p className="confidence">
-                  Confidence: {formatConfidenceValue(form.extracted_data.confidence)}
-                </p>
-              )}
-              {pageResults.length > 1 && (
-                <div className="page-confidence-list">
-                  {pageResults.map((page) => (
-                    <div key={page.page} className="page-confidence-item">
-                      <div className="page-confidence-meta">
-                        <span className="page-confidence-page">Page {page.page}</span>
-                        {page.provider && (
-                          <span className="page-confidence-provider">
-                            {formatProviderName(page.provider)}
-                          </span>
-                        )}
-                      </div>
-                      <span className="page-confidence-value">
-                        {formatConfidenceValue(page.confidence)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
+              </details>
             </div>
           )}
 
-          <div className="form-editor" style={{ maxHeight: '600px', overflowY: 'auto' }}>
-            {/* Basic Details Section */}
+          <div className="form-editor" style={{ maxHeight: 'calc(100vh - 350px)', overflowY: 'auto' }}>
+
+            {/* Academic & Admission Details */}
             <div className="form-section">
-              <h4 className="form-section-title">Basic Details</h4>
+              <h4 className="form-section-title">Academic & Admission Details</h4>
               <div className="form-grid">
                 <div className="form-row">
-                  <label>Student Name *</label>
-                  <input type="text" value={verification.student_name || ''} onChange={(e) => handleChange('student_name', e.target.value)} placeholder="Enter student name" />
-                </div>
+                  <label className="input-label">Academic Session</label>
+                  <input type="text" className="input" value={verification.academic_session || ''} onChange={(e) => handleChange('academic_session', e.target.value)} placeholder="2025-2026" />
+                      </div>
                 <div className="form-row">
-                  <label>Date of Birth</label>
-                  <input type="text" value={verification.date_of_birth || ''} onChange={(e) => handleChange('date_of_birth', e.target.value)} placeholder="DD/MM/YYYY" />
-                </div>
-                <div className="form-row">
-                  <label>Gender</label>
-                  <select value={verification.gender || ''} onChange={(e) => handleChange('gender', e.target.value)}>
-                    <option value="">Select</option>
-                    <option value="MALE">Male</option>
-                    <option value="FEMALE">Female</option>
-                    <option value="OTHER">Other</option>
+                  <label className="input-label">Course</label>
+                  <select className="input select" value={verification.course || ''} onChange={(e) => handleChange('course', e.target.value)}>
+                    <option value="">Select Course</option>
+                    <option value="B.COM.(H)">B.COM.(H)</option>
+                    <option value="B.A.(H) ECO">B.A.(H) ECO</option>
                   </select>
-                </div>
+                    </div>
                 <div className="form-row">
-                  <label>Category</label>
-                  <select value={verification.category || ''} onChange={(e) => handleChange('category', e.target.value)}>
-                    <option value="">Select</option>
-                    <option value="GENERAL">General</option>
+                  <label className="input-label">Admission Category</label>
+                  <select className="input select" value={verification.admission_category || ''} onChange={(e) => handleChange('admission_category', e.target.value)}>
+                    <option value="">Select Category</option>
+                    <option value="GEN">GEN</option>
                     <option value="OBC">OBC</option>
                     <option value="SC">SC</option>
                     <option value="ST">ST</option>
+                    <option value="EWS">EWS</option>
+                    <option value="PWD">PWD</option>
+                    <option value="Sports">Sports</option>
+                    <option value="Foreign">Foreign</option>
+                    <option value="CW">CW</option>
+                    <option value="KM">KM</option>
+                    <option value="Others">Others</option>
+                  </select>
+                </div>
+                <div className="form-row">
+                  <label className="input-label">Other Category (Specify)</label>
+                  <input type="text" className="input" value={verification.admission_category_other || ''} onChange={(e) => handleChange('admission_category_other', e.target.value)} placeholder="If Others selected" />
+            </div>
+                <div className="form-row">
+                  <label className="input-label">DU Portal Form No.</label>
+                  <input type="text" className="input" value={verification.du_portal_form_number || ''} onChange={(e) => handleChange('du_portal_form_number', e.target.value)} placeholder="Form Number" />
+                </div>
+                <div className="form-row">
+                  <label className="input-label">CUET Score (Total)</label>
+                  <input
+                    type="text"
+                    className="input"
+                    value={(() => {
+                      // Calculate sum of all obtained scores (supports decimals)
+                      let total = 0;
+                      for (let i = 1; i <= 6; i++) {
+                        const score = (verification as any)[`cuet_score_obtained_${i}`];
+                        if (score) {
+                          const num = parseFloat(score);
+                          if (!isNaN(num)) total += num;
+                        }
+                      }
+                      if (total > 0) {
+                        return total % 1 === 0 ? String(total) : total.toFixed(3).replace(/\.?0+$/, '');
+                      }
+                      return verification.cuet_score || '';
+                    })()}
+                    onChange={(e) => handleChange('cuet_score', e.target.value)}
+                    placeholder="Sum of obtained"
+                  />
+                </div>
+                <div className="form-row">
+                  <label className="input-label">College Roll No.</label>
+                  <input type="text" className="input" value={verification.college_roll_no || ''} onChange={(e) => handleChange('college_roll_no', e.target.value)} placeholder="Roll No" />
+                </div>
+                <div className="form-row">
+                  <label className="input-label">Date of Admission</label>
+                  <input type="text" className="input" value={verification.date_of_admission || ''} onChange={(e) => handleChange('date_of_admission', e.target.value)} placeholder="DD/MM/YYYY" />
+                </div>
+              </div>
+            </div>
+
+            {/* Basic Details Section */}
+            <div className="form-section">
+              <h4 className="form-section-title">Personal Details</h4>
+              <div className="form-grid">
+                <div className="form-row" style={{ gridColumn: '1 / -1' }}>
+                  <label className="input-label">Student Name (Block Letters) *</label>
+                  <input type="text" className="input" value={verification.student_name || ''} onChange={(e) => handleChange('student_name', e.target.value)} placeholder="Enter student name" />
+                </div>
+                <div className="form-row">
+                  <label className="input-label">Date of Birth</label>
+                  <input type="text" className="input" value={verification.date_of_birth || ''} onChange={(e) => handleChange('date_of_birth', e.target.value)} placeholder="DD/MM/YYYY" />
+                </div>
+                <div className="form-row">
+                  <label className="input-label">Gender</label>
+                  <select className="input select" value={verification.gender || ''} onChange={(e) => handleChange('gender', e.target.value)}>
+                    <option value="">Select</option>
+                    <option value="MALE">Male</option>
+                    <option value="FEMALE">Female</option>
+                    <option value="TRANSGENDER">Transgender</option>
                     <option value="OTHER">Other</option>
                   </select>
                 </div>
                 <div className="form-row">
-                  <label>Nationality</label>
-                  <input type="text" value={verification.nationality || ''} onChange={(e) => handleChange('nationality', e.target.value)} placeholder="Nationality" />
+                  <label className="input-label">Nationality</label>
+                  <input type="text" className="input" value={verification.nationality || ''} onChange={(e) => handleChange('nationality', e.target.value)} placeholder="Nationality" />
                 </div>
                 <div className="form-row">
-                  <label>Religion</label>
-                  <input type="text" value={verification.religion || ''} onChange={(e) => handleChange('religion', e.target.value)} placeholder="Religion" />
+                  <label className="input-label">Religion</label>
+                  <input type="text" className="input" value={verification.religion || ''} onChange={(e) => handleChange('religion', e.target.value)} placeholder="Religion" />
                 </div>
                 <div className="form-row">
-                  <label>Aadhar Number</label>
-                  <input type="text" value={verification.aadhar_number || ''} onChange={(e) => handleChange('aadhar_number', e.target.value)} placeholder="Aadhar Number" />
+                  <label className="input-label">Aadhar Number</label>
+                  <input type="text" className="input" value={verification.aadhar_number || ''} onChange={(e) => handleChange('aadhar_number', e.target.value)} placeholder="Aadhar Number" />
                 </div>
                 <div className="form-row">
-                  <label>Blood Group</label>
-                  <select value={verification.blood_group || ''} onChange={(e) => handleChange('blood_group', e.target.value)}>
+                  <label className="input-label">Blood Group</label>
+                  <select className="input select" value={verification.blood_group || ''} onChange={(e) => handleChange('blood_group', e.target.value)}>
                     <option value="">Select</option>
                     <option value="A+">A+</option>
                     <option value="A-">A-</option>
@@ -696,6 +829,22 @@ function VerificationView() {
                     <option value="O-">O-</option>
                   </select>
                 </div>
+                <div className="form-row">
+                  <label className="input-label">Below Poverty Line</label>
+                  <select className="input select" value={verification.below_poverty_line || ''} onChange={(e) => handleChange('below_poverty_line', e.target.value)}>
+                    <option value="">Select</option>
+                    <option value="YES">Yes</option>
+                    <option value="NO">No</option>
+                  </select>
+                </div>
+                <div className="form-row">
+                  <label className="input-label">Annual Family Income</label>
+                  <input type="text" className="input" value={verification.annual_income || ''} onChange={(e) => handleChange('annual_income', e.target.value)} placeholder="Annual Income" />
+                </div>
+                <div className="form-row">
+                  <label className="input-label">Minority Category</label>
+                  <input type="text" className="input" value={verification.minority_category || ''} onChange={(e) => handleChange('minority_category', e.target.value)} placeholder="e.g. Muslim, Jain, Sikh" />
+                </div>
               </div>
             </div>
 
@@ -704,24 +853,29 @@ function VerificationView() {
               <h4 className="form-section-title">Address Details</h4>
               <div className="form-grid">
                 <div className="form-row" style={{ gridColumn: '1 / -1' }}>
-                  <label>Permanent Address</label>
-                  <textarea value={verification.permanent_address || ''} onChange={(e) => handleChange('permanent_address', e.target.value)} placeholder="Permanent Address" rows={3} />
-                </div>
-                <div className="form-row" style={{ gridColumn: '1 / -1' }}>
-                  <label>Correspondence Address</label>
-                  <textarea value={verification.correspondence_address || ''} onChange={(e) => handleChange('correspondence_address', e.target.value)} placeholder="Correspondence Address" rows={3} />
+                  <label className="input-label">Permanent Address</label>
+                  <textarea className="input textarea" value={verification.permanent_address || ''} onChange={(e) => handleChange('permanent_address', e.target.value)} placeholder="Permanent Address" rows={3} />
                 </div>
                 <div className="form-row">
-                  <label>City</label>
-                  <input type="text" value={verification.city || ''} onChange={(e) => handleChange('city', e.target.value)} placeholder="City" />
+                  <label className="input-label">Permanent State</label>
+                  <input type="text" className="input" value={verification.permanent_state || ''} onChange={(e) => handleChange('permanent_state', e.target.value)} placeholder="State" />
                 </div>
                 <div className="form-row">
-                  <label>State</label>
-                  <input type="text" value={verification.state || ''} onChange={(e) => handleChange('state', e.target.value)} placeholder="State" />
+                  <label className="input-label">Permanent PIN</label>
+                  <input type="text" className="input" value={verification.permanent_pincode || ''} onChange={(e) => handleChange('permanent_pincode', e.target.value)} placeholder="PIN Code" />
+                </div>
+                
+                <div className="form-row" style={{ gridColumn: '1 / -1', marginTop: '1rem' }}>
+                  <label className="input-label">Correspondence Address</label>
+                  <textarea className="input textarea" value={verification.correspondence_address || ''} onChange={(e) => handleChange('correspondence_address', e.target.value)} placeholder="Correspondence Address" rows={3} />
                 </div>
                 <div className="form-row">
-                  <label>Pincode</label>
-                  <input type="text" value={verification.pincode || ''} onChange={(e) => handleChange('pincode', e.target.value)} placeholder="Pincode" />
+                  <label className="input-label">Correspondence State</label>
+                  <input type="text" className="input" value={verification.correspondence_state || ''} onChange={(e) => handleChange('correspondence_state', e.target.value)} placeholder="State" />
+                </div>
+                <div className="form-row">
+                  <label className="input-label">Correspondence PIN</label>
+                  <input type="text" className="input" value={verification.correspondence_pincode || ''} onChange={(e) => handleChange('correspondence_pincode', e.target.value)} placeholder="PIN Code" />
                 </div>
               </div>
             </div>
@@ -731,149 +885,232 @@ function VerificationView() {
               <h4 className="form-section-title">Contact Details</h4>
               <div className="form-grid">
                 <div className="form-row">
-                  <label>Phone Number</label>
-                  <input type="text" value={verification.phone_number || ''} onChange={(e) => handleChange('phone_number', e.target.value)} placeholder="Phone Number" />
+                  <label className="input-label">Email</label>
+                  <input type="email" className="input" value={verification.email || ''} onChange={(e) => handleChange('email', e.target.value)} placeholder="Student Email" />
                 </div>
                 <div className="form-row">
-                  <label>Alternate Phone</label>
-                  <input type="text" value={verification.alternate_phone || ''} onChange={(e) => handleChange('alternate_phone', e.target.value)} placeholder="Alternate Phone" />
+                  <label className="input-label">Phone Number</label>
+                  <input type="text" className="input" value={verification.phone_number || ''} onChange={(e) => handleChange('phone_number', e.target.value)} placeholder="Phone Number" />
                 </div>
                 <div className="form-row">
-                  <label>Email</label>
-                  <input type="email" value={verification.email || ''} onChange={(e) => handleChange('email', e.target.value)} placeholder="Email" />
-                </div>
-                <div className="form-row">
-                  <label>Emergency Contact Name</label>
-                  <input type="text" value={verification.emergency_contact_name || ''} onChange={(e) => handleChange('emergency_contact_name', e.target.value)} placeholder="Emergency Contact Name" />
-                </div>
-                <div className="form-row">
-                  <label>Emergency Contact Phone</label>
-                  <input type="text" value={verification.emergency_contact_phone || ''} onChange={(e) => handleChange('emergency_contact_phone', e.target.value)} placeholder="Emergency Contact Phone" />
+                  <label className="input-label">Alternate Phone</label>
+                  <input type="text" className="input" value={verification.alternate_phone || ''} onChange={(e) => handleChange('alternate_phone', e.target.value)} placeholder="Alternate Phone" />
                 </div>
               </div>
             </div>
 
-            {/* Parent/Guardian Details Section */}
+            {/* Parent Details Section */}
             <div className="form-section">
-              <h4 className="form-section-title">Parent/Guardian Details</h4>
+              <h4 className="form-section-title">Mother's Details</h4>
               <div className="form-grid">
                 <div className="form-row">
-                  <label>Father Name</label>
-                  <input type="text" value={verification.father_name || ''} onChange={(e) => handleChange('father_name', e.target.value)} placeholder="Father Name" />
+                  <label className="input-label">Mother's Name</label>
+                  <input type="text" className="input" value={verification.mother_name || ''} onChange={(e) => handleChange('mother_name', e.target.value)} placeholder="Mother's Name" />
                 </div>
                 <div className="form-row">
-                  <label>Father Occupation</label>
-                  <input type="text" value={verification.father_occupation || ''} onChange={(e) => handleChange('father_occupation', e.target.value)} placeholder="Father Occupation" />
+                  <label className="input-label">Occupation</label>
+                  <input type="text" className="input" value={verification.mother_occupation || ''} onChange={(e) => handleChange('mother_occupation', e.target.value)} placeholder="Occupation" />
                 </div>
                 <div className="form-row">
-                  <label>Father Phone</label>
-                  <input type="text" value={verification.father_phone || ''} onChange={(e) => handleChange('father_phone', e.target.value)} placeholder="Father Phone" />
+                  <label className="input-label">Designation</label>
+                  <input type="text" className="input" value={verification.mother_designation || ''} onChange={(e) => handleChange('mother_designation', e.target.value)} placeholder="Designation" />
                 </div>
                 <div className="form-row">
-                  <label>Mother Name</label>
-                  <input type="text" value={verification.mother_name || ''} onChange={(e) => handleChange('mother_name', e.target.value)} placeholder="Mother Name" />
+                  <label className="input-label">Organization</label>
+                  <input type="text" className="input" value={verification.mother_organization || ''} onChange={(e) => handleChange('mother_organization', e.target.value)} placeholder="Organization" />
                 </div>
                 <div className="form-row">
-                  <label>Mother Occupation</label>
-                  <input type="text" value={verification.mother_occupation || ''} onChange={(e) => handleChange('mother_occupation', e.target.value)} placeholder="Mother Occupation" />
+                  <label className="input-label">Mother's Email</label>
+                  <input type="email" className="input" value={verification.mother_email || ''} onChange={(e) => handleChange('mother_email', e.target.value)} placeholder="Email" />
                 </div>
                 <div className="form-row">
-                  <label>Mother Phone</label>
-                  <input type="text" value={verification.mother_phone || ''} onChange={(e) => handleChange('mother_phone', e.target.value)} placeholder="Mother Phone" />
+                  <label className="input-label">Mother's Mobile</label>
+                  <input type="text" className="input" value={verification.mother_mobile || ''} onChange={(e) => handleChange('mother_mobile', e.target.value)} placeholder="Mobile No." />
+                </div>
+              </div>
+
+              <h4 className="form-section-title" style={{ marginTop: '1.5rem' }}>Father's Details</h4>
+              <div className="form-grid">
+                <div className="form-row">
+                  <label className="input-label">Father's Name</label>
+                  <input type="text" className="input" value={verification.father_name || ''} onChange={(e) => handleChange('father_name', e.target.value)} placeholder="Father's Name" />
                 </div>
                 <div className="form-row">
-                  <label>Guardian Name</label>
-                  <input type="text" value={verification.guardian_name || ''} onChange={(e) => handleChange('guardian_name', e.target.value)} placeholder="Guardian Name" />
+                  <label className="input-label">Occupation</label>
+                  <input type="text" className="input" value={verification.father_occupation || ''} onChange={(e) => handleChange('father_occupation', e.target.value)} placeholder="Occupation" />
                 </div>
                 <div className="form-row">
-                  <label>Guardian Relation</label>
-                  <input type="text" value={verification.guardian_relation || ''} onChange={(e) => handleChange('guardian_relation', e.target.value)} placeholder="Guardian Relation" />
+                  <label className="input-label">Designation</label>
+                  <input type="text" className="input" value={verification.father_designation || ''} onChange={(e) => handleChange('father_designation', e.target.value)} placeholder="Designation" />
                 </div>
                 <div className="form-row">
-                  <label>Guardian Phone</label>
-                  <input type="text" value={verification.guardian_phone || ''} onChange={(e) => handleChange('guardian_phone', e.target.value)} placeholder="Guardian Phone" />
+                  <label className="input-label">Organization</label>
+                  <input type="text" className="input" value={verification.father_organization || ''} onChange={(e) => handleChange('father_organization', e.target.value)} placeholder="Organization" />
                 </div>
                 <div className="form-row">
-                  <label>Annual Income</label>
-                  <input type="text" value={verification.annual_income || ''} onChange={(e) => handleChange('annual_income', e.target.value)} placeholder="Annual Income" />
+                  <label className="input-label">Father's Email</label>
+                  <input type="email" className="input" value={verification.father_email || ''} onChange={(e) => handleChange('father_email', e.target.value)} placeholder="Email" />
+                </div>
+                <div className="form-row">
+                  <label className="input-label">Father's Mobile</label>
+                  <input type="text" className="input" value={verification.father_mobile || ''} onChange={(e) => handleChange('father_mobile', e.target.value)} placeholder="Mobile No." />
                 </div>
               </div>
             </div>
 
-            {/* Educational Qualifications Section */}
+            {/* Local Guardian Details */}
             <div className="form-section">
-              <h4 className="form-section-title">Educational Qualifications</h4>
+              <h4 className="form-section-title">Local Guardian's Details</h4>
               <div className="form-grid">
-                <h5 style={{ gridColumn: '1 / -1', marginTop: '1rem', marginBottom: '0.5rem', fontSize: '0.9rem', color: '#666' }}>10th Standard</h5>
                 <div className="form-row">
-                  <label>10th Board</label>
-                  <input type="text" value={verification.tenth_board || ''} onChange={(e) => handleChange('tenth_board', e.target.value)} placeholder="Board" />
-                </div>
-                <div className="form-row">
-                  <label>10th Year</label>
-                  <input type="text" value={verification.tenth_year || ''} onChange={(e) => handleChange('tenth_year', e.target.value)} placeholder="Year" />
+                  <label className="input-label">Guardian Name</label>
+                  <input type="text" className="input" value={verification.guardian_name || ''} onChange={(e) => handleChange('guardian_name', e.target.value)} placeholder="Name" />
                 </div>
                 <div className="form-row">
-                  <label>10th Percentage</label>
-                  <input type="text" value={verification.tenth_percentage || ''} onChange={(e) => handleChange('tenth_percentage', e.target.value)} placeholder="%" />
-                </div>
-                <div className="form-row" style={{ gridColumn: '1 / -1' }}>
-                  <label>10th School</label>
-                  <input type="text" value={verification.tenth_school || ''} onChange={(e) => handleChange('tenth_school', e.target.value)} placeholder="School Name" />
-                </div>
-                <h5 style={{ gridColumn: '1 / -1', marginTop: '1rem', marginBottom: '0.5rem', fontSize: '0.9rem', color: '#666' }}>12th Standard</h5>
-                <div className="form-row">
-                  <label>12th Board</label>
-                  <input type="text" value={verification.twelfth_board || ''} onChange={(e) => handleChange('twelfth_board', e.target.value)} placeholder="Board" />
+                  <label className="input-label">Residential Address</label>
+                  <input type="text" className="input" value={verification.guardian_residential_address || ''} onChange={(e) => handleChange('guardian_residential_address', e.target.value)} placeholder="Address" />
                 </div>
                 <div className="form-row">
-                  <label>12th Year</label>
-                  <input type="text" value={verification.twelfth_year || ''} onChange={(e) => handleChange('twelfth_year', e.target.value)} placeholder="Year" />
+                  <label className="input-label">Organization</label>
+                  <input type="text" className="input" value={verification.guardian_organization || ''} onChange={(e) => handleChange('guardian_organization', e.target.value)} placeholder="Organization" />
                 </div>
                 <div className="form-row">
-                  <label>12th Percentage</label>
-                  <input type="text" value={verification.twelfth_percentage || ''} onChange={(e) => handleChange('twelfth_percentage', e.target.value)} placeholder="%" />
+                  <label className="input-label">Email</label>
+                  <input type="email" className="input" value={verification.guardian_email || ''} onChange={(e) => handleChange('guardian_email', e.target.value)} placeholder="Email" />
                 </div>
-                <div className="form-row" style={{ gridColumn: '1 / -1' }}>
-                  <label>12th School</label>
-                  <input type="text" value={verification.twelfth_school || ''} onChange={(e) => handleChange('twelfth_school', e.target.value)} placeholder="School Name" />
-                </div>
-                <div className="form-row" style={{ gridColumn: '1 / -1' }}>
-                  <label>Previous Qualification</label>
-                  <input type="text" value={verification.previous_qualification || ''} onChange={(e) => handleChange('previous_qualification', e.target.value)} placeholder="Previous Qualification" />
-                </div>
-                <div className="form-row" style={{ gridColumn: '1 / -1' }}>
-                  <label>Graduation Details</label>
-                  <textarea value={verification.graduation_details || ''} onChange={(e) => handleChange('graduation_details', e.target.value)} placeholder="Graduation Details" rows={3} />
+                <div className="form-row">
+                  <label className="input-label">Mobile Number</label>
+                  <input type="text" className="input" value={verification.guardian_mobile || ''} onChange={(e) => handleChange('guardian_mobile', e.target.value)} placeholder="Mobile No." />
                 </div>
               </div>
             </div>
 
-            {/* Course Application Details Section */}
+            {/* CUET Marks Section */}
             <div className="form-section">
-              <h4 className="form-section-title">Course Application Details</h4>
-              <div className="form-grid">
-                <div className="form-row">
-                  <label>Course Applied</label>
-                  <input type="text" value={verification.course_applied || ''} onChange={(e) => handleChange('course_applied', e.target.value)} placeholder="Course Applied" />
-                </div>
-                <div className="form-row">
-                  <label>Application Number</label>
-                  <input type="text" value={verification.application_number || ''} onChange={(e) => handleChange('application_number', e.target.value)} placeholder="Application Number" />
-                </div>
-                <div className="form-row">
-                  <label>Enrollment Number</label>
-                  <input type="text" value={verification.enrollment_number || ''} onChange={(e) => handleChange('enrollment_number', e.target.value)} placeholder="Enrollment Number" />
-                </div>
-                <div className="form-row">
-                  <label>Admission Date</label>
-                  <input type="text" value={verification.admission_date || ''} onChange={(e) => handleChange('admission_date', e.target.value)} placeholder="DD/MM/YYYY" />
+              <h4 className="form-section-title">CUET Marks</h4>
+              <div className="form-grid" style={{ gridTemplateColumns: '1fr 100px 100px' }}>
+                <div className="form-row"><strong>Subject</strong></div>
+                <div className="form-row"><strong>Total</strong></div>
+                <div className="form-row"><strong>Obtained</strong></div>
+                
+                {[1, 2, 3, 4, 5, 6].map(i => (
+                  <div key={i} style={{ display: 'contents' }}>
+                    <input type="text" className="input" value={(verification as any)[`cuet_subject_${i}`] || ''} onChange={(e) => handleChange(`cuet_subject_${i}` as any, e.target.value)} placeholder={`Subject ${i}`} />
+                    <input type="text" className="input" value={(verification as any)[`cuet_total_score_${i}`] || ''} onChange={(e) => handleChange(`cuet_total_score_${i}` as any, e.target.value)} placeholder="Total" />
+                    <input type="text" className="input" value={(verification as any)[`cuet_score_obtained_${i}`] || ''} onChange={(e) => handleChange(`cuet_score_obtained_${i}` as any, e.target.value)} placeholder="Score" />
+                  </div>
+                ))}
+                
+                <div style={{ gridColumn: '1 / -1', marginTop: '10px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '10px' }}>
+                  <strong>Total CUET Score:</strong>
+                  <input
+                    type="text"
+                    value={(() => {
+                      // Calculate sum of all obtained scores from subjects above (supports decimals)
+                      let total = 0;
+                      for (let i = 1; i <= 6; i++) {
+                        const score = (verification as any)[`cuet_score_obtained_${i}`];
+                        if (score) {
+                          const num = parseFloat(score);
+                          if (!isNaN(num)) total += num;
+                        }
+                      }
+                      // Format: show decimals only if present
+                      if (total > 0) {
+                        return total % 1 === 0 ? String(total) : total.toFixed(3).replace(/\.?0+$/, '');
+                      }
+                      return verification.cuet_score || '';
+                    })()}
+                    onChange={(e) => handleChange('cuet_score', e.target.value)}
+                    style={{ 
+                      padding: '8px 16px', 
+                      backgroundColor: '#e8f5e9', 
+                      borderRadius: '4px', 
+                      fontWeight: 'bold',
+                      width: '80px',
+                      textAlign: 'center',
+                      border: '1px solid #c8e6c9'
+                    }}
+                  />
+                  <span style={{ fontSize: '11px', color: '#666' }}>= sum of obtained</span>
                 </div>
               </div>
             </div>
+
+            {/* Qualifying Exam Section */}
+            <div className="form-section">
+              <h4 className="form-section-title">Qualifying Examination (Class XII)</h4>
+              <div className="form-grid">
+                <div className="form-row">
+                  <label className="input-label">Year of Passing</label>
+                  <input type="text" className="input" value={verification.twelfth_year || ''} onChange={(e) => handleChange('twelfth_year', e.target.value)} placeholder="Year" />
+                </div>
+                <div className="form-row">
+                  <label className="input-label">Board/University</label>
+                  <input type="text" className="input" value={verification.twelfth_board || ''} onChange={(e) => handleChange('twelfth_board', e.target.value)} placeholder="Board" />
+                </div>
+                <div className="form-row">
+                  <label className="input-label">Exam Roll No.</label>
+                  <input type="text" className="input" value={verification.twelfth_roll_number || ''} onChange={(e) => handleChange('twelfth_roll_number', e.target.value)} placeholder="Roll No" />
+                </div>
+                <div className="form-row">
+                  <label className="input-label">Institution Last Attended</label>
+                  <input type="text" className="input" value={verification.twelfth_institution || ''} onChange={(e) => handleChange('twelfth_institution', e.target.value)} placeholder="School Name" />
+                </div>
+                <div className="form-row">
+                  <label className="input-label">Hindi Studied Upto</label>
+                  <select className="input select" value={verification.hindi_studied_upto || ''} onChange={(e) => handleChange('hindi_studied_upto', e.target.value)}>
+                    <option value="">Select</option>
+                    <option value="VIII">VIII</option>
+                    <option value="X">X</option>
+                    <option value="XII">XII</option>
+                    <option value="NEVER">Never</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Other Information & Certificate */}
+            <div className="form-section">
+              <h4 className="form-section-title">Other Information & Certificates</h4>
+              <div className="form-grid">
+                <div className="form-row">
+                  <label className="input-label">DU Enrollment No.</label>
+                  <input type="text" className="input" value={verification.du_enrollment_number || ''} onChange={(e) => handleChange('du_enrollment_number', e.target.value)} placeholder="Enrollment No" />
+                </div>
+                <div className="form-row">
+                  <label className="input-label">Hindi Medium Pref.</label>
+                  <select className="input select" value={verification.hindi_medium_preference || ''} onChange={(e) => handleChange('hindi_medium_preference', e.target.value)}>
+                    <option value="">Select</option>
+                    <option value="YES">Yes</option>
+                    <option value="NO">No</option>
+                  </select>
+                </div>
+                <div className="form-row" style={{ gridColumn: '1 / -1' }}>
+                  <label className="input-label">Certificate Issuing Authority</label>
+                  <input type="text" className="input" value={verification.category_certificate_authority || ''} onChange={(e) => handleChange('category_certificate_authority', e.target.value)} placeholder="Authority Name & Address" />
+                </div>
+                <div className="form-row">
+                  <label className="input-label">Certificate No.</label>
+                  <input type="text" className="input" value={verification.category_certificate_number || ''} onChange={(e) => handleChange('category_certificate_number', e.target.value)} placeholder="Cert No" />
+                </div>
+                <div className="form-row">
+                  <label className="input-label">Date of Issue</label>
+                  <input type="text" className="input" value={verification.category_certificate_date || ''} onChange={(e) => handleChange('category_certificate_date', e.target.value)} placeholder="DD/MM/YYYY" />
+                </div>
+              </div>
+            </div>
+
           </div>
 
           <div className="form-actions">
+            <button
+              onClick={handleSaveProgress}
+              disabled={saving}
+              className="btn btn-secondary btn-large"
+            >
+              {saving ? 'Saving...' : 'Save Progress'}
+            </button>
             <button
               onClick={handleSave}
               disabled={saving || !verification.student_name}
@@ -882,6 +1119,63 @@ function VerificationView() {
               {saving ? 'Saving...' : 'Save & Verify'}
             </button>
           </div>
+        </div>
+      </div>
+
+      {/* Document Checklist from Page 4 */}
+      <div className="form-section">
+        <h3 className="section-title">📋 Document Checklist</h3>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', padding: '12px', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
+          {[
+            { key: 'doc_admission_form', label: 'Admission/Registration Form' },
+            { key: 'doc_undertaking_ragging', label: 'Anti-Ragging Undertaking' },
+            { key: 'doc_photographs', label: 'Photographs' },
+            { key: 'doc_cuet_scorecard', label: 'CUET Score Card' },
+            { key: 'doc_class_xii_marksheet', label: 'Class XII Mark Sheet' },
+            { key: 'doc_class_x_certificate', label: 'Class X Certificate' },
+            { key: 'doc_class_xii_certificate', label: 'Class XII Certificate' },
+            { key: 'doc_character_certificate', label: 'Character Certificate' },
+            { key: 'doc_transfer_certificate', label: 'Transfer/Migration Certificate' },
+            { key: 'doc_hindi_certificate', label: 'Hindi Certificate' },
+            { key: 'doc_caste_certificate', label: 'Caste/Category Certificate' },
+            { key: 'doc_sports_eca', label: 'Sports/ECA Certificates' },
+            { key: 'doc_originals', label: 'Original Documents' },
+            { key: 'doc_photo_id', label: 'Photo ID Proof' },
+          ].map(({ key, label }) => {
+            const value = (verification as any)[key] || 'No';
+            const isChecked = value === 'Yes';
+            return (
+              <label 
+                key={key} 
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '8px',
+                  padding: '8px 12px',
+                  backgroundColor: isChecked ? '#e8f5e9' : '#fff',
+                  borderRadius: '4px',
+                  border: `1px solid ${isChecked ? '#4caf50' : '#ddd'}`,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={isChecked}
+                  onChange={(e) => handleChange(key, e.target.checked ? 'Yes' : 'No')}
+                  style={{ 
+                    width: '18px', 
+                    height: '18px',
+                    accentColor: '#4caf50',
+                    cursor: 'pointer'
+                  }}
+                />
+                <span style={{ fontSize: '13px', color: isChecked ? '#2e7d32' : '#666' }}>
+                  {label}
+                </span>
+              </label>
+            );
+          })}
         </div>
       </div>
 
@@ -897,16 +1191,16 @@ function VerificationView() {
           />
           <DocumentList
             formId={form.id}
-            onRefresh={() => {
-              loadForm(form.id);
+            onRefresh={() => loadForm(form.id)}
+            studentInfo={{
+              duPortalNumber: verification.du_portal_form_number || verification.du_enrollment_number || '',
+              fullName: [verification.first_name, verification.middle_name, verification.surname].filter(Boolean).join(' ')
             }}
           />
         </div>
       )}
-
     </div>
   );
 }
 
 export default VerificationView;
-

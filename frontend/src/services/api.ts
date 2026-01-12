@@ -48,6 +48,14 @@ api.interceptors.response.use(
 export interface OCRProvider {
   providers: string[];
   default: string;
+  model_info?: {
+    [key: string]: {
+      custom_model?: boolean;
+      model_path?: string;
+      model_name?: string;
+      description?: string;
+    };
+  };
 }
 
 export interface FormResponse {
@@ -108,6 +116,11 @@ export interface StudentProfile {
   student_name: string;
   aadhar_number?: string;
   roll_number?: string;
+  phone_number?: string;
+  email?: string;
+  course_applied?: string;
+  application_number?: string;
+  enrollment_number?: string;
   created_date: string;
   updated_date: string;
   forms_count: number;
@@ -123,8 +136,22 @@ export interface FormDetail extends FormResponse {
   extracted_data?: ExtractedData;
   student_profile_id?: number;
   documents?: Document[];
-  // Basic Details
+  
+  // Academic & Admission Details
+  academic_session?: string;
+  course?: string;
+  admission_category?: string;
+  admission_category_other?: string;
+  du_portal_form_number?: string;
+  cuet_score?: string;
+  college_roll_no?: string;
+  date_of_admission?: string;
+  
+  // Personal Details
   student_name?: string;
+  first_name?: string;
+  middle_name?: string;
+  surname?: string;
   date_of_birth?: string;
   gender?: string;
   category?: string;
@@ -132,103 +159,305 @@ export interface FormDetail extends FormResponse {
   religion?: string;
   aadhar_number?: string;
   blood_group?: string;
+  below_poverty_line?: string;
+  minority_category?: string;
+  
   // Address Details
   permanent_address?: string;
+  permanent_address_line1?: string;
+  permanent_address_line2?: string;
+  permanent_address_line3?: string;
+  permanent_state?: string;
+  permanent_pincode?: string;
   correspondence_address?: string;
+  correspondence_address_line1?: string;
+  correspondence_address_line2?: string;
+  correspondence_address_line3?: string;
+  correspondence_state?: string;
+  correspondence_pincode?: string;
   pincode?: string;
   city?: string;
   state?: string;
+  
   // Contact Details
   phone_number?: string;
   alternate_phone?: string;
   email?: string;
   emergency_contact_name?: string;
   emergency_contact_phone?: string;
-  // Guardian/Parent Details
-  father_name?: string;
-  father_occupation?: string;
-  father_phone?: string;
+  
+  // CUET Marks
+  cuet_subject_1?: string;
+  cuet_total_score_1?: string;
+  cuet_score_obtained_1?: string;
+  cuet_subject_2?: string;
+  cuet_total_score_2?: string;
+  cuet_score_obtained_2?: string;
+  cuet_subject_3?: string;
+  cuet_total_score_3?: string;
+  cuet_score_obtained_3?: string;
+  cuet_subject_4?: string;
+  cuet_total_score_4?: string;
+  cuet_score_obtained_4?: string;
+  cuet_subject_5?: string;
+  cuet_total_score_5?: string;
+  cuet_score_obtained_5?: string;
+  cuet_subject_6?: string;
+  cuet_total_score_6?: string;
+  cuet_score_obtained_6?: string;
+  cuet_total_score?: string;
+  
+  // Qualifying Examination
+  twelfth_year?: string;
+  twelfth_board?: string;
+  twelfth_roll_number?: string;
+  twelfth_institution?: string;
+  twelfth_percentage?: string;
+  twelfth_school?: string;
+  hindi_studied_upto?: string;
+  
+  // Mother's Occupational Details
   mother_name?: string;
   mother_occupation?: string;
+  mother_designation?: string;
+  mother_organization?: string;
+  mother_email?: string;
+  mother_mobile?: string;
+  mother_landline_code?: string;
+  mother_landline?: string;
   mother_phone?: string;
+  
+  // Father's Occupational Details
+  father_name?: string;
+  father_occupation?: string;
+  father_designation?: string;
+  father_organization?: string;
+  father_email?: string;
+  father_mobile?: string;
+  father_landline_code?: string;
+  father_landline?: string;
+  father_phone?: string;
+  
+  // Local Guardian's Details
   guardian_name?: string;
   guardian_relation?: string;
+  guardian_residential_address?: string;
+  guardian_organization?: string;
+  guardian_email?: string;
+  guardian_mobile?: string;
+  guardian_landline_code?: string;
+  guardian_landline?: string;
   guardian_phone?: string;
+  
+  // Personal Information
   annual_income?: string;
-  // Educational Qualifications
+  
+  // Other Information
+  du_enrollment_number?: string;
+  hindi_medium_preference?: string;
+  
+  // Category Certificate Details
+  category_certificate_authority?: string;
+  category_certificate_number?: string;
+  category_certificate_date?: string;
+  disability_percentage?: string;
+  disability_type?: string;
+  udid_number?: string;
+  
+  // Educational Qualifications (Legacy)
   tenth_board?: string;
   tenth_year?: string;
   tenth_percentage?: string;
   tenth_school?: string;
-  twelfth_board?: string;
-  twelfth_year?: string;
-  twelfth_percentage?: string;
-  twelfth_school?: string;
   previous_qualification?: string;
   graduation_details?: string;
-  // Course Application Details
+  
+  // Course Application Details (Legacy)
   course_applied?: string;
   application_number?: string;
   enrollment_number?: string;
   admission_date?: string;
+  
+  // Document Checklist (Page 4)
+  doc_admission_form?: string;
+  doc_undertaking_ragging?: string;
+  doc_photographs?: string;
+  doc_cuet_scorecard?: string;
+  doc_class_xii_marksheet?: string;
+  doc_class_x_certificate?: string;
+  doc_class_xii_certificate?: string;
+  doc_character_certificate?: string;
+  doc_transfer_certificate?: string;
+  doc_hindi_certificate?: string;
+  doc_caste_certificate?: string;
+  doc_sports_eca?: string;
+  doc_originals?: string;
+  doc_photo_id?: string;
+  
   additional_info?: any;
   verified_date?: string;
 }
 
+// Alias for backward compatibility
+export type AdmissionForm = FormDetail;
+
 export interface FormVerification {
-  // Basic Details
+  // Academic & Admission Details (Page 1 - Top)
+  academic_session?: string;
+  course?: string; // B.COM.(H) / B.A.(H) ECO
+  admission_category?: string; // GEN/OBC/SC/ST/Sports/PwD/EWS/Foreign/CW/KM/Others/ECA
+  admission_category_other?: string;
+  du_portal_form_number?: string;
+  cuet_score?: string;
+  college_roll_no?: string;
+  date_of_admission?: string;
+
+  // Personal Details (Section 1-3)
   student_name?: string;
+  first_name?: string;
+  middle_name?: string;
+  surname?: string;
+  gender?: string; // Male/Female/Transgender
   date_of_birth?: string;
-  gender?: string;
-  category?: string;
+  category?: string; // Reservation category (may differ from admission_category)
   nationality?: string;
   religion?: string;
   aadhar_number?: string;
   blood_group?: string;
-  
-  // Address Details
+  below_poverty_line?: string; // Yes/No
+  minority_category?: string; // Muslim/Jain/Sikh/Persian/Christian/Buddhists/Others
+
+  // Address Details (Section 4-5)
   permanent_address?: string;
+  permanent_address_line1?: string;
+  permanent_address_line2?: string;
+  permanent_address_line3?: string;
+  permanent_state?: string;
+  permanent_pincode?: string;
   correspondence_address?: string;
-  pincode?: string;
+  correspondence_address_line1?: string;
+  correspondence_address_line2?: string;
+  correspondence_address_line3?: string;
+  correspondence_state?: string;
+  correspondence_pincode?: string;
   city?: string;
   state?: string;
-  
-  // Contact Details
+  pincode?: string;
+
+  // Contact Details (Section 6-7)
+  email?: string;
   phone_number?: string;
   alternate_phone?: string;
-  email?: string;
   emergency_contact_name?: string;
   emergency_contact_phone?: string;
-  
-  // Guardian/Parent Details
-  father_name?: string;
-  father_occupation?: string;
-  father_phone?: string;
+
+  // Parent Names (Section 8-9)
   mother_name?: string;
-  mother_occupation?: string;
-  mother_phone?: string;
-  guardian_name?: string;
-  guardian_relation?: string;
-  guardian_phone?: string;
+  father_name?: string;
+
+  // CUET Marks (Section 10)
+  cuet_subject_1?: string;
+  cuet_total_score_1?: string;
+  cuet_score_obtained_1?: string;
+  cuet_subject_2?: string;
+  cuet_total_score_2?: string;
+  cuet_score_obtained_2?: string;
+  cuet_subject_3?: string;
+  cuet_total_score_3?: string;
+  cuet_score_obtained_3?: string;
+  cuet_subject_4?: string;
+  cuet_total_score_4?: string;
+  cuet_score_obtained_4?: string;
+  cuet_subject_5?: string;
+  cuet_total_score_5?: string;
+  cuet_score_obtained_5?: string;
+  cuet_subject_6?: string;
+  cuet_total_score_6?: string;
+  cuet_score_obtained_6?: string;
+  cuet_total_score?: string;
+
+  // Qualifying Examination (Section 11)
+  twelfth_year?: string;
+  twelfth_board?: string;
+  twelfth_roll_number?: string;
+  twelfth_institution?: string;
+  hindi_studied_upto?: string; // VIII/X/XII/Never
+
+  // Personal Information (Section 12)
   annual_income?: string;
-  
-  // Educational Qualifications
+
+  // Mother's Occupational Details (Section 13)
+  mother_occupation?: string;
+  mother_designation?: string;
+  mother_organization?: string;
+  mother_email?: string;
+  mother_mobile?: string;
+  mother_landline_code?: string;
+  mother_landline?: string;
+  mother_phone?: string;
+
+  // Father's Occupational Details (Section 14)
+  father_occupation?: string;
+  father_designation?: string;
+  father_organization?: string;
+  father_email?: string;
+  father_mobile?: string;
+  father_landline_code?: string;
+  father_landline?: string;
+  father_phone?: string;
+
+  // Local Guardian's Details (Section 15)
+  guardian_name?: string;
+  guardian_residential_address?: string;
+  guardian_organization?: string;
+  guardian_email?: string;
+  guardian_mobile?: string;
+  guardian_landline_code?: string;
+  guardian_landline?: string;
+  guardian_phone?: string;
+  guardian_relation?: string;
+
+  // Other Information (Section 16)
+  du_enrollment_number?: string;
+  hindi_medium_preference?: string; // Yes/No
+
+  // Category Certificate (Section 17)
+  category_certificate_authority?: string;
+  category_certificate_number?: string;
+  category_certificate_date?: string;
+  disability_percentage?: string;
+  disability_type?: string; // VH/HH/OH
+  udid_number?: string;
+
+  // Legacy/Backward Compatibility
+  course_applied?: string;
+  application_number?: string;
+  enrollment_number?: string;
+  admission_date?: string;
   tenth_board?: string;
   tenth_year?: string;
   tenth_percentage?: string;
   tenth_school?: string;
-  twelfth_board?: string;
-  twelfth_year?: string;
   twelfth_percentage?: string;
   twelfth_school?: string;
   previous_qualification?: string;
   graduation_details?: string;
   
-  // Course Application Details
-  course_applied?: string;
-  application_number?: string;
-  enrollment_number?: string;
-  admission_date?: string;
+  // Document Checklist (Page 4)
+  doc_admission_form?: string;
+  doc_undertaking_ragging?: string;
+  doc_photographs?: string;
+  doc_cuet_scorecard?: string;
+  doc_class_xii_marksheet?: string;
+  doc_class_x_certificate?: string;
+  doc_class_xii_certificate?: string;
+  doc_character_certificate?: string;
+  doc_transfer_certificate?: string;
+  doc_hindi_certificate?: string;
+  doc_caste_certificate?: string;
+  doc_sports_eca?: string;
+  doc_originals?: string;
+  doc_photo_id?: string;
   
   additional_info?: any;
 }
@@ -306,8 +535,8 @@ export const apiService = {
   },
 
   // Update form (general update)
-  updateForm: async (formId: number, verification: FormVerification): Promise<FormDetail> => {
-    const response = await api.put<FormDetail>(`/api/forms/${formId}`, verification);
+  updateForm: async (formId: number, verification: FormVerification, verify: boolean = false): Promise<FormDetail> => {
+    const response = await api.put<FormDetail>(`/api/forms/${formId}?verify=${verify}`, verification);
     return response.data;
   },
 
@@ -466,12 +695,36 @@ export const apiService = {
 
   createStudentProfile: async (
     studentName: string,
+    rollNumber?: string,
     aadharNumber?: string
   ): Promise<StudentProfile> => {
-    const response = await api.post<StudentProfile>('/api/students/', null, {
-      params: { student_name: studentName, aadhar_number: aadharNumber },
+    const response = await api.post<StudentProfile>('/api/students/', {
+      student_name: studentName,
+      roll_number: rollNumber,
+      aadhar_number: aadharNumber,
     });
     return response.data;
+  },
+
+  updateStudentProfile: async (
+    profileId: number,
+    updateData: {
+      student_name?: string;
+      roll_number?: string;
+      aadhar_number?: string;
+    }
+  ): Promise<StudentProfile> => {
+    const response = await api.patch<StudentProfile>(`/api/students/${profileId}`, updateData);
+    return response.data;
+  },
+
+  deleteStudentProfile: async (
+    profileId: number,
+    force: boolean = false
+  ): Promise<void> => {
+    await api.delete(`/api/students/${profileId}`, {
+      params: { force },
+    });
   },
 
   getStudentForms: async (profileId: number): Promise<FormDetail[]> => {
@@ -488,6 +741,7 @@ export const apiService = {
     enrollment_number?: string;
     application_number?: string;
     course_applied?: string;
+    academic_session?: string;
     gender?: string;
     category?: string;
     father_name?: string;
@@ -497,8 +751,88 @@ export const apiService = {
     pincode?: string;
     page?: number;
     limit?: number;
+    sort_by?: string;
+    sort_order?: string;
   }): Promise<StudentProfile[]> => {
     const response = await api.get<StudentProfile[]>('/api/students/search/results', { params });
+    return response.data;
+  },
+
+  // Export students
+  exportStudentsCSV: async (params: {
+    student_name?: string;
+    roll_number?: string;
+    aadhar_number?: string;
+    phone_number?: string;
+    email?: string;
+    enrollment_number?: string;
+    application_number?: string;
+    course_applied?: string;
+    academic_session?: string;
+    gender?: string;
+    category?: string;
+    father_name?: string;
+    mother_name?: string;
+    city?: string;
+    state?: string;
+    pincode?: string;
+    sort_by?: string;
+    sort_order?: string;
+  }): Promise<Blob> => {
+    const response = await api.get('/api/students/export/csv', {
+      params,
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+
+  exportStudentsExcel: async (params: {
+    student_name?: string;
+    roll_number?: string;
+    aadhar_number?: string;
+    phone_number?: string;
+    email?: string;
+    enrollment_number?: string;
+    application_number?: string;
+    course_applied?: string;
+    academic_session?: string;
+    gender?: string;
+    category?: string;
+    father_name?: string;
+    mother_name?: string;
+    city?: string;
+    state?: string;
+    pincode?: string;
+    sort_by?: string;
+    sort_order?: string;
+  }): Promise<Blob> => {
+    const response = await api.get('/api/students/export/excel', {
+      params,
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+
+  // Import students
+  importStudentsCSV: async (file: File): Promise<{ message: string; imported: number; errors: string[]; error_count: number }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post('/api/students/import/csv', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+
+  importStudentsExcel: async (file: File): Promise<{ message: string; imported: number; errors: string[]; error_count: number }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post('/api/students/import/excel', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   },
 
@@ -598,6 +932,57 @@ export const apiService = {
     const response = await api.get('/api/export/training-data', {
       params: { format },
     });
+    return response.data;
+  },
+
+  // Training operations
+  getTrainingStats: async (): Promise<any> => {
+    const response = await api.get('/api/training/stats');
+    return response.data;
+  },
+
+  prepareTrainingData: async (format: 'trocr' | 'donut' | 'both' = 'both', split: boolean = true): Promise<any> => {
+    const response = await api.post('/api/training/prepare-data', null, {
+      params: { format, split },
+    });
+    return response.data;
+  },
+
+  startTraining: async (config: {
+    model_type?: string;
+    base_model?: string;
+    epochs?: number;
+    batch_size?: number;
+    learning_rate?: number;
+  }): Promise<any> => {
+    const response = await api.post('/api/training/start', config);
+    return response.data;
+  },
+
+  getTrainingJobStatus: async (jobId: string): Promise<any> => {
+    const response = await api.get(`/api/training/job/${jobId}`);
+    return response.data;
+  },
+
+  getUnannotatedForms: async (limit: number = 50, offset: number = 0): Promise<any> => {
+    const response = await api.get('/api/training/forms/unannotated', {
+      params: { limit, offset },
+    });
+    return response.data;
+  },
+
+  getImprovementStats: async (): Promise<any> => {
+    const response = await api.get('/api/training/improvement-stats');
+    return response.data;
+  },
+
+  triggerRetraining: async (config: {
+    epochs?: number;
+    batch_size?: number;
+    learning_rate?: number;
+    base_model?: string;
+  }): Promise<any> => {
+    const response = await api.post('/api/training/trigger-retraining', config);
     return response.data;
   },
 };
