@@ -1,0 +1,63 @@
+{
+    "name": "ocr-admission-forms-desktop",
+    "productName": "OCR Form Extractor",
+    "version": "1.0.0",
+    "description": "Desktop application for OCR processing of admission forms",
+    "main": "main.js",
+    "scripts": {
+        "start": "electron .",
+        "dist": "electron-builder",
+        "pack": "electron-builder --dir"
+    },
+    "keywords": [
+        "Electron",
+        "OCR",
+        "FastAPI",
+        "Next.js"
+    ],
+    "author": "Smrita Pandey",
+    "license": "ISC",
+    "devDependencies": {
+        "electron": "^28.1.0",
+        "electron-builder": "^24.9.1"
+    },
+    "dependencies": {
+        "tree-kill": "^1.2.2"
+    },
+    "build": {
+        "appId": "com.smrita.ocrformextractor",
+        "win": {
+            "target": "nsis",
+            "icon": "resources/icon.ico"
+        },
+        "mac": {
+            "target": "dmg",
+            "icon": "resources/icon.icns"
+        },
+        "linux": {
+            "target": "AppImage",
+            "icon": "resources/icon.png"
+        },
+        "files": [
+            "**/*",
+            "!**/*.ts",
+            "!*.map"
+        ],
+        "extraResources": [
+            {
+                "from": "../backend-dist/api",
+                "to": "backend",
+                "filter": [
+                    "**/*"
+                ]
+            },
+            {
+                "from": "../out",
+                "to": "frontend",
+                "filter": [
+                    "**/*"
+                ]
+            }
+        ]
+    }
+}
