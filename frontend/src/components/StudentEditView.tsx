@@ -6,6 +6,9 @@ import { extractStructuredData, filterFormLabels, isFormLabel } from '../utils/s
 import DocumentUpload from './DocumentUpload';
 import './VerificationView.css'; // Reusing the same styles
 
+// API Base URL - handle TypeScript import.meta.env
+const API_BASE_URL = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) || 'http://localhost:8000';
+
 // Helper to get all documents from profile and forms
 const getAllDocuments = (profile: StudentProfileDetail | null): (Document & { sourceLabel: string })[] => {
   if (!profile) return [];
@@ -42,11 +45,9 @@ const formatConfidenceValue = (value?: number | null): string => {
 
 // Helper to get the correct file URL
 const getFileUrl = (filePath: string | undefined, formId?: number, page?: number): string => {
-  const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
-  
   if (!filePath) {
     // Fallback to preview endpoint if no file path
-    return formId ? `${apiUrl}/api/preview/${formId}${page ? `?page=${page}` : ''}` : '';
+    return formId ? `${API_BASE_URL}/api/preview/${formId}${page ? `?page=${page}` : ''}` : '';
   }
   
   // Normalize the file path - remove any leading 'uploads/' to avoid duplication
@@ -62,7 +63,7 @@ const getFileUrl = (filePath: string | undefined, formId?: number, page?: number
   }
   
   // Return the direct PDF URL - browser will handle page navigation via #page= anchor
-  return `${apiUrl}/uploads/${normalizedPath}`;
+  return `${API_BASE_URL}/uploads/${normalizedPath}`;
 };
 
 const mergeIntoVerification = (
@@ -301,8 +302,38 @@ function StudentEditView() {
     }
   };
 
+  // Calculate CUET total from obtained scores
+  const calculateCuetTotal = (data: FormVerification): string => {
+    let total = 0;
+    for (let i = 1; i <= 6; i++) {
+      const score = (data as any)[`cuet_score_obtained_${i}`];
+      if (score) {
+        const num = parseFloat(String(score).replace(/[^\d.]/g, ''));
+        if (!isNaN(num)) total += num;
+      }
+    }
+    if (total > 0) {
+      // Show decimals only if present, max 2 decimal places
+      return total % 1 === 0 ? String(total) : total.toFixed(2).replace(/\.?0+$/, '');
+    }
+    return '';
+  };
+
   const handleChange = (field: keyof FormVerification, value: string) => {
-    setVerification((prev) => ({ ...prev, [field]: value }));
+    setVerification((prev) => {
+      const updated = { ...prev, [field]: value };
+      
+      // Auto-sync CUET total when any obtained score changes
+      if (field.toString().startsWith('cuet_score_obtained_')) {
+        const newTotal = calculateCuetTotal(updated);
+        if (newTotal) {
+          updated.cuet_score = newTotal;
+          updated.cuet_total_score = newTotal;
+        }
+      }
+      
+      return updated;
+    });
   };
 
   const handleApplyParsedData = useCallback(() => {
@@ -343,9 +374,20 @@ function StudentEditView() {
              typeof value === 'string' && value.trim().length > 0;
     }).length;
 
-    // Apply filtered data to verification state
-    setVerification((prev) => mergeIntoVerification(prev, parsedData, { overwrite: false }));
-    
+    // Apply filtered data to verification state and calculate CUET total
+    setVerification((prev) => {
+      const updated = mergeIntoVerification(prev, parsedData, { overwrite: false });
+      
+      // Auto-calculate CUET total after autofill
+      const cuetTotal = calculateCuetTotal(updated);
+      if (cuetTotal) {
+        updated.cuet_score = cuetTotal;
+        updated.cuet_total_score = cuetTotal;
+      }
+      
+      return updated;
+    });
+
     // Show success message
     if (fieldsToFill > 0) {
       alert(`✅ Autofill complete! ${fieldsToFill} field${fieldsToFill > 1 ? 's' : ''} filled successfully.`);
@@ -365,26 +407,32 @@ function StudentEditView() {
         .filter(Boolean)
         .join(' ') || verification.student_name || '';
 
-      // Update student profile (basic fields)
-      await apiService.updateStudentProfile(parseInt(id), {
-        student_name: fullName,
-        roll_number: verification.college_roll_no || undefined,
-        aadhar_number: verification.aadhar_number,
-      });
-
-      // If there's a form, update it with all the form fields
+      // If there's a form, update it with all the form fields (this is the main data storage)
       if (form) {
         // Ensure student_name is set from parts
         const updatedVerification = {
           ...verification,
           student_name: fullName,
         };
-        await apiService.updateForm(form.id, updatedVerification);
+        // Pass verify=true to ensure form is marked as verified and profile is updated
+        await apiService.updateForm(form.id, updatedVerification, true);
       }
 
-      alert('Student profile and form updated successfully');
+      // Also update student profile basic fields
+      try {
+        await apiService.updateStudentProfile(parseInt(id), {
+          student_name: fullName,
+          roll_number: verification.college_roll_no || undefined,
+          aadhar_number: verification.aadhar_number,
+        });
+      } catch (profileError) {
+        console.warn('Profile update failed, but form was saved:', profileError);
+      }
+
+      alert('Student profile and form updated successfully!');
       navigate(`/students/${id}`);
     } catch (error: any) {
+      console.error('Save failed:', error);
       alert(`Save failed: ${error.response?.data?.detail || error.message}`);
     } finally {
       setSaving(false);
@@ -413,7 +461,7 @@ function StudentEditView() {
         </div>
       </div>
 
-      <div className="verification-content" style={{ display: 'grid', gridTemplateColumns: form ? '1fr 1fr' : '1fr', gap: '2rem' }}>
+      <div className="verification-content">
         {form && (
           <div className="form-preview">
             <div className="page-controls">
@@ -421,7 +469,7 @@ function StudentEditView() {
                 disabled={currentPage <= 1}
                 onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
               >
-                Previous
+                ← Previous
               </button>
               <span>Page {currentPage} of {form.extracted_data?.total_pages || form.extracted_data?.pages_processed || 1}</span>
               <button 
@@ -431,36 +479,23 @@ function StudentEditView() {
                   setCurrentPage(prev => Math.min(maxPages, prev + 1));
                 }}
               >
-                Next
+                Next →
               </button>
             </div>
             <div className="image-container">
-              {form.file_path?.toLowerCase().endsWith('.pdf') ? (
-                // PDF files - use iframe for native PDF viewing with page navigation
-                <iframe
-                  key={`pdf-${form.id}-${currentPage}`}
-                  src={`${getFileUrl(form.file_path, form.id)}#page=${currentPage}`}
-                  title={`Scanned form page ${currentPage}`}
-                  width="100%"
-                  height="800px"
-                  style={{ border: 'none', display: 'block' }}
-                  allow="fullscreen"
-                />
-              ) : (
-                // Image files
-                <img
-                  src={getFileUrl(form.file_path, form.id)}
-                  alt="Scanned form"
-                  style={{ maxWidth: '100%', height: 'auto', display: 'block' }}
-                  onError={(e) => {
-                    // Fallback to preview endpoint
-                    const img = e.target as HTMLImageElement;
-                    if (form.id && !img.src.includes('/api/preview/')) {
-                      img.src = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/api/preview/${form.id}`;
-                    }
-                  }}
-                />
-              )}
+              {/* Use preview endpoint - backend converts PDF pages to JPEG */}
+              <img
+                key={`preview-${form.id}-${currentPage}`}
+                src={`${API_BASE_URL}/api/preview/${form.id}?page=${currentPage}`}
+                alt={`Scanned form page ${currentPage}`}
+                onError={(e) => {
+                  // Fallback to direct file if preview fails
+                  const img = e.target as HTMLImageElement;
+                  if (form.file_path && !img.src.includes('/uploads/')) {
+                    img.src = getFileUrl(form.file_path, form.id);
+                  }
+                }}
+              />
             </div>
             
             {form.extracted_data && (
@@ -485,9 +520,9 @@ function StudentEditView() {
           </div>
         )}
 
-        <div className="data-section" style={{ gridColumn: form ? 'auto' : '1 / -1' }}>
+        <div className="data-section">
           <h3>Student Information</h3>
-          <div className="form-editor" style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
+          <div className="form-editor">
             
             {/* Academic & Admission Details */}
             <div className="form-section">
@@ -531,8 +566,16 @@ function StudentEditView() {
                   <input type="text" className="input" value={verification.du_portal_form_number || ''} onChange={(e) => handleChange('du_portal_form_number', e.target.value)} placeholder="Form Number" />
                 </div>
                 <div className="form-row">
-                  <label>CUET Score</label>
-                  <input type="text" className="input" value={verification.cuet_score || ''} onChange={(e) => handleChange('cuet_score', e.target.value)} placeholder="e.g. 851.147" />
+                  <label>CUET Score (Total)</label>
+                  <input
+                    type="text"
+                    className="input"
+                    readOnly
+                    value={calculateCuetTotal(verification) || verification.cuet_score || ''}
+                    placeholder="Auto-calculated from CUET Marks"
+                    style={{ backgroundColor: '#f8fafc', cursor: 'default' }}
+                    title="This is auto-calculated from CUET Marks section below"
+                  />
                 </div>
                 <div className="form-row">
                   <label>College Roll No.</label>
@@ -782,38 +825,26 @@ function StudentEditView() {
                   </div>
                 ))}
                 
-                <div style={{ gridColumn: '1 / -1', marginTop: '10px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '10px' }}>
-                  <strong>Total CUET Score:</strong>
+                <div style={{ gridColumn: '1 / -1', marginTop: '12px', paddingTop: '12px', borderTop: '2px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px' }}>
+                  <strong style={{ color: '#334155' }}>Total CUET Score:</strong>
                   <input
                     type="text"
-                    value={(() => {
-                      // Calculate sum of all obtained scores from subjects above (supports decimals)
-                      let total = 0;
-                      for (let i = 1; i <= 6; i++) {
-                        const score = (verification as any)[`cuet_score_obtained_${i}`];
-                        if (score) {
-                          const num = parseFloat(score);
-                          if (!isNaN(num)) total += num;
-                        }
-                      }
-                      // Format: show decimals only if present
-                      if (total > 0) {
-                        return total % 1 === 0 ? String(total) : total.toFixed(3).replace(/\.?0+$/, '');
-                      }
-                      return verification.cuet_score || '';
-                    })()}
-                    onChange={(e) => handleChange('cuet_score', e.target.value)}
-                    style={{
-                      padding: '8px 16px',
-                      backgroundColor: '#e8f5e9',
-                      borderRadius: '4px',
-                      fontWeight: 'bold',
-                      width: '80px',
+                    readOnly
+                    value={calculateCuetTotal(verification) || verification.cuet_score || '0'}
+                    style={{ 
+                      padding: '10px 16px', 
+                      backgroundColor: '#ecfdf5', 
+                      borderRadius: '8px', 
+                      fontWeight: '700',
+                      fontSize: '1rem',
+                      width: '100px',
                       textAlign: 'center',
-                      border: '1px solid #c8e6c9'
+                      border: '2px solid #a7f3d0',
+                      color: '#059669',
+                      cursor: 'default'
                     }}
                   />
-                  <span style={{ fontSize: '11px', color: '#666' }}>= sum of obtained</span>
+                  <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Auto-calculated</span>
                 </div>
               </div>
             </div>
@@ -949,7 +980,6 @@ function StudentEditView() {
                       return <p style={{ color: '#666', fontSize: '0.9rem', marginTop: '1rem' }}>No documents attached yet.</p>;
                     }
                     
-                    const apiUrl = 'http://localhost:8000';
                     return (
                       <div style={{ marginTop: '1rem', display: 'grid', gap: '0.75rem' }}>
                         {allDocs.map((doc, index) => {
@@ -978,17 +1008,17 @@ function StudentEditView() {
                               </div>
                               <div style={{ display: 'flex', gap: '1rem' }}>
                                 <a 
-                                  href={`${apiUrl}/uploads/${doc.file_path}`}
+                                  href={`${API_BASE_URL}/uploads/${doc.file_path}`}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  style={{ color: '#1976d2', fontSize: '0.85rem', textDecoration: 'none' }}
+                                  style={{ color: '#1a3a6e', fontSize: '0.85rem', textDecoration: 'none' }}
                                 >
                                   View
                                 </a>
                                 <a 
-                                  href={`${apiUrl}/uploads/${doc.file_path}`}
+                                  href={`${API_BASE_URL}/uploads/${doc.file_path}`}
                                   download={displayName}
-                                  style={{ color: '#388e3c', fontSize: '0.85rem', textDecoration: 'none' }}
+                                  style={{ color: '#067647', fontSize: '0.85rem', textDecoration: 'none' }}
                                 >
                                   Download
                                 </a>

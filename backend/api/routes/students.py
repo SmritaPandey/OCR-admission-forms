@@ -223,6 +223,45 @@ async def create_student_profile(
     
     return StudentProfileResponse.model_validate(profile)
 
+class StudentProfileUpdate(BaseModel):
+    student_name: Optional[str] = None
+    aadhar_number: Optional[str] = None
+    roll_number: Optional[str] = None
+
+@router.patch("/{profile_id}", response_model=StudentProfileResponse)
+async def update_student_profile(
+    profile_id: int,
+    update_data: StudentProfileUpdate,
+    db: Session = Depends(get_db)
+):
+    """Update a student profile"""
+    profile = db.query(StudentProfile).filter(StudentProfile.id == profile_id).first()
+    if not profile:
+        raise HTTPException(status_code=404, detail="Student profile not found")
+    
+    # Update fields if provided
+    if update_data.student_name is not None:
+        profile.student_name = update_data.student_name
+    if update_data.aadhar_number is not None:
+        profile.aadhar_number = update_data.aadhar_number
+    if update_data.roll_number is not None:
+        profile.roll_number = update_data.roll_number
+    
+    profile.updated_date = datetime.utcnow()
+    db.commit()
+    db.refresh(profile)
+    
+    # Add counts
+    profile_data = StudentProfileResponse.model_validate(profile)
+    profile_data.forms_count = db.query(AdmissionForm).filter(
+        AdmissionForm.student_profile_id == profile.id
+    ).count()
+    profile_data.documents_count = db.query(StudentDocument).filter(
+        StudentDocument.student_profile_id == profile.id
+    ).count()
+    
+    return profile_data
+
 @router.get("/{profile_id}/forms", response_model=List)
 async def get_student_forms(profile_id: int, db: Session = Depends(get_db)):
     """Get all forms for a student profile"""

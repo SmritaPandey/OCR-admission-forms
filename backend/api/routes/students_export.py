@@ -480,6 +480,189 @@ async def export_students_excel(
         headers={"Content-Disposition": f'attachment; filename="{filename}"'}
     )
 
+
+@router.get("/export/json")
+async def export_students_json(
+    student_name: Optional[str] = Query(None),
+    roll_number: Optional[str] = Query(None),
+    aadhar_number: Optional[str] = Query(None),
+    phone_number: Optional[str] = Query(None),
+    email: Optional[str] = Query(None),
+    course_applied: Optional[str] = Query(None),
+    academic_session: Optional[str] = Query(None),
+    gender: Optional[str] = Query(None),
+    category: Optional[str] = Query(None),
+    city: Optional[str] = Query(None),
+    state: Optional[str] = Query(None),
+    sort_by: str = Query("updated", description="Sort field: name, roll_number, aadhar, created, updated"),
+    sort_order: str = Query("desc", description="Sort order: asc or desc"),
+    db: Session = Depends(get_db)
+):
+    """Export student records to JSON with filtering and sorting - includes ALL form fields"""
+    from fastapi.responses import StreamingResponse
+    import json
+    
+    # Build query
+    query = get_student_data_query(
+        db, student_name, roll_number, aadhar_number,
+        phone_number, email, course_applied, academic_session, gender, category, city, state,
+        sort_by, sort_order
+    )
+    
+    profiles = query.all()
+    
+    if not profiles:
+        raise HTTPException(status_code=404, detail="No students found matching the criteria")
+    
+    # Build data list
+    all_data = []
+    for profile in profiles:
+        data = get_student_export_data(profile, db)
+        all_data.append(data)
+    
+    # Create JSON string
+    json_output = json.dumps(all_data, indent=2, ensure_ascii=False, default=str)
+    
+    # Generate filename with timestamp
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"students_export_{timestamp}.json"
+    
+    return StreamingResponse(
+        iter([json_output]),
+        media_type="application/json",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    )
+
+
+@router.get("/export/pdf")
+async def export_students_pdf(
+    student_name: Optional[str] = Query(None),
+    roll_number: Optional[str] = Query(None),
+    aadhar_number: Optional[str] = Query(None),
+    phone_number: Optional[str] = Query(None),
+    email: Optional[str] = Query(None),
+    course_applied: Optional[str] = Query(None),
+    academic_session: Optional[str] = Query(None),
+    gender: Optional[str] = Query(None),
+    category: Optional[str] = Query(None),
+    city: Optional[str] = Query(None),
+    state: Optional[str] = Query(None),
+    sort_by: str = Query("updated", description="Sort field: name, roll_number, aadhar, created, updated"),
+    sort_order: str = Query("desc", description="Sort order: asc or desc"),
+    db: Session = Depends(get_db)
+):
+    """Export student records to PDF with filtering and sorting"""
+    from fastapi.responses import StreamingResponse
+    
+    # Build query
+    query = get_student_data_query(
+        db, student_name, roll_number, aadhar_number,
+        phone_number, email, course_applied, academic_session, gender, category, city, state,
+        sort_by, sort_order
+    )
+    
+    profiles = query.all()
+    
+    if not profiles:
+        raise HTTPException(status_code=404, detail="No students found matching the criteria")
+    
+    # Build data list
+    all_data = []
+    for profile in profiles:
+        data = get_student_export_data(profile, db)
+        all_data.append(data)
+    
+    # Try to use reportlab for PDF generation
+    try:
+        from reportlab.lib import colors
+        from reportlab.lib.pagesizes import A4, landscape
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.units import inch, cm
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
+        from reportlab.lib.enums import TA_CENTER, TA_LEFT
+        
+        output = io.BytesIO()
+        doc = SimpleDocTemplate(output, pagesize=landscape(A4), topMargin=0.5*inch, bottomMargin=0.5*inch)
+        
+        styles = getSampleStyleSheet()
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=18,
+            alignment=TA_CENTER,
+            spaceAfter=20
+        )
+        
+        elements = []
+        
+        # Title
+        elements.append(Paragraph("SRCC Student Records Export", title_style))
+        elements.append(Paragraph(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", styles['Normal']))
+        elements.append(Paragraph(f"Total Records: {len(all_data)}", styles['Normal']))
+        elements.append(Spacer(1, 20))
+        
+        # Key fields for summary table
+        summary_headers = ['#', 'Student Name', 'Roll Number', 'Course', 'Category', 'Phone', 'Email']
+        table_data = [summary_headers]
+        
+        for idx, student in enumerate(all_data, 1):
+            row = [
+                str(idx),
+                str(student.get('Student Name', '-'))[:30],
+                str(student.get('Roll Number', '-'))[:15],
+                str(student.get('Course', '-'))[:20],
+                str(student.get('Category', '-'))[:10],
+                str(student.get('Phone Number', '-'))[:15],
+                str(student.get('Email', '-'))[:25],
+            ]
+            table_data.append(row)
+        
+        # Create table
+        col_widths = [0.4*inch, 2*inch, 1.2*inch, 1.5*inch, 0.8*inch, 1.2*inch, 2*inch]
+        table = Table(table_data, colWidths=col_widths, repeatRows=1)
+        
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.Color(0.1, 0.23, 0.43)),  # Navy blue header
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('TOPPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+            ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 1), (-1, -1), 8),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.Color(0.95, 0.95, 0.95)]),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 6),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+        ]))
+        
+        elements.append(table)
+        
+        doc.build(elements)
+        output.seek(0)
+        
+        # Generate filename with timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"students_export_{timestamp}.pdf"
+        
+        return StreamingResponse(
+            output,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+        )
+        
+    except ImportError:
+        # Fallback: return error if reportlab not installed
+        raise HTTPException(
+            status_code=500, 
+            detail="PDF export requires reportlab library. Install with: pip install reportlab"
+        )
+
+
 # Field mapping for import - maps CSV/Excel column names to database fields
 IMPORT_FIELD_MAPPING = {
     # Profile fields

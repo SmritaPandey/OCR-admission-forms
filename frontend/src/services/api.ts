@@ -813,6 +813,60 @@ export const apiService = {
     return response.data;
   },
 
+  exportStudentsJSON: async (params: {
+    student_name?: string;
+    roll_number?: string;
+    aadhar_number?: string;
+    phone_number?: string;
+    email?: string;
+    enrollment_number?: string;
+    application_number?: string;
+    course_applied?: string;
+    academic_session?: string;
+    gender?: string;
+    category?: string;
+    father_name?: string;
+    mother_name?: string;
+    city?: string;
+    state?: string;
+    pincode?: string;
+    sort_by?: string;
+    sort_order?: string;
+  }): Promise<Blob> => {
+    const response = await api.get('/api/students/export/json', {
+      params,
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+
+  exportStudentsPDF: async (params: {
+    student_name?: string;
+    roll_number?: string;
+    aadhar_number?: string;
+    phone_number?: string;
+    email?: string;
+    enrollment_number?: string;
+    application_number?: string;
+    course_applied?: string;
+    academic_session?: string;
+    gender?: string;
+    category?: string;
+    father_name?: string;
+    mother_name?: string;
+    city?: string;
+    state?: string;
+    pincode?: string;
+    sort_by?: string;
+    sort_order?: string;
+  }): Promise<Blob> => {
+    const response = await api.get('/api/students/export/pdf', {
+      params,
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+
   // Import students
   importStudentsCSV: async (file: File): Promise<{ message: string; imported: number; errors: string[]; error_count: number }> => {
     const formData = new FormData();

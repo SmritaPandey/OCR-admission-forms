@@ -355,7 +355,6 @@ export function extractStructuredData(
   }
 
   return result;
-  return {};
 }
 
 /**
@@ -456,15 +455,117 @@ function mapLabelToFieldName(label: string): string {
     'local guardian': 'guardian_name',
     
     // Academic
-    'course': 'course_applied',
-    'course applied': 'course_applied',
-    'program': 'course_applied',
+    'course': 'course',
+    'course applied': 'course',
+    'course_applied': 'course',
+    'program': 'course',
     'application number': 'application_number',
     'application no': 'application_number',
+    'application_number': 'application_number',
     'enrollment number': 'enrollment_number',
     'enrollment no': 'enrollment_number',
-    'du portal form number': 'application_number',
+    'enrollment_number': 'enrollment_number',
+    'du portal form number': 'du_portal_form_number',
+    'du_portal_form_number': 'du_portal_form_number',
     'cuet score': 'cuet_score',
+    'cuet_score': 'cuet_score',
+    'date of admission': 'date_of_admission',
+    'date_of_admission': 'date_of_admission',
+    'admission date': 'date_of_admission',
+    'academic session': 'academic_session',
+    'academic_session': 'academic_session',
+    'admission category': 'admission_category',
+    'admission_category': 'admission_category',
+    'category': 'category',
+    
+    // Personal Details
+    'nationality': 'nationality',
+    'religion': 'religion',
+    'blood group': 'blood_group',
+    'blood_group': 'blood_group',
+    'below poverty line': 'below_poverty_line',
+    'below_poverty_line': 'below_poverty_line',
+    'minority category': 'minority_category',
+    'minority_category': 'minority_category',
+    'annual income': 'annual_income',
+    'annual_income': 'annual_income',
+    
+    // CUET Scores
+    'cuet_subject_1': 'cuet_subject_1',
+    'cuet_total_score_1': 'cuet_total_score_1',
+    'cuet_score_obtained_1': 'cuet_score_obtained_1',
+    'cuet_subject_2': 'cuet_subject_2',
+    'cuet_total_score_2': 'cuet_total_score_2',
+    'cuet_score_obtained_2': 'cuet_score_obtained_2',
+    'cuet_subject_3': 'cuet_subject_3',
+    'cuet_total_score_3': 'cuet_total_score_3',
+    'cuet_score_obtained_3': 'cuet_score_obtained_3',
+    'cuet_subject_4': 'cuet_subject_4',
+    'cuet_total_score_4': 'cuet_total_score_4',
+    'cuet_score_obtained_4': 'cuet_score_obtained_4',
+    'cuet_subject_5': 'cuet_subject_5',
+    'cuet_total_score_5': 'cuet_total_score_5',
+    'cuet_score_obtained_5': 'cuet_score_obtained_5',
+    'cuet_subject_6': 'cuet_subject_6',
+    'cuet_total_score_6': 'cuet_total_score_6',
+    'cuet_score_obtained_6': 'cuet_score_obtained_6',
+    
+    // Class XII Details
+    'twelfth year': 'twelfth_year',
+    'twelfth_year': 'twelfth_year',
+    'year of passing': 'twelfth_year',
+    'twelfth board': 'twelfth_board',
+    'twelfth_board': 'twelfth_board',
+    'board university': 'twelfth_board',
+    'twelfth roll number': 'twelfth_roll_number',
+    'twelfth_roll_number': 'twelfth_roll_number',
+    'examination roll no': 'twelfth_roll_number',
+    'twelfth institution': 'twelfth_institution',
+    'twelfth_institution': 'twelfth_institution',
+    'institution last attended': 'twelfth_institution',
+    'hindi studied upto': 'hindi_studied_upto',
+    'hindi_studied_upto': 'hindi_studied_upto',
+    
+    // Parent Occupational Details
+    'mother occupation': 'mother_occupation',
+    'mother_occupation': 'mother_occupation',
+    'mother designation': 'mother_designation',
+    'mother_designation': 'mother_designation',
+    'mother organization': 'mother_organization',
+    'mother_organization': 'mother_organization',
+    'mother email': 'mother_email',
+    'mother_email': 'mother_email',
+    'mother mobile': 'mother_mobile',
+    'mother_mobile': 'mother_mobile',
+    'father occupation': 'father_occupation',
+    'father_occupation': 'father_occupation',
+    'father designation': 'father_designation',
+    'father_designation': 'father_designation',
+    'father organization': 'father_organization',
+    'father_organization': 'father_organization',
+    'father email': 'father_email',
+    'father_email': 'father_email',
+    'father mobile': 'father_mobile',
+    'father_mobile': 'father_mobile',
+    
+    // Guardian Details
+    'guardian_name': 'guardian_name',
+    'guardian residential address': 'guardian_residential_address',
+    'guardian_residential_address': 'guardian_residential_address',
+    'guardian organization': 'guardian_organization',
+    'guardian_organization': 'guardian_organization',
+    'guardian email': 'guardian_email',
+    'guardian_email': 'guardian_email',
+    'guardian mobile': 'guardian_mobile',
+    'guardian_mobile': 'guardian_mobile',
+    'guardian relation': 'guardian_relation',
+    'guardian_relation': 'guardian_relation',
+    
+    // Other
+    'du enrollment number': 'du_enrollment_number',
+    'du_enrollment_number': 'du_enrollment_number',
+    'hindi medium preference': 'hindi_medium_preference',
+    'hindi_medium_preference': 'hindi_medium_preference',
   };
   
   return mapping[labelLower] || label;  // Return original if no mapping found

@@ -7,6 +7,9 @@ import DocumentUpload from './DocumentUpload';
 import DocumentList from './DocumentList';
 import './VerificationView.css';
 
+// API Base URL - handle TypeScript import.meta.env
+const API_BASE_URL = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) || 'http://localhost:8000';
+
 const PROVIDER_LABELS: Record<string, string> = {
   tesseract: 'Tesseract (Local)',
   google: 'Google Vision',
@@ -203,11 +206,9 @@ const determineConfidenceClass = (value?: number): { label: string; className: s
 
 // Helper to get the correct file URL
 const getFileUrl = (filePath: string | undefined, formId?: number, page?: number): string => {
-  const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
-  
   if (!filePath) {
     // Fallback to preview endpoint if no file path
-    return formId ? `${apiUrl}/api/preview/${formId}${page ? `?page=${page}` : ''}` : '';
+    return formId ? `${API_BASE_URL}/api/preview/${formId}${page ? `?page=${page}` : ''}` : '';
   }
   
   // Normalize the file path - remove any leading 'uploads/' to avoid duplication
@@ -223,7 +224,7 @@ const getFileUrl = (filePath: string | undefined, formId?: number, page?: number
   }
   
   // Return the direct PDF URL - browser will handle page navigation via #page= anchor
-  return `${apiUrl}/uploads/${normalizedPath}`;
+  return `${API_BASE_URL}/uploads/${normalizedPath}`;
 };
 
 const formatProviderName = (provider?: string | null, modelInfo?: Record<string, any>): string => {
@@ -366,9 +367,16 @@ function VerificationView() {
         }
       });
 
+      // Auto-calculate CUET total after autofill
+      const cuetTotal = calculateCuetTotal(updated as FormVerification);
+      if (cuetTotal) {
+        updated.cuet_score = cuetTotal;
+        updated.cuet_total_score = cuetTotal;
+      }
+
       console.log('[Auto-fill] Updated verification - student_name:', updated.student_name);
       console.log('[Auto-fill] Updated verification - date_of_birth:', updated.date_of_birth);
-      console.log('[Auto-fill] Updated verification - gender:', updated.gender);
+      console.log('[Auto-fill] Updated verification - cuet_score:', updated.cuet_score);
       
       return updated;
     });
@@ -555,8 +563,38 @@ function VerificationView() {
     }
   };
 
+  // Calculate CUET total from obtained scores
+  const calculateCuetTotal = (data: FormVerification): string => {
+    let total = 0;
+    for (let i = 1; i <= 6; i++) {
+      const score = (data as any)[`cuet_score_obtained_${i}`];
+      if (score) {
+        const num = parseFloat(String(score).replace(/[^\d.]/g, ''));
+        if (!isNaN(num)) total += num;
+      }
+    }
+    if (total > 0) {
+      // Show decimals only if present, max 2 decimal places
+      return total % 1 === 0 ? String(total) : total.toFixed(2).replace(/\.?0+$/, '');
+    }
+    return '';
+  };
+
   const handleChange = (field: keyof FormVerification, value: string) => {
-    setVerification((prev) => ({ ...prev, [field]: value }));
+    setVerification((prev) => {
+      const updated = { ...prev, [field]: value };
+      
+      // Auto-sync CUET total when any obtained score changes
+      if (field.toString().startsWith('cuet_score_obtained_')) {
+        const newTotal = calculateCuetTotal(updated);
+        if (newTotal) {
+          updated.cuet_score = newTotal;
+          updated.cuet_total_score = newTotal;
+        }
+      }
+      
+      return updated;
+    });
   };
 
   const handleResetVerification = () => {
@@ -638,33 +676,19 @@ function VerificationView() {
                   </button>
                 </div>
           <div className="image-container">
-            {form.file_path?.toLowerCase().endsWith('.pdf') ? (
-              // PDF files - use iframe for native PDF viewing with page navigation
-              // The #page= parameter works with most PDF viewers (Chrome, Firefox, Edge)
-              <iframe
-                key={`pdf-${form.id}-${currentPage}`}
-                src={`${getFileUrl(form.file_path, form.id)}#page=${currentPage}`}
-                title={`Scanned form page ${currentPage}`}
-                width="100%"
-                height="800px"
-                style={{ border: 'none', display: 'block' }}
-                allow="fullscreen"
-              />
-            ) : (
-              // Image files
-              <img
-                src={getFileUrl(form.file_path, form.id)}
-                alt="Scanned form"
-                style={{ maxWidth: '100%', height: 'auto', display: 'block' }}
-                onError={(e) => {
-                  // Fallback to preview endpoint
-                  const img = e.target as HTMLImageElement;
-                  if (form.id && !img.src.includes('/api/preview/')) {
-                    img.src = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/api/preview/${form.id}`;
-                  }
-                }}
-              />
-            )}
+            {/* Use preview endpoint - backend converts PDF pages to JPEG */}
+            <img
+              key={`preview-${form.id}-${currentPage}`}
+              src={`${API_BASE_URL}/api/preview/${form.id}?page=${currentPage}`}
+              alt={`Scanned form page ${currentPage}`}
+              onError={(e) => {
+                // Fallback to direct file if preview fails
+                const img = e.target as HTMLImageElement;
+                if (form.file_path && !img.src.includes('/uploads/')) {
+                  img.src = getFileUrl(form.file_path, form.id);
+                }
+              }}
+            />
           </div>
         </div>
 
@@ -703,7 +727,7 @@ function VerificationView() {
             </div>
           )}
 
-          <div className="form-editor" style={{ maxHeight: 'calc(100vh - 350px)', overflowY: 'auto' }}>
+          <div className="form-editor">
 
             {/* Academic & Admission Details */}
             <div className="form-section">
@@ -751,23 +775,11 @@ function VerificationView() {
                   <input
                     type="text"
                     className="input"
-                    value={(() => {
-                      // Calculate sum of all obtained scores (supports decimals)
-                      let total = 0;
-                      for (let i = 1; i <= 6; i++) {
-                        const score = (verification as any)[`cuet_score_obtained_${i}`];
-                        if (score) {
-                          const num = parseFloat(score);
-                          if (!isNaN(num)) total += num;
-                        }
-                      }
-                      if (total > 0) {
-                        return total % 1 === 0 ? String(total) : total.toFixed(3).replace(/\.?0+$/, '');
-                      }
-                      return verification.cuet_score || '';
-                    })()}
-                    onChange={(e) => handleChange('cuet_score', e.target.value)}
-                    placeholder="Sum of obtained"
+                    readOnly
+                    value={calculateCuetTotal(verification) || verification.cuet_score || ''}
+                    placeholder="Auto-calculated from CUET Marks"
+                    style={{ backgroundColor: '#f8fafc', cursor: 'default' }}
+                    title="This is auto-calculated from CUET Marks section below"
                   />
                 </div>
                 <div className="form-row">
@@ -1001,38 +1013,26 @@ function VerificationView() {
                   </div>
                 ))}
                 
-                <div style={{ gridColumn: '1 / -1', marginTop: '10px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '10px' }}>
-                  <strong>Total CUET Score:</strong>
+                <div style={{ gridColumn: '1 / -1', marginTop: '12px', paddingTop: '12px', borderTop: '2px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px' }}>
+                  <strong style={{ color: '#334155' }}>Total CUET Score:</strong>
                   <input
                     type="text"
-                    value={(() => {
-                      // Calculate sum of all obtained scores from subjects above (supports decimals)
-                      let total = 0;
-                      for (let i = 1; i <= 6; i++) {
-                        const score = (verification as any)[`cuet_score_obtained_${i}`];
-                        if (score) {
-                          const num = parseFloat(score);
-                          if (!isNaN(num)) total += num;
-                        }
-                      }
-                      // Format: show decimals only if present
-                      if (total > 0) {
-                        return total % 1 === 0 ? String(total) : total.toFixed(3).replace(/\.?0+$/, '');
-                      }
-                      return verification.cuet_score || '';
-                    })()}
-                    onChange={(e) => handleChange('cuet_score', e.target.value)}
+                    readOnly
+                    value={calculateCuetTotal(verification) || verification.cuet_score || '0'}
                     style={{ 
-                      padding: '8px 16px', 
-                      backgroundColor: '#e8f5e9', 
-                      borderRadius: '4px', 
-                      fontWeight: 'bold',
-                      width: '80px',
+                      padding: '10px 16px', 
+                      backgroundColor: '#ecfdf5', 
+                      borderRadius: '8px', 
+                      fontWeight: '700',
+                      fontSize: '1rem',
+                      width: '100px',
                       textAlign: 'center',
-                      border: '1px solid #c8e6c9'
+                      border: '2px solid #a7f3d0',
+                      color: '#059669',
+                      cursor: 'default'
                     }}
                   />
-                  <span style={{ fontSize: '11px', color: '#666' }}>= sum of obtained</span>
+                  <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Auto-calculated</span>
                 </div>
               </div>
             </div>

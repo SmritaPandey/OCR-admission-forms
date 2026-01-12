@@ -6,7 +6,14 @@
         "dev": "next dev --turbopack",
         "build": "next build",
         "start": "next start",
-        "lint": "next lint"
+        "lint": "next lint",
+        "desktop:install": "cd desktop && npm install",
+        "desktop:dev": "cd desktop && npm run dev",
+        "desktop:build": "npm run build && cd desktop && npm run build",
+        "desktop:build:win": "npm run build && cd desktop && npm run build:win",
+        "desktop:build:mac": "npm run build && cd desktop && npm run build:mac",
+        "desktop:build:linux": "npm run build && cd desktop && npm run build:linux",
+        "desktop:build:all": "npm run build && cd desktop && npm run build:all"
     },
     "dependencies": {
         "@babel/parser": "^7.28.5",

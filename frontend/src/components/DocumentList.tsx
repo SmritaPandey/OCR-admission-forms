@@ -6,6 +6,10 @@ interface DocumentListProps {
   formId?: number;
   studentProfileId?: number;
   onRefresh?: () => void;
+  studentInfo?: {
+    duPortalNumber?: string;
+    fullName?: string;
+  };
 }
 
 function DocumentList({ formId, studentProfileId, onRefresh }: DocumentListProps) {

@@ -103,6 +103,23 @@
     /* Typography */
     --font-display: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
     --font-text: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+
+    /* Legacy variable mappings for component compatibility */
+    --primary-color: var(--color-brand-500);
+    --primary-dark: var(--color-brand-600);
+    --primary-light: var(--color-brand-100);
+    --secondary-color: #d4a827;
+    --secondary-dark: #9a7a1d;
+    --success-color: var(--color-success-600);
+    --error-color: var(--color-error-600);
+    --warning-color: var(--color-warning-600);
+    --text-primary: var(--color-gray-900);
+    --text-secondary: var(--color-gray-500);
+    --text-light: var(--color-gray-400);
+    --bg-primary: #ffffff;
+    --bg-secondary: var(--color-gray-50);
+    --bg-tertiary: var(--color-gray-100);
+    --border-color: var(--color-gray-200);
   }
 
   * {

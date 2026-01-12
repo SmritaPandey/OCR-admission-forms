@@ -66,3 +66,14 @@ Thumbs.db
 google-cloud-credentials.json
 admission-ocr-*.json
 
+
+# Next.js build output
+.next/
+out/
+
+# Desktop build
+desktop/
+
+# Misc
+.backend.pid
+

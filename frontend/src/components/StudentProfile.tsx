@@ -1,9 +1,53 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { apiService, StudentProfileDetail } from '../services/api';
+import { apiService, StudentProfileDetail, FormDetail, Document } from '../services/api';
 import DocumentUpload from './DocumentUpload';
-import DocumentList from './DocumentList';
 import './StudentProfile.css';
+
+const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:8000';
+
+// Helper to get the latest verified or extracted form
+const getLatestForm = (forms: FormDetail[]): FormDetail | null => {
+  if (forms.length === 0) return null;
+  
+  // Prefer verified forms, then extracted, then any
+  const verified = forms.filter(f => f.status === 'verified');
+  if (verified.length > 0) return verified[0];
+  
+  const extracted = forms.filter(f => f.status === 'extracted');
+  if (extracted.length > 0) return extracted[0];
+  
+  return forms[0];
+};
+
+// Helper to get all documents from profile and forms
+const getAllDocuments = (profile: StudentProfileDetail): Document[] => {
+  const profileDocs = profile.documents || [];
+  const formDocs = profile.forms.flatMap(form => form.documents || []);
+  
+  // Deduplicate by id
+  const seen = new Set<number>();
+  const allDocs: Document[] = [];
+  [...profileDocs, ...formDocs].forEach(doc => {
+    if (!seen.has(doc.id)) {
+      seen.add(doc.id);
+      allDocs.push(doc);
+    }
+  });
+  
+  return allDocs;
+};
+
+// Detail row component
+const DetailRow = ({ label, value }: { label: string; value?: string | null }) => {
+  if (!value) return null;
+  return (
+    <div className="detail-row">
+      <dt>{label}</dt>
+      <dd>{value}</dd>
+    </div>
+  );
+};
 
 function StudentProfile() {
   const { id } = useParams<{ id: string }>();
@@ -11,6 +55,7 @@ function StudentProfile() {
   const [profile, setProfile] = useState<StudentProfileDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'overview' | 'forms' | 'documents'>('overview');
 
   useEffect(() => {
     if (id) {
@@ -38,7 +83,12 @@ function StudentProfile() {
   };
 
   if (loading) {
-    return <div className="student-profile loading">Loading student profile...</div>;
+    return (
+      <div className="student-profile loading">
+        <div className="spinner"></div>
+        <p>Loading student profile...</p>
+      </div>
+    );
   }
 
   if (error) {
@@ -56,39 +106,50 @@ function StudentProfile() {
     return <div className="student-profile error">Student profile not found</div>;
   }
 
+  const latestForm = getLatestForm(profile.forms);
+  const allDocuments = getAllDocuments(profile);
+
   return (
     <div className="student-profile">
+      {/* Hero Section */}
       <section className="profile-hero">
         <div className="hero-details">
-          <button onClick={() => navigate(-1)} className="btn btn-outline back-btn">
-            ← Back
-          </button>
+          <div className="hero-nav">
+            <button onClick={() => navigate(-1)} className="btn btn-outline back-btn">
+              ← Back
+            </button>
+            <button onClick={() => navigate(`/students/${id}/edit`)} className="btn btn-primary edit-btn">
+              ✏️ Edit Profile
+            </button>
+          </div>
           <span className="page-eyebrow">Student Record</span>
           <h1>{profile.student_name}</h1>
-          <p>
-            Centralized profile of supporting documents, verification history, and admission forms for
-            this applicant. Track outstanding actions and upload additional paperwork without leaving
-            the admissions console.
-          </p>
+          
           <div className="hero-meta">
-            <div className="meta-item">
-              <span className="meta-label">Profile Created</span>
-              <span className="meta-value">
-                {new Date(profile.created_date).toLocaleDateString()}
-              </span>
-            </div>
-            <div className="meta-item">
-              <span className="meta-label">Last Updated</span>
-              <span className="meta-value">
-                {new Date(profile.updated_date).toLocaleDateString()}
-              </span>
-            </div>
+            {latestForm?.course && (
+              <div className="meta-item">
+                <span className="meta-label">Course</span>
+                <span className="meta-value">{latestForm.course}</span>
+              </div>
+            )}
+            {latestForm?.college_roll_no && (
+              <div className="meta-item">
+                <span className="meta-label">Roll No</span>
+                <span className="meta-value">{latestForm.college_roll_no}</span>
+              </div>
+            )}
             {profile.aadhar_number && (
               <div className="meta-item">
                 <span className="meta-label">Aadhar</span>
                 <span className="meta-value">{profile.aadhar_number}</span>
               </div>
             )}
+            <div className="meta-item">
+              <span className="meta-label">Profile Created</span>
+              <span className="meta-value">
+                {new Date(profile.created_date).toLocaleDateString()}
+              </span>
+            </div>
           </div>
         </div>
         <div className="hero-stats">
@@ -99,99 +160,347 @@ function StudentProfile() {
           </div>
           <div className="stat-card">
             <span className="stat-chip">Supporting Docs</span>
-            <span className="stat-value">{profile.documents_count}</span>
+            <span className="stat-value">{allDocuments.length}</span>
             <span className="stat-description">Archived for compliance</span>
           </div>
         </div>
       </section>
 
-      <section className="profile-section">
-        <header className="section-header">
-          <div>
-            <h2>Admission Forms</h2>
-            <p>
-              {profile.forms.length > 0
-                ? 'Review submission status and navigate directly to verification.'
-                : 'No forms on record yet. Upload a form to begin the digitization workflow.'}
-            </p>
-          </div>
-          <span className="section-count">{profile.forms.length} total</span>
-        </header>
+      {/* Tab Navigation */}
+      <div className="profile-tabs">
+        <button 
+          className={`tab-btn ${activeTab === 'overview' ? 'active' : ''}`}
+          onClick={() => setActiveTab('overview')}
+        >
+          Overview
+        </button>
+        <button 
+          className={`tab-btn ${activeTab === 'forms' ? 'active' : ''}`}
+          onClick={() => setActiveTab('forms')}
+        >
+          Forms ({profile.forms.length})
+        </button>
+        <button 
+          className={`tab-btn ${activeTab === 'documents' ? 'active' : ''}`}
+          onClick={() => setActiveTab('documents')}
+        >
+          Documents ({allDocuments.length})
+        </button>
+      </div>
 
-        {profile.forms.length === 0 ? (
-          <div className="empty-state">
-            No forms found for this student. Upload a form from the documents section below.
-          </div>
-        ) : (
-          <div className="forms-grid">
-            {profile.forms.map((form) => (
-              <article key={form.id} className="form-card">
-                <header className="form-card-header">
-                  <div>
-                    <h3>
-                      <Link to={`/forms/${form.id}`}>{form.filename}</Link>
-                    </h3>
-                    <p>Uploaded {new Date(form.upload_date).toLocaleDateString()}</p>
-                  </div>
-                  <span className={`status-badge status-${form.status}`}>
-                    {form.status}
-                  </span>
-                </header>
-                <dl className="form-card-meta">
-                  {form.student_name && (
-                    <div>
-                      <dt>Student</dt>
-                      <dd>{form.student_name}</dd>
-                    </div>
-                  )}
-                  {form.course_applied && (
-                    <div>
-                      <dt>Course</dt>
-                      <dd>{form.course_applied}</dd>
-                    </div>
-                  )}
-                  <div>
-                    <dt>Provider</dt>
-                    <dd>{form.ocr_provider}</dd>
-                  </div>
-                </dl>
-                {form.documents && form.documents.length > 0 && (
-                  <footer className="form-card-footer">
-                    {form.documents.length} supporting document
-                    {form.documents.length === 1 ? '' : 's'} attached
-                  </footer>
-                )}
-              </article>
-            ))}
-          </div>
-        )}
-      </section>
+      {/* Overview Tab */}
+      {activeTab === 'overview' && latestForm && (
+        <div className="profile-overview">
+          {/* Personal Details */}
+          <section className="details-card">
+            <h3>Personal Details</h3>
+            <dl className="details-grid">
+              <DetailRow label="Full Name" value={latestForm.student_name} />
+              <DetailRow label="First Name" value={latestForm.first_name} />
+              <DetailRow label="Middle Name" value={latestForm.middle_name} />
+              <DetailRow label="Surname" value={latestForm.surname} />
+              <DetailRow label="Date of Birth" value={latestForm.date_of_birth} />
+              <DetailRow label="Gender" value={latestForm.gender} />
+              <DetailRow label="Category" value={latestForm.category || latestForm.admission_category} />
+              <DetailRow label="Nationality" value={latestForm.nationality} />
+              <DetailRow label="Religion" value={latestForm.religion} />
+              <DetailRow label="Aadhar Number" value={latestForm.aadhar_number} />
+              <DetailRow label="Blood Group" value={latestForm.blood_group} />
+            </dl>
+          </section>
 
-      <section className="profile-section">
-        <header className="section-header">
-          <div>
-            <h2>Supporting Documents</h2>
-            <p>
-              Upload new files or manage existing documentation linked to this student profile. These
-              assets remain accessible during verification and auditing.
-            </p>
-          </div>
-          <span className="section-count">{profile.documents.length} total</span>
-        </header>
-        <div className="documents-panel">
-          <DocumentUpload
-            studentProfileId={profile.id}
-            onUploadComplete={handleRefresh}
-          />
-          <DocumentList
-            studentProfileId={profile.id}
-            onRefresh={handleRefresh}
-          />
+          {/* Contact Details */}
+          <section className="details-card">
+            <h3>Contact Details</h3>
+            <dl className="details-grid">
+              <DetailRow label="Phone Number" value={latestForm.phone_number} />
+              <DetailRow label="Alternate Phone" value={latestForm.alternate_phone} />
+              <DetailRow label="Email" value={latestForm.email} />
+              <DetailRow label="Emergency Contact" value={latestForm.emergency_contact_name} />
+              <DetailRow label="Emergency Phone" value={latestForm.emergency_contact_phone} />
+            </dl>
+          </section>
+
+          {/* Address Details */}
+          <section className="details-card">
+            <h3>Address</h3>
+            <dl className="details-grid two-cols">
+              <div className="address-block">
+                <h4>Permanent Address</h4>
+                <DetailRow label="Line 1" value={latestForm.permanent_address_line1} />
+                <DetailRow label="Line 2" value={latestForm.permanent_address_line2} />
+                <DetailRow label="Line 3" value={latestForm.permanent_address_line3} />
+                <DetailRow label="State" value={latestForm.permanent_state} />
+                <DetailRow label="Pincode" value={latestForm.permanent_pincode} />
+              </div>
+              <div className="address-block">
+                <h4>Correspondence Address</h4>
+                <DetailRow label="Line 1" value={latestForm.correspondence_address_line1} />
+                <DetailRow label="Line 2" value={latestForm.correspondence_address_line2} />
+                <DetailRow label="Line 3" value={latestForm.correspondence_address_line3} />
+                <DetailRow label="State" value={latestForm.correspondence_state} />
+                <DetailRow label="Pincode" value={latestForm.correspondence_pincode} />
+              </div>
+            </dl>
+          </section>
+
+          {/* Academic Details */}
+          <section className="details-card">
+            <h3>Academic Details</h3>
+            <dl className="details-grid">
+              <DetailRow label="Course" value={latestForm.course} />
+              <DetailRow label="Academic Session" value={latestForm.academic_session} />
+              <DetailRow label="College Roll No" value={latestForm.college_roll_no} />
+              <DetailRow label="DU Portal Form No" value={latestForm.du_portal_form_number} />
+              <DetailRow label="DU Enrollment No" value={latestForm.du_enrollment_number} />
+              <DetailRow label="Date of Admission" value={latestForm.date_of_admission} />
+              <DetailRow label="Admission Category" value={latestForm.admission_category} />
+            </dl>
+          </section>
+
+          {/* CUET Scores */}
+          {(latestForm.cuet_score || latestForm.cuet_subject_1) && (
+            <section className="details-card">
+              <h3>CUET Scores</h3>
+              <div className="cuet-table-container">
+                <table className="cuet-table">
+                  <thead>
+                    <tr>
+                      <th>Subject</th>
+                      <th>Total</th>
+                      <th>Obtained</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[1, 2, 3, 4, 5, 6].map(i => {
+                      const subject = latestForm[`cuet_subject_${i}` as keyof FormDetail] as string;
+                      const total = latestForm[`cuet_total_score_${i}` as keyof FormDetail] as string;
+                      const obtained = latestForm[`cuet_score_obtained_${i}` as keyof FormDetail] as string;
+                      if (!subject && !obtained) return null;
+                      return (
+                        <tr key={i}>
+                          <td>{subject || '-'}</td>
+                          <td>{total || '-'}</td>
+                          <td>{obtained || '-'}</td>
+                        </tr>
+                      );
+                    })}
+                    <tr className="total-row">
+                      <td><strong>Total CUET Score</strong></td>
+                      <td></td>
+                      <td><strong>{latestForm.cuet_score || latestForm.cuet_total_score || '-'}</strong></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+
+          {/* 12th Details */}
+          <section className="details-card">
+            <h3>Qualifying Examination (12th)</h3>
+            <dl className="details-grid">
+              <DetailRow label="Year" value={latestForm.twelfth_year} />
+              <DetailRow label="Board" value={latestForm.twelfth_board} />
+              <DetailRow label="School/Institution" value={latestForm.twelfth_school || latestForm.twelfth_institution} />
+              <DetailRow label="Roll Number" value={latestForm.twelfth_roll_number} />
+              <DetailRow label="Percentage" value={latestForm.twelfth_percentage} />
+              <DetailRow label="Hindi Studied Upto" value={latestForm.hindi_studied_upto} />
+            </dl>
+          </section>
+
+          {/* Parent/Guardian Details */}
+          <section className="details-card">
+            <h3>Parent / Guardian Details</h3>
+            <dl className="details-grid three-cols">
+              <div className="parent-block">
+                <h4>Father</h4>
+                <DetailRow label="Name" value={latestForm.father_name} />
+                <DetailRow label="Occupation" value={latestForm.father_occupation} />
+                <DetailRow label="Designation" value={latestForm.father_designation} />
+                <DetailRow label="Organization" value={latestForm.father_organization} />
+                <DetailRow label="Mobile" value={latestForm.father_mobile || latestForm.father_phone} />
+                <DetailRow label="Email" value={latestForm.father_email} />
+              </div>
+              <div className="parent-block">
+                <h4>Mother</h4>
+                <DetailRow label="Name" value={latestForm.mother_name} />
+                <DetailRow label="Occupation" value={latestForm.mother_occupation} />
+                <DetailRow label="Designation" value={latestForm.mother_designation} />
+                <DetailRow label="Organization" value={latestForm.mother_organization} />
+                <DetailRow label="Mobile" value={latestForm.mother_mobile || latestForm.mother_phone} />
+                <DetailRow label="Email" value={latestForm.mother_email} />
+              </div>
+              <div className="parent-block">
+                <h4>Local Guardian</h4>
+                <DetailRow label="Name" value={latestForm.guardian_name} />
+                <DetailRow label="Relation" value={latestForm.guardian_relation} />
+                <DetailRow label="Address" value={latestForm.guardian_residential_address} />
+                <DetailRow label="Mobile" value={latestForm.guardian_mobile || latestForm.guardian_phone} />
+                <DetailRow label="Email" value={latestForm.guardian_email} />
+              </div>
+            </dl>
+          </section>
+
+          {/* Other Details */}
+          <section className="details-card">
+            <h3>Other Information</h3>
+            <dl className="details-grid">
+              <DetailRow label="Annual Family Income" value={latestForm.annual_income} />
+              <DetailRow label="Below Poverty Line" value={latestForm.below_poverty_line} />
+              <DetailRow label="Minority Category" value={latestForm.minority_category} />
+              <DetailRow label="Hindi Medium Preference" value={latestForm.hindi_medium_preference} />
+              <DetailRow label="Disability Type" value={latestForm.disability_type} />
+              <DetailRow label="Disability %" value={latestForm.disability_percentage} />
+              <DetailRow label="UDID Number" value={latestForm.udid_number} />
+            </dl>
+          </section>
         </div>
-      </section>
+      )}
+
+      {activeTab === 'overview' && !latestForm && (
+        <div className="profile-section">
+          <div className="empty-state">
+            <p>No form data available. Upload and verify a form to see student details.</p>
+            <Link to="/upload" className="btn btn-primary">Upload Form</Link>
+          </div>
+        </div>
+      )}
+
+      {/* Forms Tab */}
+      {activeTab === 'forms' && (
+        <section className="profile-section">
+          <header className="section-header">
+            <div>
+              <h2>Admission Forms</h2>
+              <p>
+                {profile.forms.length > 0
+                  ? 'Review submission status and navigate directly to verification.'
+                  : 'No forms on record yet. Upload a form to begin the digitization workflow.'}
+              </p>
+            </div>
+            <Link to="/upload" className="btn btn-primary">+ Upload Form</Link>
+          </header>
+
+          {profile.forms.length === 0 ? (
+            <div className="empty-state">
+              No forms found for this student. Upload a form to get started.
+            </div>
+          ) : (
+            <div className="forms-grid">
+              {profile.forms.map((form) => (
+                <article key={form.id} className="form-card">
+                  <header className="form-card-header">
+                    <div>
+                      <h3>
+                        <Link to={`/forms/${form.id}`}>{form.filename}</Link>
+                      </h3>
+                      <p>Uploaded {new Date(form.upload_date).toLocaleDateString()}</p>
+                    </div>
+                    <span className={`status-badge status-${form.status}`}>
+                      {form.status}
+                    </span>
+                  </header>
+                  <dl className="form-card-meta">
+                    {form.course && (
+                      <div>
+                        <dt>Course</dt>
+                        <dd>{form.course}</dd>
+                      </div>
+                    )}
+                    {form.college_roll_no && (
+                      <div>
+                        <dt>Roll No</dt>
+                        <dd>{form.college_roll_no}</dd>
+                      </div>
+                    )}
+                    <div>
+                      <dt>Provider</dt>
+                      <dd>{form.ocr_provider}</dd>
+                    </div>
+                  </dl>
+                  <footer className="form-card-actions">
+                    <Link to={`/forms/${form.id}`} className="btn btn-sm btn-secondary">
+                      View Details
+                    </Link>
+                    {form.status !== 'verified' && (
+                      <Link to={`/forms/${form.id}`} className="btn btn-sm btn-primary">
+                        Verify
+                      </Link>
+                    )}
+                  </footer>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* Documents Tab */}
+      {activeTab === 'documents' && (
+        <section className="profile-section">
+          <header className="section-header">
+            <div>
+              <h2>Supporting Documents</h2>
+              <p>
+                Upload new files or manage existing documentation linked to this student profile.
+              </p>
+            </div>
+            <span className="section-count">{allDocuments.length} total</span>
+          </header>
+          
+          <div className="documents-panel">
+            <DocumentUpload
+              studentProfileId={profile.id}
+              onUploadComplete={handleRefresh}
+            />
+            
+            {allDocuments.length === 0 ? (
+              <div className="empty-state">
+                No documents attached yet. Upload supporting documents above.
+              </div>
+            ) : (
+              <div className="documents-grid">
+                {allDocuments.map((doc) => (
+                  <article key={doc.id} className="document-card">
+                    <div className="document-icon">
+                      {doc.filename.toLowerCase().endsWith('.pdf') ? '📄' : '🖼️'}
+                    </div>
+                    <div className="document-info">
+                      <h4>{doc.filename}</h4>
+                      <span className="document-category-badge">{doc.document_category}</span>
+                      {doc.description && <p className="document-desc">{doc.description}</p>}
+                      <div className="document-meta">
+                        <span>{(doc.file_size / 1024).toFixed(1)} KB</span>
+                        <span>{new Date(doc.upload_date).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                    <div className="document-actions">
+                      <a
+                        href={`${API_BASE_URL}/uploads/${doc.file_path}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn btn-sm btn-secondary"
+                      >
+                        View
+                      </a>
+                      <a
+                        href={`${API_BASE_URL}/uploads/${doc.file_path}`}
+                        download={doc.filename}
+                        className="btn btn-sm btn-primary"
+                      >
+                        Download
+                      </a>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+      )}
     </div>
   );
 }
 
 export default StudentProfile;
-
