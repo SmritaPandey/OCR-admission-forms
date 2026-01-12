@@ -47,7 +47,7 @@ export interface FormExtractionResponse {
   result: ExtractedData;
 }
 
-export type DocumentCategory = 
+export type DocumentCategory =
   | "ID Proof"
   | "Academic Certificate"
   | "Medical Certificate"
@@ -135,7 +135,11 @@ export interface FormDetail extends FormResponse {
 }
 
 export interface FormVerification {
+  // Basic Personal Details
   student_name?: string;
+  first_name?: string;
+  middle_name?: string;
+  surname?: string;
   date_of_birth?: string;
   gender?: string;
   category?: string;
@@ -143,26 +147,86 @@ export interface FormVerification {
   religion?: string;
   aadhar_number?: string;
   blood_group?: string;
+  below_poverty_line?: string;
+  minority_category?: string;
+
+  // Academic & Admission Details
+  academic_session?: string;
+  course?: string;
+  admission_category?: string;
+  admission_category_other?: string;
+  du_portal_form_number?: string;
+  cuet_score?: string;
+  college_roll_no?: string;
+  date_of_admission?: string;
+  course_applied?: string;
+  application_number?: string;
+  enrollment_number?: string;
+  admission_date?: string;
+  du_enrollment_number?: string;
+  hindi_medium_preference?: string;
+
+  // Address Details
   permanent_address?: string;
+  permanent_address_line1?: string;
+  permanent_address_line2?: string;
+  permanent_address_line3?: string;
+  permanent_state?: string;
+  permanent_pincode?: string;
   correspondence_address?: string;
+  correspondence_address_line1?: string;
+  correspondence_address_line2?: string;
+  correspondence_address_line3?: string;
+  correspondence_state?: string;
+  correspondence_pincode?: string;
   pincode?: string;
   city?: string;
   state?: string;
+
+  // Contact Details
   phone_number?: string;
   alternate_phone?: string;
   email?: string;
   emergency_contact_name?: string;
   emergency_contact_phone?: string;
-  father_name?: string;
-  father_occupation?: string;
-  father_phone?: string;
+
+  // Mother's Details
   mother_name?: string;
   mother_occupation?: string;
+  mother_designation?: string;
+  mother_organization?: string;
+  mother_email?: string;
+  mother_mobile?: string;
+  mother_landline_code?: string;
+  mother_landline?: string;
   mother_phone?: string;
+
+  // Father's Details
+  father_name?: string;
+  father_occupation?: string;
+  father_designation?: string;
+  father_organization?: string;
+  father_email?: string;
+  father_mobile?: string;
+  father_landline_code?: string;
+  father_landline?: string;
+  father_phone?: string;
+
+  // Guardian Details
   guardian_name?: string;
   guardian_relation?: string;
+  guardian_residential_address?: string;
+  guardian_organization?: string;
+  guardian_email?: string;
+  guardian_mobile?: string;
+  guardian_landline_code?: string;
+  guardian_landline?: string;
   guardian_phone?: string;
+
+  // Family Income
   annual_income?: string;
+
+  // Academic History
   tenth_board?: string;
   tenth_year?: string;
   tenth_percentage?: string;
@@ -171,12 +235,57 @@ export interface FormVerification {
   twelfth_year?: string;
   twelfth_percentage?: string;
   twelfth_school?: string;
+  twelfth_roll_number?: string;
+  twelfth_institution?: string;
+  hindi_studied_upto?: string;
   previous_qualification?: string;
   graduation_details?: string;
-  course_applied?: string;
-  application_number?: string;
-  enrollment_number?: string;
-  admission_date?: string;
+
+  // Certificate Details
+  category_certificate_authority?: string;
+  category_certificate_number?: string;
+  category_certificate_date?: string;
+  disability_percentage?: string;
+  disability_type?: string;
+  udid_number?: string;
+
+  // CUET Marks
+  cuet_subject_1?: string;
+  cuet_total_score_1?: string;
+  cuet_score_obtained_1?: string;
+  cuet_subject_2?: string;
+  cuet_total_score_2?: string;
+  cuet_score_obtained_2?: string;
+  cuet_subject_3?: string;
+  cuet_total_score_3?: string;
+  cuet_score_obtained_3?: string;
+  cuet_subject_4?: string;
+  cuet_total_score_4?: string;
+  cuet_score_obtained_4?: string;
+  cuet_subject_5?: string;
+  cuet_total_score_5?: string;
+  cuet_score_obtained_5?: string;
+  cuet_subject_6?: string;
+  cuet_total_score_6?: string;
+  cuet_score_obtained_6?: string;
+  cuet_total_score?: string;
+
+  // Document Checklist
+  doc_admission_form?: string;
+  doc_undertaking_ragging?: string;
+  doc_photographs?: string;
+  doc_cuet_scorecard?: string;
+  doc_class_xii_marksheet?: string;
+  doc_class_x_certificate?: string;
+  doc_class_xii_certificate?: string;
+  doc_character_certificate?: string;
+  doc_transfer_certificate?: string;
+  doc_hindi_certificate?: string;
+  doc_caste_certificate?: string;
+  doc_sports_eca?: string;
+  doc_originals?: string;
+  doc_photo_id?: string;
+
   additional_info?: any;
 }
 
@@ -346,6 +455,27 @@ export const apiService = {
       params: { student_name: studentName, aadhar_number: aadharNumber },
     });
     return response.data;
+  },
+
+  updateStudentProfile: async (
+    profileId: number,
+    updateData: {
+      student_name?: string;
+      roll_number?: string;
+      aadhar_number?: string;
+    }
+  ): Promise<StudentProfile> => {
+    const response = await api.patch<StudentProfile>(`/api/students/${profileId}`, updateData);
+    return response.data;
+  },
+
+  deleteStudentProfile: async (
+    profileId: number,
+    force: boolean = false
+  ): Promise<void> => {
+    await api.delete(`/api/students/${profileId}`, {
+      params: { force },
+    });
   },
 
   getStudentForms: async (profileId: number): Promise<FormDetail[]> => {

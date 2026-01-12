@@ -373,3 +373,85 @@ async def search_student_profiles(
     
     return result
 
+
+@router.delete("/{profile_id}", status_code=204)
+async def delete_student_profile(
+    profile_id: int,
+    force: bool = Query(False, description="Force delete even if related data exists (always true for this implementation)"),
+    db: Session = Depends(get_db)
+):
+    """
+    Delete a student profile and all associated data (forms, documents, files).
+    This performs a cascading delete:
+    1. Deletes all associated documents and their physical files
+    2. Deletes all associated forms and their physical files
+    3. Deletes the student profile
+    """
+    profile = db.query(StudentProfile).filter(StudentProfile.id == profile_id).first()
+    if not profile:
+        raise HTTPException(status_code=404, detail="Student profile not found")
+    
+    import os
+    from pathlib import Path
+    from backend.models.form import FormStatus
+    from backend.config import settings
+    
+    upload_dir = Path(settings.UPLOAD_DIR).resolve()
+    
+    # 1. Delete all associated documents
+    documents = db.query(StudentDocument).filter(
+        StudentDocument.student_profile_id == profile_id
+    ).all()
+    
+    for doc in documents:
+        # Delete physical file
+        try:
+            full_file_path = upload_dir / doc.file_path
+            if full_file_path.exists():
+                os.remove(full_file_path)
+            # Also try deleting thumbnail/preview if exists (optional cleanup)
+        except Exception as e:
+            # Log error but continue
+            print(f"Error deleting document file {doc.file_path}: {e}")
+            pass
+        
+        db.delete(doc)
+    
+    # 2. Delete all associated forms
+    forms = db.query(AdmissionForm).filter(
+        AdmissionForm.student_profile_id == profile_id
+    ).all()
+    
+    for form in forms:
+        # Delete documents associated with this form but NOT linked to student (if any)
+        # (Though usually documents are linked to student, some might be just form-linked)
+        form_docs = db.query(StudentDocument).filter(
+            StudentDocument.form_id == form.id,
+            StudentDocument.student_profile_id == None # Only those not already deleted above
+        ).all()
+        
+        for fdoc in form_docs:
+            try:
+                full_file_path = upload_dir / fdoc.file_path
+                if full_file_path.exists():
+                    os.remove(full_file_path)
+            except Exception as e:
+                print(f"Error deleting form document file {fdoc.file_path}: {e}")
+                pass
+            db.delete(fdoc)
+            
+        # Delete form physical file
+        try:
+            full_file_path = upload_dir / form.file_path
+            if full_file_path.exists():
+                os.remove(full_file_path)
+        except Exception as e:
+            print(f"Error deleting form file {form.file_path}: {e}")
+            pass
+            
+        db.delete(form)
+    
+    # 3. Delete the profile itself
+    db.delete(profile)
+    db.commit()
+    return None

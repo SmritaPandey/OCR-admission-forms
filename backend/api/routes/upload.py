@@ -107,8 +107,28 @@ async def upload_form(
                         continue
                 
                 # Combine all pages' text
+                # Note: Page order doesn't matter - extraction is page-order agnostic
                 combined_text = "\n".join(all_raw_text)
                 avg_confidence = sum(all_confidences) / len(all_confidences) if all_confidences else 0.0
+                
+                # Optional: Detect and log page types for debugging
+                try:
+                    from backend.utils.page_detector import PageDetector
+                    detected_pages = PageDetector.detect_pages_from_text(combined_text)
+                    if detected_pages:
+                        page_types = {p['page_number']: p.get('page_type', 'unknown') for p in detected_pages}
+                        # Log if pages are out of order
+                        expected_order = {1: 'page1', 2: 'page2', 3: 'page3', 4: 'page4'}
+                        out_of_order = any(
+                            page_types.get(num) != expected_order.get(num)
+                            for num in page_types.keys()
+                            if num <= 4
+                        )
+                        if out_of_order:
+                            print(f"⚠️  Pages detected out of order: {page_types}")
+                except Exception as e:
+                    # Non-critical - continue even if page detection fails
+                    print(f"Page detection warning: {e}")
                 
                 ocr_result = {
                     "raw_text": combined_text,
@@ -184,55 +204,26 @@ async def upload_form(
                     else:
                         ocr_result = await provider.extract_text(image)
             
-            # Parse structured data from OCR text for SRCC forms
+            # Parse structured data from OCR text - ALWAYS extract (SRCC extractor works for all forms)
             if ocr_result.get('raw_text'):
-                from backend.utils.form_parser import parse_form_text
-                # Check if this is an SRCC form based on filename pattern
-                is_srcc_form = 'srcc' in (file.filename or '').lower() or 'data form' in (file.filename or '').lower()
-                if is_srcc_form:
-                    structured_data = parse_form_text(ocr_result['raw_text'], form_type='srcc')
-                    ocr_result['structured_data'] = structured_data
-                    # Auto-fill all form fields if available
-                    # Basic Details
-                    for field in ['student_name', 'date_of_birth', 'gender', 'category', 'nationality', 
-                                 'religion', 'aadhar_number', 'blood_group']:
-                        if structured_data.get(field):
-                            setattr(form, field, structured_data[field])
-                    
-                    # Address Details
-                    for field in ['permanent_address', 'correspondence_address', 'pincode', 'city', 'state']:
-                        if structured_data.get(field):
-                            setattr(form, field, structured_data[field])
-                    
-                    # Contact Details
-                    for field in ['phone_number', 'alternate_phone', 'email', 'emergency_contact_name', 
-                                 'emergency_contact_phone']:
-                        if structured_data.get(field):
-                            setattr(form, field, structured_data[field])
-                    
-                    # Guardian/Parent Details
-                    for field in ['father_name', 'father_occupation', 'father_phone', 'mother_name', 
-                                 'mother_occupation', 'mother_phone', 'guardian_name', 'guardian_relation', 
-                                 'guardian_phone', 'annual_income']:
-                        if structured_data.get(field):
-                            setattr(form, field, structured_data[field])
-                    
-                    # Educational Qualifications
-                    for field in ['tenth_board', 'tenth_year', 'tenth_percentage', 'tenth_school',
-                                 'twelfth_board', 'twelfth_year', 'twelfth_percentage', 'twelfth_school',
-                                 'previous_qualification', 'graduation_details']:
-                        if structured_data.get(field):
-                            setattr(form, field, structured_data[field])
-                    
-                    # Course Application Details
-                    for field in ['course_applied', 'application_number', 'admission_date']:
-                        if structured_data.get(field):
-                            setattr(form, field, structured_data[field])
+                from backend.utils.srcc_form_extractor import extract_srcc_form
+                # Always use SRCC extractor - it's the most comprehensive extractor
+                structured_data = extract_srcc_form(ocr_result['raw_text'])
+                ocr_result['structured_data'] = structured_data
+                print(f"[Upload] Extracted {len(structured_data)} fields from OCR text")
+                
+                # Auto-fill ALL form fields automatically using helper function
+                from backend.utils.form_field_applier import apply_structured_data_to_form
+                fields_set = apply_structured_data_to_form(form, structured_data)
+                print(f"[Upload] Applied {fields_set} fields from structured_data to form {form.id}")
             
             # Update form with extracted data
             form.extracted_data = ocr_result
             form.status = FormStatus.EXTRACTED
+            
+            # Commit form with all fields applied
             db.commit()
+            db.refresh(form)  # Refresh to ensure form object has latest data
             
         except Exception as e:
             form.status = FormStatus.ERROR
@@ -350,11 +341,31 @@ async def upload_form_pages(
                     print(f"Error processing page {page_num + 1}: {str(page_error)}")
                     continue
             
-            # Combine all pages' text
-            combined_text = "\n".join(all_raw_text)
-            avg_confidence = sum(all_confidences) / len(all_confidences) if all_confidences else 0.0
-            
-            ocr_result = {
+                # Combine all pages' text
+                # NOTE: Extraction is page-order agnostic - works correctly even if pages 2 and 3 are swapped
+                combined_text = "\n".join(all_raw_text)
+                avg_confidence = sum(all_confidences) / len(all_confidences) if all_confidences else 0.0
+                
+                # Optional: Detect and log page types for debugging (non-critical)
+                try:
+                    from backend.utils.page_detector import PageDetector
+                    detected_pages = PageDetector.detect_pages_from_text(combined_text)
+                    if detected_pages:
+                        page_types = {p['page_number']: p.get('page_type', 'unknown') for p in detected_pages}
+                        # Log if pages are out of order (for debugging)
+                        expected_order = {1: 'page1', 2: 'page2', 3: 'page3', 4: 'page4'}
+                        out_of_order = any(
+                            page_types.get(num) != expected_order.get(num)
+                            for num in page_types.keys()
+                            if num <= 4
+                        )
+                        if out_of_order:
+                            print(f"ℹ️  Pages detected out of order: {page_types} (extraction will still work correctly)")
+                except Exception as e:
+                    # Non-critical - continue even if page detection fails
+                    pass
+                
+                ocr_result = {
                 "raw_text": combined_text,
                 "confidence": round(avg_confidence, 2),
                 "structured_data": None,
@@ -363,31 +374,26 @@ async def upload_form_pages(
                 "page_results": page_results
             }
             
-            # Parse structured data from OCR text for SRCC forms
+            # Parse structured data from OCR text for SRCC forms using advanced extractor
             if ocr_result.get('raw_text'):
-                from backend.utils.form_parser import parse_form_text
-                is_srcc_form = 'srcc' in (files[0].filename or '').lower() or 'data form' in (files[0].filename or '').lower()
-                if is_srcc_form:
-                    structured_data = parse_form_text(ocr_result['raw_text'], form_type='srcc')
-                    ocr_result['structured_data'] = structured_data
-                    # Auto-fill all form fields if available
-                    for field in ['student_name', 'date_of_birth', 'gender', 'category', 'nationality', 
-                                 'religion', 'aadhar_number', 'blood_group', 'permanent_address', 
-                                 'correspondence_address', 'pincode', 'city', 'state', 'phone_number', 
-                                 'alternate_phone', 'email', 'emergency_contact_name', 'emergency_contact_phone',
-                                 'father_name', 'father_occupation', 'father_phone', 'mother_name', 
-                                 'mother_occupation', 'mother_phone', 'guardian_name', 'guardian_relation', 
-                                 'guardian_phone', 'annual_income', 'tenth_board', 'tenth_year', 
-                                 'tenth_percentage', 'tenth_school', 'twelfth_board', 'twelfth_year', 
-                                 'twelfth_percentage', 'twelfth_school', 'previous_qualification', 
-                                 'graduation_details', 'course_applied', 'application_number', 'admission_date']:
-                        if structured_data.get(field):
-                            setattr(form, field, structured_data[field])
+                from backend.utils.srcc_form_extractor import extract_srcc_form
+                # Always use SRCC extractor - it's the most comprehensive extractor
+                structured_data = extract_srcc_form(ocr_result['raw_text'])
+                ocr_result['structured_data'] = structured_data
+                print(f"[Upload Pages] Extracted {len(structured_data)} fields from OCR text")
+                
+                # Auto-fill ALL form fields automatically using helper function
+                from backend.utils.form_field_applier import apply_structured_data_to_form
+                fields_set = apply_structured_data_to_form(form, structured_data)
+                print(f"[Upload Pages] Applied {fields_set} fields from structured_data to form {form.id}")
             
             # Update form with extracted data
             form.extracted_data = ocr_result
             form.status = FormStatus.EXTRACTED
+            
+            # Commit form with all fields applied
             db.commit()
+            db.refresh(form)  # Refresh to ensure form object has latest data
             
         except Exception as e:
             form.status = FormStatus.ERROR
@@ -420,9 +426,14 @@ async def list_ocr_providers():
     # Add "best" option if multiple providers are available
     if len(available) > 1:
         available.append("best")  # Multi-provider mode
-    default_provider = settings.OCR_PROVIDER.lower()
-    if default_provider not in available:
-        default_provider = available[0] if available else "tesseract"
+    
+    # Prefer google-vision as default (best trained and most accurate)
+    if "google-vision" in available:
+        default_provider = "google-vision"
+    else:
+        default_provider = settings.OCR_PROVIDER.lower()
+        if default_provider not in available:
+            default_provider = available[0] if available else "tesseract"
     
     # Get model information for Azure Form Recognizer if available
     model_info = None

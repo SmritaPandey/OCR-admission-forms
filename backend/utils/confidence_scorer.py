@@ -63,9 +63,13 @@ class OCRConfidenceScorer:
         for field, validator in self.field_validators.items():
             value = extracted_data.get(field)
             if value:
-                total_fields += 1
-                if validator(value):
-                    valid_fields += 1
+                try:
+                    total_fields += 1
+                    if validator(value):
+                        valid_fields += 1
+                except Exception:
+                    # Skip validation if validator fails
+                    pass
         
         if total_fields > 0:
             validation_ratio = valid_fields / total_fields

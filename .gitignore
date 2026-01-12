@@ -77,3 +77,4 @@ desktop/
 # Misc
 .backend.pid
 
+models/

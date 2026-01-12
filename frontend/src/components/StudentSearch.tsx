@@ -570,7 +570,7 @@ function StudentSearch() {
             </p>
           </div>
           <div className="export-actions">
-            <div className="export-dropdown" ref={exportMenuRef}
+            <div className="export-dropdown" ref={exportMenuRef}>
               <button
                 type="button"
                 className="btn btn-secondary export-btn"

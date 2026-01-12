@@ -12,19 +12,19 @@ const API_BASE_URL = (typeof import.meta !== 'undefined' && (import.meta as any)
 // Helper to get all documents from profile and forms
 const getAllDocuments = (profile: StudentProfileDetail | null): (Document & { sourceLabel: string })[] => {
   if (!profile) return [];
-  
+
   const directDocs = (profile.documents || []).map(doc => ({
     ...doc,
     sourceLabel: 'Profile'
   }));
-  
-  const formDocs = (profile.forms || []).flatMap(form => 
+
+  const formDocs = (profile.forms || []).flatMap(form =>
     (form.documents || []).map(doc => ({
       ...doc,
       sourceLabel: `Form: ${form.filename}`
     }))
   );
-  
+
   return [...directDocs, ...formDocs];
 };
 
@@ -49,7 +49,7 @@ const getFileUrl = (filePath: string | undefined, formId?: number, page?: number
     // Fallback to preview endpoint if no file path
     return formId ? `${API_BASE_URL}/api/preview/${formId}${page ? `?page=${page}` : ''}` : '';
   }
-  
+
   // Normalize the file path - remove any leading 'uploads/' to avoid duplication
   let normalizedPath = filePath;
   if (normalizedPath.startsWith('uploads/')) {
@@ -61,7 +61,7 @@ const getFileUrl = (filePath: string | undefined, formId?: number, page?: number
   if (normalizedPath.startsWith('/')) {
     normalizedPath = normalizedPath.substring(1);
   }
-  
+
   // Return the direct PDF URL - browser will handle page navigation via #page= anchor
   return `${API_BASE_URL}/uploads/${normalizedPath}`;
 };
@@ -123,23 +123,23 @@ function StudentEditView() {
       // If profile has forms, use the first one to populate the edit view
       if (profileData.forms && profileData.forms.length > 0) {
         // Sort by upload date desc to get latest
-        const forms = [...profileData.forms].sort((a, b) => 
+        const forms = [...profileData.forms].sort((a, b) =>
           new Date(b.upload_date).getTime() - new Date(a.upload_date).getTime()
         );
         const latestForm = forms[0];
-        
+
         // Fetch full form details including extracted data
         const formData = await apiService.getForm(latestForm.id);
         setForm(formData);
-        
+
         // Get structured data from extracted_data as fallback
         const sd = formData.extracted_data?.structured_data || {};
-        
+
         // Helper to get value from form or structured data
         const getValue = (field: string): string => {
           return (formData as any)[field] || sd[field] || '';
         };
-        
+
         // Initialize verification state from form data AND structured_data
         const formState: FormVerification = {
           // Academic & Admission
@@ -151,7 +151,7 @@ function StudentEditView() {
           cuet_score: getValue('cuet_score'),
           college_roll_no: getValue('college_roll_no'),
           date_of_admission: getValue('date_of_admission'),
-          
+
           // Personal - Name parts
           first_name: getValue('first_name'),
           middle_name: getValue('middle_name'),
@@ -167,7 +167,7 @@ function StudentEditView() {
           below_poverty_line: getValue('below_poverty_line'),
           annual_income: getValue('annual_income'),
           minority_category: getValue('minority_category'),
-          
+
           // Address
           permanent_address: getValue('permanent_address'),
           permanent_state: getValue('permanent_state'),
@@ -178,14 +178,14 @@ function StudentEditView() {
           city: getValue('city'),
           state: getValue('state'),
           pincode: getValue('pincode'),
-          
+
           // Contact
           phone_number: formData.phone_number || profileData.phone_number || sd.phone_number || '',
           alternate_phone: getValue('alternate_phone'),
           email: formData.email || profileData.email || sd.email || '',
           emergency_contact_name: getValue('emergency_contact_name'),
           emergency_contact_phone: getValue('emergency_contact_phone'),
-          
+
           // Family
           father_name: getValue('father_name'),
           father_occupation: getValue('father_occupation'),
@@ -194,7 +194,7 @@ function StudentEditView() {
           father_email: getValue('father_email'),
           father_mobile: getValue('father_mobile'),
           father_phone: getValue('father_phone'),
-          
+
           mother_name: getValue('mother_name'),
           mother_occupation: getValue('mother_occupation'),
           mother_designation: getValue('mother_designation'),
@@ -202,7 +202,7 @@ function StudentEditView() {
           mother_email: getValue('mother_email'),
           mother_mobile: getValue('mother_mobile'),
           mother_phone: getValue('mother_phone'),
-          
+
           guardian_name: getValue('guardian_name'),
           guardian_relation: getValue('guardian_relation'),
           guardian_residential_address: getValue('guardian_residential_address'),
@@ -210,7 +210,7 @@ function StudentEditView() {
           guardian_email: getValue('guardian_email'),
           guardian_mobile: getValue('guardian_mobile'),
           guardian_phone: getValue('guardian_phone'),
-          
+
           // Academic History
           tenth_board: getValue('tenth_board'),
           tenth_year: getValue('tenth_year'),
@@ -225,7 +225,7 @@ function StudentEditView() {
           hindi_studied_upto: getValue('hindi_studied_upto'),
           previous_qualification: getValue('previous_qualification'),
           graduation_details: getValue('graduation_details'),
-          
+
           // Course & Admission
           course_applied: formData.course_applied || profileData.course_applied || sd.course_applied || '',
           application_number: formData.application_number || profileData.application_number || sd.application_number || '',
@@ -233,7 +233,7 @@ function StudentEditView() {
           du_enrollment_number: getValue('du_enrollment_number'),
           hindi_medium_preference: getValue('hindi_medium_preference'),
           admission_date: getValue('admission_date'),
-          
+
           // Certificate
           category_certificate_authority: getValue('category_certificate_authority'),
           category_certificate_number: getValue('category_certificate_number'),
@@ -241,7 +241,7 @@ function StudentEditView() {
           disability_percentage: getValue('disability_percentage'),
           disability_type: getValue('disability_type'),
           udid_number: getValue('udid_number'),
-          
+
           // CUET Marks
           cuet_subject_1: getValue('cuet_subject_1'),
           cuet_total_score_1: getValue('cuet_total_score_1'),
@@ -262,7 +262,7 @@ function StudentEditView() {
           cuet_total_score_6: getValue('cuet_total_score_6'),
           cuet_score_obtained_6: getValue('cuet_score_obtained_6'),
           cuet_total_score: getValue('cuet_total_score'),
-          
+
           // Document Checklist
           doc_admission_form: getValue('doc_admission_form'),
           doc_undertaking_ragging: getValue('doc_undertaking_ragging'),
@@ -279,7 +279,7 @@ function StudentEditView() {
           doc_originals: getValue('doc_originals'),
           doc_photo_id: getValue('doc_photo_id'),
         };
-        
+
         setVerification(formState);
       } else {
         // No form found, initialize with basic profile data
@@ -322,7 +322,7 @@ function StudentEditView() {
   const handleChange = (field: keyof FormVerification, value: string) => {
     setVerification((prev) => {
       const updated = { ...prev, [field]: value };
-      
+
       // Auto-sync CUET total when any obtained score changes
       if (field.toString().startsWith('cuet_score_obtained_')) {
         const newTotal = calculateCuetTotal(updated);
@@ -331,7 +331,7 @@ function StudentEditView() {
           updated.cuet_total_score = newTotal;
         }
       }
-      
+
       return updated;
     });
   };
@@ -352,13 +352,13 @@ function StudentEditView() {
     // Priority 2: Parse raw_text if structured_data didn't provide enough data
     if (form.extracted_data.raw_text) {
       const parsedFromText = parseOCRText(form.extracted_data.raw_text);
-      
+
       // Filter out form labels from parsed text
       const filteredParsed = filterFormLabels(parsedFromText);
-      
+
       // Merge with structured data (structured_data takes precedence)
       parsedData = { ...filteredParsed, ...parsedData };
-      
+
       // Handle address field mapping
       if (parsedFromText.address && !parsedData.permanent_address) {
         if (!isFormLabel(parsedFromText.address)) {
@@ -370,21 +370,21 @@ function StudentEditView() {
     // Count how many fields were actually filled
     const fieldsToFill = Object.keys(parsedData).filter(key => {
       const value = parsedData[key];
-      return value !== undefined && value !== null && value !== '' && 
-             typeof value === 'string' && value.trim().length > 0;
+      return value !== undefined && value !== null && value !== '' &&
+        typeof value === 'string' && value.trim().length > 0;
     }).length;
 
     // Apply filtered data to verification state and calculate CUET total
     setVerification((prev) => {
       const updated = mergeIntoVerification(prev, parsedData, { overwrite: false });
-      
+
       // Auto-calculate CUET total after autofill
       const cuetTotal = calculateCuetTotal(updated);
       if (cuetTotal) {
         updated.cuet_score = cuetTotal;
         updated.cuet_total_score = cuetTotal;
       }
-      
+
       return updated;
     });
 
@@ -439,6 +439,23 @@ function StudentEditView() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!profile || !id) return;
+
+    if (window.confirm(`Are you sure you want to delete the student profile for "${profile.student_name}"?\n\nThis will permanently delete:\n- The student profile\n- All associated admission forms\n- All uploaded documents\n\nThis action cannot be undone.`)) {
+      try {
+        setSaving(true);
+        await apiService.deleteStudentProfile(parseInt(id), true);
+        alert('Student profile deleted successfully.');
+        navigate('/students'); // Navigate back to student list
+      } catch (error: any) {
+        console.error('Delete failed:', error);
+        alert(`Delete failed: ${error.response?.data?.detail || error.message}`);
+        setSaving(false);
+      }
+    }
+  };
+
   if (loading) {
     return <div className="loading">Loading student data...</div>;
   }
@@ -452,6 +469,14 @@ function StudentEditView() {
       <div className="verification-header">
         <h2>Edit Student: {profile.student_name}</h2>
         <div className="header-actions">
+          <button
+            onClick={handleDelete}
+            className="btn btn-danger"
+            style={{ backgroundColor: '#ef4444', color: 'white', marginRight: '8px' }}
+            disabled={saving}
+          >
+            Delete Student
+          </button>
           <button onClick={handleSave} className="btn btn-primary" disabled={saving}>
             {saving ? 'Saving...' : 'Save'}
           </button>
@@ -465,14 +490,14 @@ function StudentEditView() {
         {form && (
           <div className="form-preview">
             <div className="page-controls">
-              <button 
+              <button
                 disabled={currentPage <= 1}
                 onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
               >
                 ← Previous
               </button>
               <span>Page {currentPage} of {form.extracted_data?.total_pages || form.extracted_data?.pages_processed || 1}</span>
-              <button 
+              <button
                 disabled={currentPage >= (form.extracted_data?.total_pages || form.extracted_data?.pages_processed || 1)}
                 onClick={() => {
                   const maxPages = form.extracted_data?.total_pages || form.extracted_data?.pages_processed || 1;
@@ -497,7 +522,7 @@ function StudentEditView() {
                 }}
               />
             </div>
-            
+
             {form.extracted_data && (
               <div className="extracted-text" style={{ marginTop: '1rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
@@ -523,7 +548,7 @@ function StudentEditView() {
         <div className="data-section">
           <h3>Student Information</h3>
           <div className="form-editor">
-            
+
             {/* Academic & Admission Details */}
             <div className="form-section">
               <h4 className="form-section-title">Academic & Admission Details</h4>
@@ -606,9 +631,9 @@ function StudentEditView() {
                 </div>
                 <div className="form-row" style={{ gridColumn: '1 / -1' }}>
                   <label>Full Name (Auto)</label>
-                  <input 
-                    type="text" 
-                    value={[verification.first_name, verification.middle_name, verification.surname].filter(Boolean).join(' ') || verification.student_name || ''} 
+                  <input
+                    type="text"
+                    value={[verification.first_name, verification.middle_name, verification.surname].filter(Boolean).join(' ') || verification.student_name || ''}
                     readOnly
                     style={{ backgroundColor: '#f5f5f5' }}
                   />
@@ -688,7 +713,7 @@ function StudentEditView() {
                   <label>Permanent PIN</label>
                   <input type="text" className="input" value={verification.permanent_pincode || ''} onChange={(e) => handleChange('permanent_pincode', e.target.value)} placeholder="PIN Code" />
                 </div>
-                
+
                 <div className="form-row" style={{ gridColumn: '1 / -1', marginTop: '1rem' }}>
                   <label>Correspondence Address</label>
                   <textarea className="input" value={verification.correspondence_address || ''} onChange={(e) => handleChange('correspondence_address', e.target.value)} placeholder="Correspondence Address" rows={3} />
@@ -781,7 +806,7 @@ function StudentEditView() {
                 </div>
               </div>
             </div>
-            
+
             {/* Local Guardian Details */}
             <div className="form-section">
               <h4 className="form-section-title">Local Guardian's Details</h4>
@@ -816,7 +841,7 @@ function StudentEditView() {
                 <div className="form-row"><strong>Subject</strong></div>
                 <div className="form-row"><strong>Total</strong></div>
                 <div className="form-row"><strong>Obtained</strong></div>
-                
+
                 {[1, 2, 3, 4, 5, 6].map(i => (
                   <div key={i} style={{ display: 'contents' }}>
                     <input type="text" className="input" value={(verification as any)[`cuet_subject_${i}`] || ''} onChange={(e) => handleChange(`cuet_subject_${i}` as any, e.target.value)} placeholder={`Subject ${i}`} />
@@ -824,17 +849,17 @@ function StudentEditView() {
                     <input type="text" className="input" value={(verification as any)[`cuet_score_obtained_${i}`] || ''} onChange={(e) => handleChange(`cuet_score_obtained_${i}` as any, e.target.value)} placeholder="Score" />
                   </div>
                 ))}
-                
+
                 <div style={{ gridColumn: '1 / -1', marginTop: '12px', paddingTop: '12px', borderTop: '2px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px' }}>
                   <strong style={{ color: '#334155' }}>Total CUET Score:</strong>
                   <input
                     type="text"
                     readOnly
                     value={calculateCuetTotal(verification) || verification.cuet_score || '0'}
-                    style={{ 
-                      padding: '10px 16px', 
-                      backgroundColor: '#ecfdf5', 
-                      borderRadius: '8px', 
+                    style={{
+                      padding: '10px 16px',
+                      backgroundColor: '#ecfdf5',
+                      borderRadius: '8px',
                       fontWeight: '700',
                       fontSize: '1rem',
                       width: '100px',
@@ -936,11 +961,11 @@ function StudentEditView() {
                   const value = (verification as any)[key] || 'No';
                   const isChecked = value === 'Yes';
                   return (
-                    <label 
-                      key={key} 
-                      style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
+                    <label
+                      key={key}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
                         gap: '8px',
                         padding: '8px 12px',
                         backgroundColor: isChecked ? '#e8f5e9' : '#fff',
@@ -973,22 +998,22 @@ function StudentEditView() {
                     studentProfileId={profile.id}
                     onUploadComplete={() => loadStudentData(parseInt(id!))}
                   />
-                  
+
                   {(() => {
                     const allDocs = getAllDocuments(profile);
                     if (allDocs.length === 0) {
                       return <p style={{ color: '#666', fontSize: '0.9rem', marginTop: '1rem' }}>No documents attached yet.</p>;
                     }
-                    
+
                     return (
                       <div style={{ marginTop: '1rem', display: 'grid', gap: '0.75rem' }}>
                         {allDocs.map((doc, index) => {
                           const displayName = verification.du_portal_form_number || verification.du_enrollment_number
                             ? `${verification.du_portal_form_number || verification.du_enrollment_number}_${(verification.student_name || 'document').replace(/\s+/g, '_')}_${index + 1}.pdf`
                             : doc.filename;
-                          
+
                           return (
-                            <div 
+                            <div
                               key={`${doc.id}-${index}`}
                               style={{
                                 display: 'flex',
@@ -1007,7 +1032,7 @@ function StudentEditView() {
                                 </div>
                               </div>
                               <div style={{ display: 'flex', gap: '1rem' }}>
-                                <a 
+                                <a
                                   href={`${API_BASE_URL}/uploads/${doc.file_path}`}
                                   target="_blank"
                                   rel="noopener noreferrer"
@@ -1015,7 +1040,7 @@ function StudentEditView() {
                                 >
                                   View
                                 </a>
-                                <a 
+                                <a
                                   href={`${API_BASE_URL}/uploads/${doc.file_path}`}
                                   download={displayName}
                                   style={{ color: '#067647', fontSize: '0.85rem', textDecoration: 'none' }}

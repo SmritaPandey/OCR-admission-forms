@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { apiService, FormDetail, FormVerification } from '../services/api';
 import { parseOCRText } from '../utils/ocrParser';
@@ -6,6 +6,142 @@ import { extractStructuredData } from '../utils/structuredDataParser';
 import DocumentUpload from './DocumentUpload';
 import DocumentList from './DocumentList';
 import './VerificationView.css';
+
+// Component for rendering a single PDF page - Adobe-style viewer
+const PDFPageImage = ({ formId, pageNum, filePath, zoomLevel, fitZoomLevel, onImageLoad, API_BASE_URL, getFileUrl }: {
+  formId: number;
+  pageNum: number;
+  filePath?: string;
+  zoomLevel: number | null;
+  fitZoomLevel: number;
+  onImageLoad?: (width: number, height: number) => void;
+  API_BASE_URL: string;
+  getFileUrl: (path: string | undefined, id?: number, page?: number) => string;
+}) => {
+  const [imageError, setImageError] = useState(false);
+  const [imageLoading, setImageLoading] = useState(true);
+  const [naturalWidth, setNaturalWidth] = useState<number | null>(null);
+  const [naturalHeight, setNaturalHeight] = useState<number | null>(null);
+  
+  const previewUrl = `${API_BASE_URL}/api/preview/${formId}?page=${pageNum}`;
+  const fallbackUrl = filePath ? getFileUrl(filePath, formId, pageNum) : previewUrl;
+  
+  // Calculate actual zoom: zoomLevel is relative to fitZoomLevel (1.0 = 100% = fit-to-window)
+  const effectiveZoom = (zoomLevel ?? 1.0) * fitZoomLevel;
+  
+  // Calculate actual scaled dimensions
+  const displayWidth = naturalWidth ? naturalWidth * effectiveZoom : null;
+  const displayHeight = naturalHeight ? naturalHeight * effectiveZoom : null;
+  
+  return (
+    <div className="page-wrapper" style={{ 
+      marginBottom: '30px', 
+      position: 'relative',
+      display: 'inline-block',
+      boxSizing: 'content-box',
+      // Container expands to fit scaled image
+      width: displayWidth ? `${displayWidth}px` : 'auto',
+      height: displayHeight ? `${displayHeight}px` : 'auto'
+    }}>
+      <div className="page-label" style={{ 
+        position: 'absolute', 
+        top: '10px', 
+        left: '10px', 
+        background: 'rgba(51, 65, 85, 0.9)', 
+        color: 'white', 
+        padding: '6px 12px', 
+        borderRadius: '4px',
+        fontSize: '12px',
+        fontWeight: 600,
+        boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+        zIndex: 10,
+        pointerEvents: 'none'
+      }}>
+        Page {pageNum}
+      </div>
+      
+      {imageLoading && (
+        <div style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          color: '#e5e7eb',
+          fontSize: '14px',
+          zIndex: 5
+        }}>
+          Loading page {pageNum}...
+        </div>
+      )}
+      
+      {imageError ? (
+        <div style={{
+          padding: '2rem',
+          textAlign: 'center',
+          color: '#ef4444',
+          fontSize: '14px',
+          background: 'rgba(239, 68, 68, 0.1)',
+          borderRadius: '4px'
+        }}>
+          Failed to load page {pageNum}. 
+          <br />
+          <a 
+            href={fallbackUrl} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            style={{ color: '#60a5fa', textDecoration: 'underline', marginTop: '0.5rem', display: 'inline-block' }}
+          >
+            Open PDF directly
+          </a>
+        </div>
+      ) : (
+        <img
+          src={previewUrl}
+          alt={`Scanned form page ${pageNum}`}
+          style={{ 
+            display: imageLoading ? 'none' : 'block', 
+            width: displayWidth ? `${displayWidth}px` : 'auto',
+            height: displayHeight ? `${displayHeight}px` : 'auto',
+            borderRadius: '2px', 
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
+            background: 'white',
+            transition: 'width 0.2s ease-out, height 0.2s ease-out',
+            imageRendering: 'auto',
+            // Ensure image doesn't get clipped - use actual dimensions
+            maxWidth: 'none',
+            maxHeight: 'none',
+            objectFit: 'contain',
+            margin: '0'
+          }}
+          onLoad={(e) => {
+            const img = e.target as HTMLImageElement;
+            setImageLoading(false);
+            setImageError(false);
+            setNaturalWidth(img.naturalWidth);
+            setNaturalHeight(img.naturalHeight);
+            // Notify parent to calculate fit zoom
+            if (onImageLoad) {
+              onImageLoad(img.naturalWidth, img.naturalHeight);
+            }
+          }}
+          onError={(e) => {
+            const img = e.target as HTMLImageElement;
+            setImageLoading(false);
+            
+            // Try fallback URL if preview failed and we haven't tried it yet
+            if (fallbackUrl && img.src === previewUrl && img.src !== fallbackUrl) {
+              // Retry with fallback URL
+              img.src = fallbackUrl;
+            } else {
+              // Both URLs failed
+              setImageError(true);
+            }
+          }}
+        />
+      )}
+    </div>
+  );
+};
 
 // API Base URL - handle TypeScript import.meta.env
 const API_BASE_URL = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) || 'http://localhost:8000';
@@ -306,7 +442,53 @@ function VerificationView() {
   const [reExtractProvider, setReExtractProvider] = useState<string>('');
   const [availableProviders, setAvailableProviders] = useState<string[]>([]);
   const [providerModelInfo, setProviderModelInfo] = useState<Record<string, any>>({});
-  const [currentPage, setCurrentPage] = useState(1);
+  const [zoomLevel, setZoomLevel] = useState<number | null>(null); // null = auto-fit, value is relative to fitZoom
+  const [fitZoomLevel, setFitZoomLevel] = useState(1); // Base zoom level for fit-to-window
+  const imageContainerRef = useRef<HTMLDivElement>(null);
+
+  // Calculate fit-to-window zoom when image loads
+  const calculateFitZoom = useCallback((imageWidth: number, imageHeight: number) => {
+    if (!imageContainerRef.current) return 1;
+    
+    const container = imageContainerRef.current;
+    const containerWidth = container.clientWidth - 40; // Account for padding (20px each side)
+    const containerHeight = container.clientHeight - 60; // Account for padding and controls
+    
+    // Calculate zoom to fit width (with some margin)
+    const widthZoom = (containerWidth * 0.98) / imageWidth;
+    // Calculate zoom to fit height (with some margin)  
+    const heightZoom = (containerHeight * 0.98) / imageHeight;
+    
+    // Use the smaller zoom to ensure image fits completely
+    const fitZoom = Math.min(widthZoom, heightZoom, 2); // Cap at 200%
+    
+    setFitZoomLevel(fitZoom);
+    // Set initial zoom to 1.0 (which represents 100% = fit-to-window)
+    if (zoomLevel === null) {
+      setZoomLevel(1.0);
+    }
+    return fitZoom;
+  }, [zoomLevel]);
+
+  // Get actual zoom level for rendering (zoomLevel * fitZoomLevel)
+  const actualZoomLevel = (zoomLevel ?? 1.0) * fitZoomLevel;
+  
+  // Get display percentage (zoomLevel * 100, where 1.0 = 100%)
+  const displayZoomPercent = Math.round((zoomLevel ?? 1.0) * 100);
+
+  const handleZoomIn = () => {
+    const current = zoomLevel ?? 1.0;
+    setZoomLevel(Math.min(current + 0.25, 5)); // Max 500% relative to fit
+  };
+  
+  const handleZoomOut = () => {
+    const current = zoomLevel ?? 1.0;
+    setZoomLevel(Math.max(current - 0.25, 0.25)); // Min 25% relative to fit
+  };
+  
+  const handleZoomReset = () => setZoomLevel(1.0); // Reset to 100% (fit)
+  const handleZoomFit = () => setZoomLevel(1.0); // Fit to window (100%)
+
 
   const handleApplyParsedData = useCallback(() => {
     if (!form?.extracted_data) {
@@ -443,49 +625,46 @@ function VerificationView() {
         nextVerification[field] = '';
       });
 
-      // If form is already verified, use the saved data
-      if (data.status === 'verified') {
-        FORM_FIELD_KEYS.forEach((field) => {
-          const value = (data as Record<string, unknown>)[field];
-          if (value && typeof value === 'string') {
-            nextVerification[field] = value;
+      // ALWAYS start with saved form data (fields that were applied to the form object)
+      // This ensures we show what was actually extracted and saved
+      FORM_FIELD_KEYS.forEach((field) => {
+        const value = (data as Record<string, unknown>)[field];
+        if (value && typeof value === 'string' && value.trim()) {
+          nextVerification[field] = value.trim();
+        }
+      });
+      
+      // Then, for non-verified forms, supplement with structured_data if fields are missing
+      if (data.status !== 'verified' && data.extracted_data?.structured_data) {
+        const structuredData = extractStructuredData({ structured_data: data.extracted_data.structured_data });
+        console.log('[loadForm] Structured data fields:', Object.keys(structuredData).length);
+        
+        // Apply structured data only to empty fields (don't overwrite saved data)
+        Object.entries(structuredData).forEach(([key, value]) => {
+          if (value && typeof value === 'string' && value.trim()) {
+            const fieldKey = key as keyof FormVerification;
+            if (fieldKey in nextVerification && !nextVerification[fieldKey]) {
+              nextVerification[fieldKey] = value.trim();
+            }
           }
         });
-      } else {
-        // For non-verified forms, extract data from OCR results
-        
-        // Priority 1: Use structured_data from backend (most reliable)
-        if (data.extracted_data?.structured_data) {
-          const structuredData = extractStructuredData({ structured_data: data.extracted_data.structured_data });
-          console.log('[loadForm] Structured data fields:', Object.keys(structuredData).length);
-          
-          // Apply structured data to verification
-          Object.entries(structuredData).forEach(([key, value]) => {
-            if (value && typeof value === 'string' && value.trim()) {
-              const fieldKey = key as keyof FormVerification;
-              if (fieldKey in nextVerification) {
-                nextVerification[fieldKey] = value.trim();
-              }
-            }
-          });
-        }
+      }
 
-        // Priority 2: Parse raw_text to fill any missing fields
-        if (data.extracted_data?.raw_text) {
-          const parsedFromText = parseOCRText(data.extracted_data.raw_text);
-          console.log('[loadForm] Parsed from text fields:', Object.keys(parsedFromText).filter(k => parsedFromText[k]).length);
-          
-          // Apply parsed text data only for empty fields
-          Object.entries(parsedFromText).forEach(([key, value]) => {
-            if (value && typeof value === 'string' && value.trim()) {
-              const fieldKey = key as keyof FormVerification;
-              // Only fill if the field is empty
-              if (fieldKey in nextVerification && !nextVerification[fieldKey]) {
-                nextVerification[fieldKey] = value.trim();
-              }
+      // Finally, parse raw_text as last resort for any still-missing fields
+      if (data.extracted_data?.raw_text) {
+        const parsedFromText = parseOCRText(data.extracted_data.raw_text);
+        console.log('[loadForm] Parsed from text fields:', Object.keys(parsedFromText).filter(k => parsedFromText[k]).length);
+        
+        // Apply parsed text data only for empty fields
+        Object.entries(parsedFromText).forEach(([key, value]) => {
+          if (value && typeof value === 'string' && value.trim()) {
+            const fieldKey = key as keyof FormVerification;
+            // Only fill if the field is empty
+            if (fieldKey in nextVerification && !nextVerification[fieldKey]) {
+              nextVerification[fieldKey] = value.trim();
             }
-          });
-        }
+          }
+        });
       }
 
       // Log key fields for debugging
@@ -511,9 +690,24 @@ function VerificationView() {
     try {
       setReExtracting(true);
       const response = await apiService.reExtractForm(parseInt(id), reExtractProvider || undefined);
-      await loadForm(parseInt(id));
       const usedProvider = response.result.provider || reExtractProvider;
-      alert(`Re-extraction completed with ${formatProviderName(usedProvider)}`);
+      
+      // Reload form to get updated data with auto-filled fields
+      await loadForm(parseInt(id));
+      
+      // Count how many fields were auto-filled
+      const formData = await apiService.getForm(parseInt(id));
+      let fieldsFilled = 0;
+      if (formData.extracted_data?.structured_data) {
+        fieldsFilled = Object.keys(formData.extracted_data.structured_data).filter(
+          k => formData.extracted_data?.structured_data?.[k]
+        ).length;
+      }
+      
+      alert(
+        `Re-extraction completed with ${formatProviderName(usedProvider)}!\n` +
+        `${fieldsFilled} fields automatically extracted and filled.`
+      );
     } catch (error: any) {
       alert(`Re-extraction failed: ${error.response?.data?.detail || error.message}`);
     } finally {
@@ -657,38 +851,93 @@ function VerificationView() {
 
       <div className="verification-content">
         <div className="form-preview">
-          <div className="page-controls">
-                <button
-              disabled={currentPage <= 1}
-                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                  >
-              Previous
-                  </button>
-            <span>Page {currentPage} of {form.extracted_data?.total_pages || form.extracted_data?.pages_processed || 1}</span>
-                  <button
-              disabled={currentPage >= (form.extracted_data?.total_pages || form.extracted_data?.pages_processed || 1)}
-              onClick={() => {
-                const maxPages = form.extracted_data?.total_pages || form.extracted_data?.pages_processed || 1;
-                setCurrentPage(prev => Math.min(maxPages, prev + 1));
+          <div className="pdf-controls" style={{ 
+            position: 'sticky', 
+            top: 0, 
+            zIndex: 100, 
+            background: 'rgba(42, 42, 42, 0.95)', 
+            backdropFilter: 'blur(8px)',
+            padding: '8px 16px', 
+            marginBottom: '0',
+            display: 'flex', 
+            justifyContent: 'center', 
+            alignItems: 'center',
+            gap: '8px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+            borderBottom: '1px solid rgba(255,255,255,0.1)'
+          }}>
+            <button 
+              onClick={handleZoomOut} 
+              className="btn btn-sm" 
+              title="Zoom Out"
+              style={{
+                background: 'rgba(255,255,255,0.1)',
+                border: '1px solid rgba(255,255,255,0.2)',
+                color: '#e5e7eb',
+                padding: '6px 12px',
+                minWidth: '36px'
               }}
             >
-              Next
-                  </button>
-                </div>
-          <div className="image-container">
-            {/* Use preview endpoint - backend converts PDF pages to JPEG */}
-            <img
-              key={`preview-${form.id}-${currentPage}`}
-              src={`${API_BASE_URL}/api/preview/${form.id}?page=${currentPage}`}
-              alt={`Scanned form page ${currentPage}`}
-              onError={(e) => {
-                // Fallback to direct file if preview fails
-                const img = e.target as HTMLImageElement;
-                if (form.file_path && !img.src.includes('/uploads/')) {
-                  img.src = getFileUrl(form.file_path, form.id);
-                }
+              <span style={{ fontSize: '1.1rem', lineHeight: 1 }}>−</span>
+            </button>
+            <button 
+              onClick={handleZoomFit} 
+              className="btn btn-sm" 
+              title="Fit to Window"
+              style={{
+                background: zoomLevel === null ? 'rgba(59, 130, 246, 0.3)' : 'rgba(255,255,255,0.1)',
+                border: '1px solid rgba(255,255,255,0.2)',
+                color: '#e5e7eb',
+                padding: '6px 12px',
+                fontSize: '0.85rem'
               }}
-            />
+            >
+              Fit
+            </button>
+            <span style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              minWidth: '70px', 
+              justifyContent: 'center', 
+              fontWeight: 600,
+              color: '#e5e7eb',
+              fontSize: '0.9rem'
+            }}>
+              {displayZoomPercent}%
+            </span>
+            <button 
+              onClick={handleZoomIn} 
+              className="btn btn-sm" 
+              title="Zoom In"
+              style={{
+                background: 'rgba(255,255,255,0.1)',
+                border: '1px solid rgba(255,255,255,0.2)',
+                color: '#e5e7eb',
+                padding: '6px 12px',
+                minWidth: '36px'
+              }}
+            >
+              <span style={{ fontSize: '1.1rem', lineHeight: 1 }}>+</span>
+            </button>
+          </div>
+
+          <div className="image-container" ref={imageContainerRef}>
+            {Array.from({ length: form.extracted_data?.total_pages || form.extracted_data?.pages_processed || 1 }).map((_, idx) => {
+              const pageNum = idx + 1;
+              return (
+                <PDFPageImage
+                  key={pageNum}
+                  formId={form.id}
+                  pageNum={pageNum}
+                  filePath={form.file_path}
+                  zoomLevel={zoomLevel}
+                  fitZoomLevel={fitZoomLevel}
+                  onImageLoad={pageNum === 1 ? calculateFitZoom : undefined}
+                  API_BASE_URL={API_BASE_URL}
+                  getFileUrl={getFileUrl}
+                />
+              );
+            })}
           </div>
         </div>
 
@@ -828,6 +1077,23 @@ function VerificationView() {
                   <input type="text" className="input" value={verification.aadhar_number || ''} onChange={(e) => handleChange('aadhar_number', e.target.value)} placeholder="Aadhar Number" />
                 </div>
                 <div className="form-row">
+                  <label className="input-label">Category</label>
+                  <select className="input select" value={verification.category || ''} onChange={(e) => handleChange('category', e.target.value)}>
+                    <option value="">Select Category</option>
+                    <option value="GEN">GEN</option>
+                    <option value="OBC">OBC</option>
+                    <option value="SC">SC</option>
+                    <option value="ST">ST</option>
+                    <option value="EWS">EWS</option>
+                    <option value="PWD">PWD</option>
+                    <option value="Sports">Sports</option>
+                    <option value="Foreign">Foreign</option>
+                    <option value="CW">CW</option>
+                    <option value="KM">KM</option>
+                    <option value="Others">Others</option>
+                  </select>
+                </div>
+                <div className="form-row">
                   <label className="input-label">Blood Group</label>
                   <select className="input select" value={verification.blood_group || ''} onChange={(e) => handleChange('blood_group', e.target.value)}>
                     <option value="">Select</option>
@@ -865,8 +1131,20 @@ function VerificationView() {
               <h4 className="form-section-title">Address Details</h4>
               <div className="form-grid">
                 <div className="form-row" style={{ gridColumn: '1 / -1' }}>
-                  <label className="input-label">Permanent Address</label>
-                  <textarea className="input textarea" value={verification.permanent_address || ''} onChange={(e) => handleChange('permanent_address', e.target.value)} placeholder="Permanent Address" rows={3} />
+                  <label className="input-label">Permanent Address (Combined)</label>
+                  <textarea className="input textarea" value={verification.permanent_address || ''} onChange={(e) => handleChange('permanent_address', e.target.value)} placeholder="Permanent Address" rows={2} />
+                </div>
+                <div className="form-row">
+                  <label className="input-label">Permanent Address Line 1</label>
+                  <input type="text" className="input" value={verification.permanent_address_line1 || ''} onChange={(e) => handleChange('permanent_address_line1', e.target.value)} placeholder="Line 1" />
+                </div>
+                <div className="form-row">
+                  <label className="input-label">Permanent Address Line 2</label>
+                  <input type="text" className="input" value={verification.permanent_address_line2 || ''} onChange={(e) => handleChange('permanent_address_line2', e.target.value)} placeholder="Line 2" />
+                </div>
+                <div className="form-row">
+                  <label className="input-label">Permanent Address Line 3</label>
+                  <input type="text" className="input" value={verification.permanent_address_line3 || ''} onChange={(e) => handleChange('permanent_address_line3', e.target.value)} placeholder="Line 3" />
                 </div>
                 <div className="form-row">
                   <label className="input-label">Permanent State</label>
@@ -878,8 +1156,20 @@ function VerificationView() {
                 </div>
                 
                 <div className="form-row" style={{ gridColumn: '1 / -1', marginTop: '1rem' }}>
-                  <label className="input-label">Correspondence Address</label>
-                  <textarea className="input textarea" value={verification.correspondence_address || ''} onChange={(e) => handleChange('correspondence_address', e.target.value)} placeholder="Correspondence Address" rows={3} />
+                  <label className="input-label">Correspondence Address (Combined)</label>
+                  <textarea className="input textarea" value={verification.correspondence_address || ''} onChange={(e) => handleChange('correspondence_address', e.target.value)} placeholder="Correspondence Address" rows={2} />
+                </div>
+                <div className="form-row">
+                  <label className="input-label">Correspondence Address Line 1</label>
+                  <input type="text" className="input" value={verification.correspondence_address_line1 || ''} onChange={(e) => handleChange('correspondence_address_line1', e.target.value)} placeholder="Line 1" />
+                </div>
+                <div className="form-row">
+                  <label className="input-label">Correspondence Address Line 2</label>
+                  <input type="text" className="input" value={verification.correspondence_address_line2 || ''} onChange={(e) => handleChange('correspondence_address_line2', e.target.value)} placeholder="Line 2" />
+                </div>
+                <div className="form-row">
+                  <label className="input-label">Correspondence Address Line 3</label>
+                  <input type="text" className="input" value={verification.correspondence_address_line3 || ''} onChange={(e) => handleChange('correspondence_address_line3', e.target.value)} placeholder="Line 3" />
                 </div>
                 <div className="form-row">
                   <label className="input-label">Correspondence State</label>
@@ -888,6 +1178,18 @@ function VerificationView() {
                 <div className="form-row">
                   <label className="input-label">Correspondence PIN</label>
                   <input type="text" className="input" value={verification.correspondence_pincode || ''} onChange={(e) => handleChange('correspondence_pincode', e.target.value)} placeholder="PIN Code" />
+                </div>
+                <div className="form-row">
+                  <label className="input-label">City</label>
+                  <input type="text" className="input" value={verification.city || ''} onChange={(e) => handleChange('city', e.target.value)} placeholder="City" />
+                </div>
+                <div className="form-row">
+                  <label className="input-label">State (Legacy)</label>
+                  <input type="text" className="input" value={verification.state || ''} onChange={(e) => handleChange('state', e.target.value)} placeholder="State" />
+                </div>
+                <div className="form-row">
+                  <label className="input-label">PIN Code (Legacy)</label>
+                  <input type="text" className="input" value={verification.pincode || ''} onChange={(e) => handleChange('pincode', e.target.value)} placeholder="PIN" />
                 </div>
               </div>
             </div>
@@ -907,6 +1209,14 @@ function VerificationView() {
                 <div className="form-row">
                   <label className="input-label">Alternate Phone</label>
                   <input type="text" className="input" value={verification.alternate_phone || ''} onChange={(e) => handleChange('alternate_phone', e.target.value)} placeholder="Alternate Phone" />
+                </div>
+                <div className="form-row">
+                  <label className="input-label">Emergency Contact Name</label>
+                  <input type="text" className="input" value={verification.emergency_contact_name || ''} onChange={(e) => handleChange('emergency_contact_name', e.target.value)} placeholder="Emergency Contact" />
+                </div>
+                <div className="form-row">
+                  <label className="input-label">Emergency Contact Phone</label>
+                  <input type="text" className="input" value={verification.emergency_contact_phone || ''} onChange={(e) => handleChange('emergency_contact_phone', e.target.value)} placeholder="Emergency Phone" />
                 </div>
               </div>
             </div>
@@ -939,6 +1249,18 @@ function VerificationView() {
                   <label className="input-label">Mother's Mobile</label>
                   <input type="text" className="input" value={verification.mother_mobile || ''} onChange={(e) => handleChange('mother_mobile', e.target.value)} placeholder="Mobile No." />
                 </div>
+                <div className="form-row">
+                  <label className="input-label">Mother's Landline Code</label>
+                  <input type="text" className="input" value={verification.mother_landline_code || ''} onChange={(e) => handleChange('mother_landline_code', e.target.value)} placeholder="Code" />
+                </div>
+                <div className="form-row">
+                  <label className="input-label">Mother's Landline</label>
+                  <input type="text" className="input" value={verification.mother_landline || ''} onChange={(e) => handleChange('mother_landline', e.target.value)} placeholder="Landline No." />
+                </div>
+                <div className="form-row">
+                  <label className="input-label">Mother's Phone (Combined)</label>
+                  <input type="text" className="input" value={verification.mother_phone || ''} onChange={(e) => handleChange('mother_phone', e.target.value)} placeholder="Phone" />
+                </div>
               </div>
 
               <h4 className="form-section-title" style={{ marginTop: '1.5rem' }}>Father's Details</h4>
@@ -967,6 +1289,18 @@ function VerificationView() {
                   <label className="input-label">Father's Mobile</label>
                   <input type="text" className="input" value={verification.father_mobile || ''} onChange={(e) => handleChange('father_mobile', e.target.value)} placeholder="Mobile No." />
                 </div>
+                <div className="form-row">
+                  <label className="input-label">Father's Landline Code</label>
+                  <input type="text" className="input" value={verification.father_landline_code || ''} onChange={(e) => handleChange('father_landline_code', e.target.value)} placeholder="Code" />
+                </div>
+                <div className="form-row">
+                  <label className="input-label">Father's Landline</label>
+                  <input type="text" className="input" value={verification.father_landline || ''} onChange={(e) => handleChange('father_landline', e.target.value)} placeholder="Landline No." />
+                </div>
+                <div className="form-row">
+                  <label className="input-label">Father's Phone (Combined)</label>
+                  <input type="text" className="input" value={verification.father_phone || ''} onChange={(e) => handleChange('father_phone', e.target.value)} placeholder="Phone" />
+                </div>
               </div>
             </div>
 
@@ -993,6 +1327,22 @@ function VerificationView() {
                 <div className="form-row">
                   <label className="input-label">Mobile Number</label>
                   <input type="text" className="input" value={verification.guardian_mobile || ''} onChange={(e) => handleChange('guardian_mobile', e.target.value)} placeholder="Mobile No." />
+                </div>
+                <div className="form-row">
+                  <label className="input-label">Guardian's Landline Code</label>
+                  <input type="text" className="input" value={verification.guardian_landline_code || ''} onChange={(e) => handleChange('guardian_landline_code', e.target.value)} placeholder="Code" />
+                </div>
+                <div className="form-row">
+                  <label className="input-label">Guardian's Landline</label>
+                  <input type="text" className="input" value={verification.guardian_landline || ''} onChange={(e) => handleChange('guardian_landline', e.target.value)} placeholder="Landline No." />
+                </div>
+                <div className="form-row">
+                  <label className="input-label">Guardian's Phone (Combined)</label>
+                  <input type="text" className="input" value={verification.guardian_phone || ''} onChange={(e) => handleChange('guardian_phone', e.target.value)} placeholder="Phone" />
+                </div>
+                <div className="form-row">
+                  <label className="input-label">Guardian's Relation</label>
+                  <input type="text" className="input" value={verification.guardian_relation || ''} onChange={(e) => handleChange('guardian_relation', e.target.value)} placeholder="Relationship" />
                 </div>
               </div>
             </div>
@@ -1050,6 +1400,14 @@ function VerificationView() {
                   <input type="text" className="input" value={verification.twelfth_board || ''} onChange={(e) => handleChange('twelfth_board', e.target.value)} placeholder="Board" />
                 </div>
                 <div className="form-row">
+                  <label className="input-label">Percentage</label>
+                  <input type="text" className="input" value={verification.twelfth_percentage || ''} onChange={(e) => handleChange('twelfth_percentage', e.target.value)} placeholder="%" />
+                </div>
+                <div className="form-row">
+                  <label className="input-label">School Name</label>
+                  <input type="text" className="input" value={verification.twelfth_school || ''} onChange={(e) => handleChange('twelfth_school', e.target.value)} placeholder="School" />
+                </div>
+                <div className="form-row">
                   <label className="input-label">Exam Roll No.</label>
                   <input type="text" className="input" value={verification.twelfth_roll_number || ''} onChange={(e) => handleChange('twelfth_roll_number', e.target.value)} placeholder="Roll No" />
                 </div>
@@ -1066,6 +1424,44 @@ function VerificationView() {
                     <option value="XII">XII</option>
                     <option value="NEVER">Never</option>
                   </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Class X Details (Legacy) */}
+            <div className="form-section">
+              <h4 className="form-section-title">Class X Details (Legacy)</h4>
+              <div className="form-grid">
+                <div className="form-row">
+                  <label className="input-label">Class X Board</label>
+                  <input type="text" className="input" value={verification.tenth_board || ''} onChange={(e) => handleChange('tenth_board', e.target.value)} placeholder="Board" />
+                </div>
+                <div className="form-row">
+                  <label className="input-label">Class X Year</label>
+                  <input type="text" className="input" value={verification.tenth_year || ''} onChange={(e) => handleChange('tenth_year', e.target.value)} placeholder="Year" />
+                </div>
+                <div className="form-row">
+                  <label className="input-label">Class X Percentage</label>
+                  <input type="text" className="input" value={verification.tenth_percentage || ''} onChange={(e) => handleChange('tenth_percentage', e.target.value)} placeholder="%" />
+                </div>
+                <div className="form-row">
+                  <label className="input-label">Class X School</label>
+                  <input type="text" className="input" value={verification.tenth_school || ''} onChange={(e) => handleChange('tenth_school', e.target.value)} placeholder="School" />
+                </div>
+              </div>
+            </div>
+
+            {/* Other Educational Details */}
+            <div className="form-section">
+              <h4 className="form-section-title">Other Educational Details</h4>
+              <div className="form-grid">
+                <div className="form-row" style={{ gridColumn: '1 / -1' }}>
+                  <label className="input-label">Previous Qualification</label>
+                  <input type="text" className="input" value={verification.previous_qualification || ''} onChange={(e) => handleChange('previous_qualification', e.target.value)} placeholder="Previous Qualification" />
+                </div>
+                <div className="form-row" style={{ gridColumn: '1 / -1' }}>
+                  <label className="input-label">Graduation Details</label>
+                  <textarea className="input textarea" value={verification.graduation_details || ''} onChange={(e) => handleChange('graduation_details', e.target.value)} placeholder="Graduation Details" rows={2} />
                 </div>
               </div>
             </div>
@@ -1098,6 +1494,23 @@ function VerificationView() {
                   <label className="input-label">Date of Issue</label>
                   <input type="text" className="input" value={verification.category_certificate_date || ''} onChange={(e) => handleChange('category_certificate_date', e.target.value)} placeholder="DD/MM/YYYY" />
                 </div>
+                <div className="form-row">
+                  <label className="input-label">Disability Percentage</label>
+                  <input type="text" className="input" value={verification.disability_percentage || ''} onChange={(e) => handleChange('disability_percentage', e.target.value)} placeholder="%" />
+                </div>
+                <div className="form-row">
+                  <label className="input-label">Disability Type</label>
+                  <select className="input select" value={verification.disability_type || ''} onChange={(e) => handleChange('disability_type', e.target.value)}>
+                    <option value="">Select</option>
+                    <option value="VH">VH (Visual)</option>
+                    <option value="HH">HH (Hearing)</option>
+                    <option value="OH">OH (Orthopedic)</option>
+                  </select>
+                </div>
+                <div className="form-row">
+                  <label className="input-label">UDID Number</label>
+                  <input type="text" className="input" value={verification.udid_number || ''} onChange={(e) => handleChange('udid_number', e.target.value)} placeholder="UDID No." />
+                </div>
               </div>
             </div>
 
@@ -1119,86 +1532,89 @@ function VerificationView() {
               {saving ? 'Saving...' : 'Save & Verify'}
             </button>
           </div>
-        </div>
-      </div>
 
-      {/* Document Checklist from Page 4 */}
-      <div className="form-section">
-        <h3 className="section-title">📋 Document Checklist</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', padding: '12px', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
-          {[
-            { key: 'doc_admission_form', label: 'Admission/Registration Form' },
-            { key: 'doc_undertaking_ragging', label: 'Anti-Ragging Undertaking' },
-            { key: 'doc_photographs', label: 'Photographs' },
-            { key: 'doc_cuet_scorecard', label: 'CUET Score Card' },
-            { key: 'doc_class_xii_marksheet', label: 'Class XII Mark Sheet' },
-            { key: 'doc_class_x_certificate', label: 'Class X Certificate' },
-            { key: 'doc_class_xii_certificate', label: 'Class XII Certificate' },
-            { key: 'doc_character_certificate', label: 'Character Certificate' },
-            { key: 'doc_transfer_certificate', label: 'Transfer/Migration Certificate' },
-            { key: 'doc_hindi_certificate', label: 'Hindi Certificate' },
-            { key: 'doc_caste_certificate', label: 'Caste/Category Certificate' },
-            { key: 'doc_sports_eca', label: 'Sports/ECA Certificates' },
-            { key: 'doc_originals', label: 'Original Documents' },
-            { key: 'doc_photo_id', label: 'Photo ID Proof' },
-          ].map(({ key, label }) => {
-            const value = (verification as any)[key] || 'No';
-            const isChecked = value === 'Yes';
-            return (
-              <label 
-                key={key} 
-                style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '8px',
-                  padding: '8px 12px',
-                  backgroundColor: isChecked ? '#e8f5e9' : '#fff',
-                  borderRadius: '4px',
-                  border: `1px solid ${isChecked ? '#4caf50' : '#ddd'}`,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease'
+          {/* Document Checklist from Page 4 */}
+          <div className="form-section" style={{ marginTop: '2rem' }}>
+            <h3 className="section-title">📋 Document Checklist</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', padding: '12px', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
+              {[
+                { key: 'doc_admission_form', label: 'Admission/Registration Form' },
+                { key: 'doc_undertaking_ragging', label: 'Anti-Ragging Undertaking' },
+                { key: 'doc_photographs', label: 'Photographs' },
+                { key: 'doc_cuet_scorecard', label: 'CUET Score Card' },
+                { key: 'doc_class_xii_marksheet', label: 'Class XII Mark Sheet' },
+                { key: 'doc_class_x_certificate', label: 'Class X Certificate' },
+                { key: 'doc_class_xii_certificate', label: 'Class XII Certificate' },
+                { key: 'doc_character_certificate', label: 'Character Certificate' },
+                { key: 'doc_transfer_certificate', label: 'Transfer/Migration Certificate' },
+                { key: 'doc_hindi_certificate', label: 'Hindi Certificate' },
+                { key: 'doc_caste_certificate', label: 'Caste/Category Certificate' },
+                { key: 'doc_sports_eca', label: 'Sports/ECA Certificates' },
+                { key: 'doc_originals', label: 'Original Documents' },
+                { key: 'doc_photo_id', label: 'Photo ID Proof' },
+              ].map(({ key, label }) => {
+                const value = (verification as any)[key] || 'No';
+                const isChecked = value === 'Yes';
+                return (
+                  <label 
+                    key={key} 
+                    style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '8px',
+                      padding: '8px 12px',
+                      backgroundColor: isChecked ? '#e8f5e9' : '#fff',
+                      borderRadius: '4px',
+                      border: `1px solid ${isChecked ? '#4caf50' : '#ddd'}`,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={(e) => handleChange(key, e.target.checked ? 'Yes' : 'No')}
+                      style={{ 
+                        width: '18px', 
+                        height: '18px',
+                        accentColor: '#4caf50',
+                        cursor: 'pointer'
+                      }}
+                    />
+                    <span style={{ fontSize: '13px', color: isChecked ? '#2e7d32' : '#666' }}>
+                      {label}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Documents Section */}
+          {form && (
+            <div className="verification-section documents-section">
+              <h2>Attached Documents</h2>
+              <DocumentUpload
+                formId={form.id}
+                onUploadComplete={() => {
+                  loadForm(form.id);
                 }}
-              >
-                <input
-                  type="checkbox"
-                  checked={isChecked}
-                  onChange={(e) => handleChange(key, e.target.checked ? 'Yes' : 'No')}
-                  style={{ 
-                    width: '18px', 
-                    height: '18px',
-                    accentColor: '#4caf50',
-                    cursor: 'pointer'
-                  }}
-                />
-                <span style={{ fontSize: '13px', color: isChecked ? '#2e7d32' : '#666' }}>
-                  {label}
-                </span>
-              </label>
-            );
-          })}
+              />
+              <DocumentList
+                formId={form.id}
+                onRefresh={() => loadForm(form.id)}
+                studentInfo={{
+                  duPortalNumber: verification.du_portal_form_number || verification.du_enrollment_number || '',
+                  fullName: [verification.first_name, verification.middle_name, verification.surname].filter(Boolean).join(' ')
+                }}
+              />
+            </div>
+          )}
+          
+          {/* Bottom spacing */}
+          <div style={{ height: '4rem' }}></div>
         </div>
       </div>
-
-      {/* Documents Section */}
-      {form && (
-        <div className="verification-section documents-section">
-          <h2>Attached Documents</h2>
-          <DocumentUpload
-            formId={form.id}
-            onUploadComplete={() => {
-              loadForm(form.id);
-            }}
-          />
-          <DocumentList
-            formId={form.id}
-            onRefresh={() => loadForm(form.id)}
-            studentInfo={{
-              duPortalNumber: verification.du_portal_form_number || verification.du_enrollment_number || '',
-              fullName: [verification.first_name, verification.middle_name, verification.surname].filter(Boolean).join(' ')
-            }}
-          />
-        </div>
-      )}
     </div>
   );
 }

@@ -170,9 +170,9 @@ def _evaluate_fields(
 
     if not structured_data and sample.form_type:
         try:
-            from backend.utils.form_parser import parse_form_text
+            from backend.utils.srcc_form_extractor import extract_srcc_form
 
-            structured_data = parse_form_text(raw_text, form_type=sample.form_type) or {}
+            structured_data = extract_srcc_form(raw_text) or {}
         except Exception:
             structured_data = structured_data or {}
 

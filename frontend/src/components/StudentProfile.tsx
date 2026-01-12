@@ -455,6 +455,61 @@ function StudentProfile() {
               onUploadComplete={handleRefresh}
             />
             
+            {/* Document Checklist from Form */}
+            {latestForm && (
+              <div className="details-card" style={{ marginTop: '1.5rem', marginBottom: '1.5rem' }}>
+                <h3>📋 Document Checklist (from Form)</h3>
+                <div style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', 
+                  gap: '8px', 
+                  padding: '12px', 
+                  backgroundColor: '#f8f9fa', 
+                  borderRadius: '8px',
+                  marginTop: '1rem'
+                }}>
+                  {[
+                    { key: 'doc_admission_form', label: 'Admission/Registration Form' },
+                    { key: 'doc_undertaking_ragging', label: 'Anti-Ragging Undertaking' },
+                    { key: 'doc_photographs', label: 'Photographs' },
+                    { key: 'doc_cuet_scorecard', label: 'CUET Score Card' },
+                    { key: 'doc_class_xii_marksheet', label: 'Class XII Mark Sheet' },
+                    { key: 'doc_class_x_certificate', label: 'Class X Certificate' },
+                    { key: 'doc_class_xii_certificate', label: 'Class XII Certificate' },
+                    { key: 'doc_character_certificate', label: 'Character Certificate' },
+                    { key: 'doc_transfer_certificate', label: 'Transfer/Migration Certificate' },
+                    { key: 'doc_hindi_certificate', label: 'Hindi Certificate' },
+                    { key: 'doc_caste_certificate', label: 'Caste/Category Certificate' },
+                    { key: 'doc_sports_eca', label: 'Sports/ECA Certificates' },
+                    { key: 'doc_originals', label: 'Original Documents' },
+                    { key: 'doc_photo_id', label: 'Photo ID Proof' },
+                  ].map(({ key, label }) => {
+                    const value = (latestForm as any)[key] || 'No';
+                    const isChecked = value === 'Yes';
+                    return (
+                      <div
+                        key={key}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          padding: '8px 12px',
+                          backgroundColor: isChecked ? '#e8f5e9' : '#fff',
+                          borderRadius: '4px',
+                          border: `1px solid ${isChecked ? '#4caf50' : '#ddd'}`,
+                          fontSize: '13px'
+                        }}
+                      >
+                        <span style={{ color: isChecked ? '#2e7d32' : '#666', fontWeight: isChecked ? 500 : 400 }}>
+                          {isChecked ? '✓' : '○'} {label}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            
             {allDocuments.length === 0 ? (
               <div className="empty-state">
                 No documents attached yet. Upload supporting documents above.

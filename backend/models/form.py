@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 from datetime import datetime
 from typing import Optional, Dict, Any, List
 from backend.database import FormStatus
@@ -233,6 +233,21 @@ class FormVerification(BaseModel):
     cuet_subject_6: Optional[str] = None
     cuet_total_score_6: Optional[str] = None
     cuet_score_obtained_6: Optional[str] = None
+    
+    # Extra CUET Marks (7-10) to be stored in additional_info
+    cuet_subject_7: Optional[str] = None
+    cuet_total_score_7: Optional[str] = None
+    cuet_score_obtained_7: Optional[str] = None
+    cuet_subject_8: Optional[str] = None
+    cuet_total_score_8: Optional[str] = None
+    cuet_score_obtained_8: Optional[str] = None
+    cuet_subject_9: Optional[str] = None
+    cuet_total_score_9: Optional[str] = None
+    cuet_score_obtained_9: Optional[str] = None
+    cuet_subject_10: Optional[str] = None
+    cuet_total_score_10: Optional[str] = None
+    cuet_score_obtained_10: Optional[str] = None
+    
     cuet_total_score: Optional[str] = None
     
     # Document Checklist
@@ -395,6 +410,21 @@ class FormDetailResponse(FormResponse):
     cuet_subject_6: Optional[str] = None
     cuet_total_score_6: Optional[str] = None
     cuet_score_obtained_6: Optional[str] = None
+    
+    # Extra CUET Marks (7-10)
+    cuet_subject_7: Optional[str] = None
+    cuet_total_score_7: Optional[str] = None
+    cuet_score_obtained_7: Optional[str] = None
+    cuet_subject_8: Optional[str] = None
+    cuet_total_score_8: Optional[str] = None
+    cuet_score_obtained_8: Optional[str] = None
+    cuet_subject_9: Optional[str] = None
+    cuet_total_score_9: Optional[str] = None
+    cuet_score_obtained_9: Optional[str] = None
+    cuet_subject_10: Optional[str] = None
+    cuet_total_score_10: Optional[str] = None
+    cuet_score_obtained_10: Optional[str] = None
+    
     cuet_total_score: Optional[str] = None
     
     # Document Checklist
@@ -416,6 +446,46 @@ class FormDetailResponse(FormResponse):
     additional_info: Optional[Dict[str, Any]] = None
     verified_date: Optional[datetime] = None
     
+    @model_validator(mode='before')
+    @classmethod
+    def extract_extra_cuet_fields(cls, data: Any) -> Any:
+        # If input is an ORM object, it has additional_info attribute
+        # If input is dict, it has additional_info key
+        additional_info = None
+        if hasattr(data, 'additional_info'):
+            additional_info = data.additional_info
+        elif isinstance(data, dict):
+            additional_info = data.get('additional_info')
+            
+        if additional_info:
+            # Create a dict of extra fields to patch into the object/dict
+            extra_data = {}
+            for i in range(7, 11):
+                for suffix in ['subject', 'total_score', 'score_obtained']:
+                    key = f'cuet_{suffix}_{i}'
+                    if key in additional_info:
+                        extra_data[key] = additional_info[key]
+            
+            # Apply extra data
+            if isinstance(data, dict):
+                data.update(extra_data)
+            else:
+                # For ORM objects, we can't set arbitrary attributes easily if it's strict,
+                # but Pydantic 'from_attributes' reads attributes.
+                # Since we can't modify the ORM object in-place safely without side effects, 
+                # we convert it to a dict-like structure or just set attributes if allowed.
+                # However, cleaner way for Pydantic v2 from_attributes is usually:
+                # The validator runs *before* parsing.
+                # If 'data' is the ORM object, we can just setattr on it assuming it's not immutable,
+                # or better, return a wrapper/proxy.
+                # Simplest: Just use setattr as it's a transient SQLAlchemy instance usually.
+                for k, v in extra_data.items():
+                    try:
+                        setattr(data, k, v)
+                    except:
+                        pass
+        return data
+
     class Config:
         from_attributes = True
 

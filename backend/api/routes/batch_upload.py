@@ -158,6 +158,14 @@ async def batch_upload_forms(
                     "page_results": page_results
                 }
             
+            # Parse structured data from OCR text - ALWAYS extract (SRCC extractor works for all forms)
+            if ocr_result.get('raw_text'):
+                from backend.utils.srcc_form_extractor import extract_srcc_form
+                # Always use SRCC extractor - it's the most comprehensive extractor
+                structured_data = extract_srcc_form(ocr_result['raw_text'])
+                ocr_result['structured_data'] = structured_data
+                print(f"[Batch Upload] Extracted {len(structured_data)} fields from OCR text")
+            
             # Create form record
             upload_dir = Path(settings.UPLOAD_DIR).resolve()
             file_path_obj = Path(file_path).resolve()
@@ -167,7 +175,7 @@ async def batch_upload_forms(
                 filename=file_item.filename or filename,
                 file_path=relative_path,
                 ocr_provider=ocr_result.get("provider", provider_name),
-                status=FormStatus.EXTRACTED,
+                status=FormStatus.EXTRACTING,  # Will be updated to EXTRACTED after field application
                 extracted_data={
                     "raw_text": ocr_result.get("raw_text", ""),
                     "confidence": ocr_result.get("confidence", 0),
@@ -179,6 +187,17 @@ async def batch_upload_forms(
                 }
             )
             local_db.add(form)
+            local_db.commit()
+            local_db.refresh(form)
+            
+            # Auto-fill ALL form fields automatically using helper function
+            if ocr_result.get('structured_data'):
+                from backend.utils.form_field_applier import apply_structured_data_to_form
+                fields_set = apply_structured_data_to_form(form, ocr_result['structured_data'])
+                print(f"[Batch Upload] Applied {fields_set} fields from structured_data to form {form.id}")
+            
+            # Update status and commit
+            form.status = FormStatus.EXTRACTED
             local_db.commit()
             local_db.refresh(form)
             

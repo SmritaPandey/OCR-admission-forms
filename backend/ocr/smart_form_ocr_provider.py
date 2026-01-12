@@ -332,9 +332,9 @@ IMPORTANT:
         # Parse structured data from combined raw text and best structured candidates
         final_structured_data = {}
         if combined_raw_text:
-            # Use the rule-based parser first
-            from backend.utils.form_parser import parse_form_text
-            final_structured_data.update(parse_form_text(combined_raw_text))
+            # Use the advanced SRCC extractor first (better decimal support and extraction)
+            from backend.utils.srcc_form_extractor import extract_srcc_form
+            final_structured_data.update(extract_srcc_form(combined_raw_text))
             # Then overlay with AI parser results
             ai_parsed_from_text = self.ai_form_parser.parse_from_text(combined_raw_text)
             final_structured_data.update(ai_parsed_from_text)

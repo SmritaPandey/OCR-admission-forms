@@ -152,17 +152,23 @@ class OCRFactory:
             if abbyy_provider:
                 providers["abbyy"] = abbyy_provider
         
-        gpt4_vision_provider = _get_gpt4_vision_provider()
-        if gpt4_vision_provider:
-            providers["gpt4-vision"] = gpt4_vision_provider
+        # GPT-4 Vision (only if enabled)
+        if settings.OCR_ENABLE_GPT4_VISION:
+            gpt4_vision_provider = _get_gpt4_vision_provider()
+            if gpt4_vision_provider:
+                providers["gpt4-vision"] = gpt4_vision_provider
         
-        claude_vision_provider = _get_claude_vision_provider()
-        if claude_vision_provider:
-            providers["claude-vision"] = claude_vision_provider
+        # Claude Vision (only if enabled)
+        if settings.OCR_ENABLE_CLAUDE_VISION:
+            claude_vision_provider = _get_claude_vision_provider()
+            if claude_vision_provider:
+                providers["claude-vision"] = claude_vision_provider
         
-        ollama_provider = _get_ollama_provider()
-        if ollama_provider:
-            providers["ollama"] = ollama_provider
+        # Ollama (only if enabled)
+        if settings.OCR_ENABLE_OLLAMA:
+            ollama_provider = _get_ollama_provider()
+            if ollama_provider:
+                providers["ollama"] = ollama_provider
         
         # CRAFT + TR-OCR for handwritten text recognition
         if settings.OCR_ENABLE_CRAFT_TROCR:
@@ -221,10 +227,17 @@ class OCRFactory:
     
     @classmethod
     def get_available_providers(cls) -> list[str]:
-        """Get list of available and configured providers"""
+        """Get list of available and configured providers (no duplicates/aliases)"""
         available = []
         providers = cls._get_providers()
+        
+        # Define canonical names (skip aliases like "google", "azure", "combined")
+        alias_names = {"google", "azure", "combined"}
+        
         for name, provider_class in providers.items():
+            # Skip alias names to avoid duplicates
+            if name in alias_names:
+                continue
             try:
                 provider = provider_class()
                 if provider.is_available() and name not in available:
@@ -237,13 +250,13 @@ class OCRFactory:
             default_provider = settings.OCR_PROVIDER.lower()
             if default_provider in providers:
                 try:
-                    # Actually test if the default provider is available
                     provider = providers[default_provider]()
                     if provider.is_available():
                         available.append(default_provider)
                     else:
-                        # If default provider is not available, try to find any working provider
                         for name, provider_class in providers.items():
+                            if name in alias_names:
+                                continue
                             try:
                                 test_provider = provider_class()
                                 if test_provider.is_available():
@@ -252,9 +265,8 @@ class OCRFactory:
                             except Exception:
                                 pass
                 except Exception:
-                    # If we can't instantiate the default provider, try others
                     for name, provider_class in providers.items():
-                        if name != default_provider:
+                        if name != default_provider and name not in alias_names:
                             try:
                                 test_provider = provider_class()
                                 if test_provider.is_available():

@@ -237,37 +237,67 @@ async def re_extract_form(
             )
             ocr_result.setdefault("provider", selected_provider)
         
-        # Parse structured data from OCR text - ALWAYS parse (not just SRCC forms)
+        # Parse structured data from OCR text using INTELLIGENT extraction
         if ocr_result.get('raw_text'):
-            from backend.utils.form_parser import parse_form_text
+            from backend.utils.intelligent_extractor import extract_intelligent
+            from backend.utils.srcc_form_extractor import extract_srcc_form
             from backend.utils.ai_form_parser import AIFormParser
             
-            # First, use AI form parser for initial extraction
-            ai_parser = AIFormParser()
+            # Use INTELLIGENT extractor FIRST - handles edge cases:
+            # - Scattered values (DOB spread across lines)
+            # - Tick mark detection (gender, course, category)
+            # - Multi-component name assembly
+            # - Date year validation (DOB 1995-2010, DOA 2020+)
+            intelligent_parsed = extract_intelligent(ocr_result['raw_text'])
+            
+            # Use SRCC form extractor as FALLBACK for any missing fields
+            srcc_parsed = extract_srcc_form(ocr_result['raw_text'])
+            
+            # Merge: intelligent takes priority, SRCC fills gaps
             structured_data = {}
+            
+            # First add all intelligent results
+            for field, value in intelligent_parsed.items():
+                if value and str(value).strip():
+                    structured_data[field] = str(value).strip()
+            
+            # Then add SRCC fields that are missing
+            for field, value in srcc_parsed.items():
+                if field not in structured_data and value and str(value).strip():
+                    value_str = str(value).strip()
+                    value_lower = value_str.lower()
+                    
+                    # Only reject if it's clearly just a label
+                    if len(value_lower.split()) <= 1:
+                        if value_lower in ['please', 'tick', 'check', 'enter', 'fill', 'select', 'name', 'block', 'letters']:
+                            continue
+                    
+                    # For student_name, only reject if it's clearly "name in block letters"
+                    if field == 'student_name':
+                        if value_lower in ['name in block letters', 'in block letters', 'block letters']:
+                            continue
+                        # Allow any reasonable name length
+                        if len(value_str) < 2:
+                            continue
+                    
+                    # Accept the value - extractor already did the heavy filtering
+                    structured_data[field] = value
+            
+            # Then use AI form parser to fill in any missing fields
+            ai_parser = AIFormParser()
             
             if ocr_result.get('structured_data'):
                 ai_parsed = ai_parser.parse_from_ai_result(ocr_result)
-                structured_data.update(ai_parsed)
-            
-            # Parse from raw text as well
-            text_parsed = ai_parser.parse_from_text(ocr_result['raw_text'])
-            structured_data.update(text_parsed)
-            
-            # NOW use SRCC form parser - its results take precedence
-            # This parser is specifically designed for SRCC form layout
-            srcc_parsed = parse_form_text(ocr_result['raw_text'])
-            
-            # Only use SRCC values if they look valid (not garbage)
-            for field, value in srcc_parsed.items():
-                if value and len(str(value)) > 1:
-                    # Check if value is not garbage (common pattern check)
-                    value_str = str(value)
-                    if not any(garbage in value_str.lower() for garbage in [
-                        'please', 'tick', 'check', 'enter', 'fill', 'select',
-                        'details', 'information', 'particulars', 'mandatory'
-                    ]):
+                # Only add AI values if field is not already set by SRCC parser
+                for field, value in ai_parsed.items():
+                    if field not in structured_data and value:
                         structured_data[field] = value
+            
+            # Parse from raw text as fallback for any still missing fields
+            text_parsed = ai_parser.parse_from_text(ocr_result['raw_text'])
+            for field, value in text_parsed.items():
+                if field not in structured_data and value:
+                    structured_data[field] = value
             
             # Post-processing: Clean up garbage values from AI parser
             # These fields often have incorrect values from AI parsing
@@ -345,6 +375,41 @@ async def re_extract_form(
                 # If confidence scorer fails, use original confidence
                 pass
             
+            # Construct full student_name from components if not present or if components are better
+            name_parts = []
+            if structured_data.get('first_name'):
+                name_parts.append(structured_data['first_name'])
+            if structured_data.get('middle_name'):
+                name_parts.append(structured_data['middle_name'])
+            if structured_data.get('surname'):
+                name_parts.append(structured_data['surname'])
+            
+            if name_parts:
+                constructed_name = ' '.join(name_parts)
+                # Use constructed name if student_name is missing or if constructed is better (has all parts)
+                if 'student_name' not in structured_data or not structured_data['student_name']:
+                    structured_data['student_name'] = constructed_name
+                elif len(name_parts) >= 2 and len(constructed_name.split()) > len(structured_data['student_name'].split()):
+                    # Constructed name has more parts, use it
+                    structured_data['student_name'] = constructed_name
+            
+            # Final cleanup: Remove "TICK()" and other garbage values
+            fields_to_remove = []
+            for field, value in structured_data.items():
+                if isinstance(value, str):
+                    value_lower = value.lower()
+                    # Remove garbage values
+                    if value_lower in ['tick()', 'tick', '()', 'please', 'fill', 'enter']:
+                        fields_to_remove.append(field)
+                    # Clean up gender
+                    elif field == 'gender' and 'tick' in value_lower:
+                        fields_to_remove.append(field)
+            
+            # Remove garbage fields
+            for field in fields_to_remove:
+                if field in structured_data:
+                    del structured_data[field]
+            
             # Store structured data
             ocr_result['structured_data'] = structured_data
             
@@ -358,40 +423,10 @@ async def re_extract_form(
                     # Clear old garbage value
                     setattr(form, field, None)
             
-            # Auto-fill all form fields if available
-            for field in [
-                # Basic identification
-                'student_name', 'first_name', 'middle_name', 'surname',
-                'date_of_birth', 'gender', 'category', 'nationality', 'religion',
-                'aadhar_number', 'blood_group', 'below_poverty_line', 'minority_category',
-                # Address
-                'permanent_address', 'permanent_state', 'permanent_pincode',
-                'correspondence_address', 'correspondence_state', 'correspondence_pincode',
-                'pincode', 'city', 'state',
-                # Contact
-                'phone_number', 'alternate_phone', 'email',
-                'emergency_contact_name', 'emergency_contact_phone',
-                # Parents/Guardian
-                'father_name', 'father_occupation', 'father_phone', 'father_email', 'father_mobile',
-                'mother_name', 'mother_occupation', 'mother_phone', 'mother_email', 'mother_mobile',
-                'guardian_name', 'guardian_relation', 'guardian_phone', 'guardian_mobile',
-                # Academic/Admission
-                'academic_session', 'course', 'cuet_score', 'college_roll_no', 'date_of_admission',
-                'du_portal_form_number', 'admission_category',
-                # Income
-                'annual_income',
-                # Education
-                'tenth_board', 'tenth_year', 'tenth_percentage', 'tenth_school',
-                'twelfth_board', 'twelfth_year', 'twelfth_percentage', 'twelfth_school',
-                'twelfth_roll_number', 'twelfth_institution', 'hindi_studied_upto',
-                'previous_qualification', 'graduation_details',
-                # Other
-                'du_enrollment_number', 'hindi_medium_preference',
-                'course_applied', 'application_number', 'enrollment_number',
-                'admission_date', 'exam_roll_no'
-            ]:
-                if structured_data.get(field):
-                    setattr(form, field, structured_data[field])
+            # Auto-fill ALL form fields automatically using helper function
+            from backend.utils.form_field_applier import apply_structured_data_to_form
+            fields_set = apply_structured_data_to_form(form, structured_data)
+            print(f"[Re-extract] Applied {fields_set} fields from structured_data to form {form.id}")
         
         # Check if form is empty (template)
         from backend.utils.empty_form_detector import EmptyFormDetector
@@ -816,7 +851,7 @@ async def update_form(
         'category_certificate_authority', 'category_certificate_number', 'category_certificate_date',
         'disability_percentage', 'disability_type', 'udid_number',
         
-        # CUET Marks
+        # CUET Marks (1-6 are columns, 7-10 go to additional_info)
         'cuet_subject_1', 'cuet_total_score_1', 'cuet_score_obtained_1',
         'cuet_subject_2', 'cuet_total_score_2', 'cuet_score_obtained_2',
         'cuet_subject_3', 'cuet_total_score_3', 'cuet_score_obtained_3',
@@ -839,6 +874,23 @@ async def update_form(
             # Check if the form model has this field before setting
             if hasattr(form, field):
                 setattr(form, field, value)
+                
+    # Handle extra CUET subjects (7-10) by storing in additional_info
+    extra_cuet_data = {}
+    for i in range(7, 11):
+        for suffix in ['subject', 'total_score', 'score_obtained']:
+            key = f'cuet_{suffix}_{i}'
+            val = getattr(verification, key, None)
+            if val is not None:
+                extra_cuet_data[key] = val
+    
+    if extra_cuet_data:
+        if form.additional_info is None:
+            form.additional_info = {}
+        # Merge with existing
+        current_info = dict(form.additional_info) if form.additional_info else {}
+        current_info.update(extra_cuet_data)
+        form.additional_info = current_info
     
     # Sync category and admission_category (they are the same field)
     if form.admission_category and not form.category:

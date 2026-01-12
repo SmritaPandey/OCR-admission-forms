@@ -1,14 +1,14 @@
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings
-from typing import List
+from typing import List, Union, Set, Optional
 
 class Settings(BaseSettings):
     # Database
     # Default to SQLite for easy setup, can be overridden with PostgreSQL
     DATABASE_URL: str = "sqlite:///./admission_forms.db"
     
-    # OCR Provider (tesseract, google, azure, abbyy, tesseract-google-combined, combined, craft-trocr)
-    OCR_PROVIDER: str = "craft-trocr"  # Default to CRAFT+TR-OCR for handwritten forms
+    # OCR Provider (tesseract, google-vision, azure, abbyy, tesseract-google-combined, combined, craft-trocr)
+    OCR_PROVIDER: str = "google-vision"  # Default to Google Vision (best trained and most accurate)
     OCR_ENABLE_TESSERACT: bool = Field(True, description="Enable local Tesseract OCR provider.")
     OCR_ENABLE_GOOGLE_VISION: bool = Field(True, description="Enable Google Cloud Vision OCR provider.")
     OCR_ENABLE_GOOGLE_DOCUMENT_AI: bool = Field(False, description="Enable Google Document AI OCR provider.")
@@ -20,9 +20,12 @@ class Settings(BaseSettings):
     OCR_ENABLE_CRAFT_TROCR: bool = Field(True, description="Enable CRAFT+TR-OCR provider for handwritten text recognition.")
     OCR_ENABLE_CRAFT: bool = Field(True, description="Enable CRAFT-only provider for text detection.")
     OCR_ENABLE_TROCR: bool = Field(True, description="Enable TR-OCR-only provider for text recognition.")
-    OCR_BENCHMARK_PROVIDERS: List[str] = Field(
-        default_factory=list,
-        description="Optional list of providers to benchmark; defaults to enabled providers."
+    OCR_ENABLE_CLAUDE_VISION: bool = Field(False, description="Enable Claude Vision for AI-powered OCR.")
+    OCR_ENABLE_GPT4_VISION: bool = Field(False, description="Enable GPT-4 Vision for AI-powered OCR.")
+    OCR_ENABLE_OLLAMA: bool = Field(False, description="Enable Ollama local vision models.")
+    OCR_BENCHMARK_PROVIDERS: Optional[str] = Field(
+        default=None,
+        description="Optional comma-separated list of providers to benchmark."
     )
 
     # OCR Preprocessing
@@ -118,7 +121,7 @@ class Settings(BaseSettings):
     ALLOWED_EXTENSIONS: List[str] = ["jpg", "jpeg", "png", "pdf", "tiff", "bmp"]
     
     # CORS
-    CORS_ORIGINS: str | List[str] = Field(
+    CORS_ORIGINS: Union[str, List[str]] = Field(
         default="http://localhost:3000,http://localhost:5173",
         description="Allowed CORS origins (comma-separated string or list)."
     )
@@ -146,7 +149,7 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def ensure_provider_configuration(cls, values: "Settings") -> "Settings":
-        enabled_map: set[str] = set()
+        enabled_map: Set[str] = set()
         if values.OCR_ENABLE_TESSERACT:
             enabled_map.add("tesseract")
         if values.OCR_ENABLE_GOOGLE_VISION:
@@ -170,6 +173,12 @@ class Settings(BaseSettings):
             enabled_map.add("craft")
         if values.OCR_ENABLE_TROCR:
             enabled_map.add("trocr")
+        if values.OCR_ENABLE_CLAUDE_VISION:
+            enabled_map.add("claude-vision")
+        if values.OCR_ENABLE_GPT4_VISION:
+            enabled_map.add("gpt4-vision")
+        if values.OCR_ENABLE_OLLAMA:
+            enabled_map.add("ollama")
 
         if len(enabled_map) >= 2:
             enabled_map.update({"multi", "best"})
@@ -186,8 +195,9 @@ class Settings(BaseSettings):
             )
 
         if values.OCR_BENCHMARK_PROVIDERS:
+            providers_list = [p.strip() for p in values.OCR_BENCHMARK_PROVIDERS.split(",") if p.strip()]
             invalid = [
-                provider for provider in values.OCR_BENCHMARK_PROVIDERS
+                provider for provider in providers_list
                 if provider.lower() not in enabled_map
             ]
             if invalid:

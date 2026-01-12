@@ -589,14 +589,24 @@ class CrossFieldValidator:
         corrected = dict(fields)
         issues = {}
         
-        # Validate date formats
+        # Validate date formats with field-specific year constraints
         for date_field in ['date_of_birth', 'date_of_admission', 'category_certificate_date']:
             if date_field in corrected:
-                validated = cls._validate_date(corrected[date_field])
+                validated = cls._validate_date(corrected[date_field], field_name=date_field)
                 if validated:
                     corrected[date_field] = validated
                 else:
-                    issues[date_field] = f"Invalid date format: {corrected[date_field]}"
+                    # For date_of_birth, if it looks like an admission date (2020+), clear it
+                    if date_field == 'date_of_birth':
+                        year_match = re.search(r'(\d{4})', str(corrected[date_field]))
+                        if year_match and int(year_match.group(1)) > 2015:
+                            # This is likely an admission date wrongly assigned to DOB
+                            corrected[date_field] = None
+                            issues[date_field] = f"Year too recent for DOB, likely DOA: {corrected[date_field]}"
+                        else:
+                            issues[date_field] = f"Invalid date format: {corrected[date_field]}"
+                    else:
+                        issues[date_field] = f"Invalid date format: {corrected[date_field]}"
         
         # Validate phone numbers
         for phone_field in ['phone_number', 'mother_mobile', 'father_mobile', 'guardian_mobile']:
@@ -633,8 +643,8 @@ class CrossFieldValidator:
         return corrected, issues
     
     @classmethod
-    def _validate_date(cls, date_str: str) -> Optional[str]:
-        """Validate and normalize date"""
+    def _validate_date(cls, date_str: str, field_name: str = None) -> Optional[str]:
+        """Validate and normalize date with field-specific year constraints"""
         if not date_str:
             return None
         
@@ -651,8 +661,25 @@ class CrossFieldValidator:
                 day, month, year = match.groups()
                 day, month, year = int(day), int(month), int(year)
                 
-                if 1 <= day <= 31 and 1 <= month <= 12 and 1900 <= year <= 2100:
-                    return f"{day:02d}/{month:02d}/{year}"
+                # Basic date validation
+                if not (1 <= day <= 31 and 1 <= month <= 12):
+                    continue
+                
+                # Field-specific year validation
+                if field_name == 'date_of_birth':
+                    # For college students, DOB should be 1995-2010 (ages 16-31)
+                    if not (1995 <= year <= 2010):
+                        continue  # Reject dates outside DOB range
+                elif field_name == 'date_of_admission':
+                    # Admission dates should be recent (2020-2030)
+                    if not (2020 <= year <= 2030):
+                        continue  # Reject dates outside DOA range
+                else:
+                    # General date validation (1900-2100)
+                    if not (1900 <= year <= 2100):
+                        continue
+                
+                return f"{day:02d}/{month:02d}/{year}"
         
         return None
     
