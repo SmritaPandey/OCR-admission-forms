@@ -29,6 +29,24 @@ jobs:
         choco install tesseract --yes
         choco install poppler --yes
 
+    - name: Restore sensitive data from secrets
+      run: |
+        # Create .env file from secret
+        echo "${{ secrets.ENV_FILE }}" > .env
+        
+        # Create Google Cloud credentials from secret
+        echo "${{ secrets.GOOGLE_CLOUD_CREDENTIALS }}" > google-cloud-credentials.json
+        
+        # Decode and restore database from base64 secret
+        $dbBase64 = "${{ secrets.DATABASE_BASE64 }}"
+        if ($dbBase64) {
+          [System.IO.File]::WriteAllBytes("admission_forms.db", [System.Convert]::FromBase64String($dbBase64))
+        }
+        
+        # Create empty uploads directory (too large for secrets)
+        New-Item -ItemType Directory -Force -Path uploads
+      shell: pwsh
+
     - name: Build Backend (PyInstaller)
       working-directory: ./backend
       run: |
@@ -44,7 +62,6 @@ jobs:
 
     - name: Build Frontend (Next.js)
       run: npm run build
-      # This creates .next folder with production build
 
     - name: Install Electron Dependencies
       working-directory: ./electron
