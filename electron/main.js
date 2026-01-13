@@ -42,10 +42,8 @@ function startBackend() {
 }
 
 function startNextServer() {
-    const cwd = isDev ? path.join(__dirname, '..') : process.resourcesPath;
-
     if (isDev) {
-        // In dev, run next dev
+        const cwd = path.join(__dirname, '..');
         console.log('Starting Next.js dev server...');
         nextProcess = spawn('npm', ['run', 'dev'], {
             cwd: cwd,
@@ -53,12 +51,20 @@ function startNextServer() {
             env: { ...process.env, PORT: String(NEXT_PORT) }
         });
     } else {
-        // In prod, run next start (requires .next folder to be packaged)
-        console.log('Starting Next.js production server...');
-        nextProcess = spawn('node', [path.join(cwd, 'node_modules/next/dist/bin/next'), 'start', '-p', String(NEXT_PORT)], {
-            cwd: cwd,
+        // In prod, use the standalone server created by Next.js
+        const standaloneDir = path.join(process.resourcesPath, 'standalone');
+        const serverPath = path.join(standaloneDir, 'server.js');
+
+        console.log(`Starting Next.js standalone server from: ${serverPath}`);
+
+        nextProcess = spawn('node', [serverPath], {
+            cwd: standaloneDir,
             shell: process.platform === 'win32',
-            env: { ...process.env }
+            env: {
+                ...process.env,
+                PORT: String(NEXT_PORT),
+                HOSTNAME: 'localhost'
+            }
         });
     }
 
@@ -80,7 +86,7 @@ function createWindow() {
         },
     });
 
-    // Always load from Next.js server
+    // Load from Next.js server
     mainWindow.loadURL(`http://localhost:${NEXT_PORT}`);
 
     if (isDev) {
@@ -90,13 +96,13 @@ function createWindow() {
 
 function checkServerReady(port, name) {
     return new Promise((resolve, reject) => {
-        const tryConnect = (retries = 30) => {
+        const tryConnect = (retries = 60) => {
             http.get(`http://localhost:${port}`, (res) => {
-                if (res.statusCode === 200 || res.statusCode === 404) resolve();
-                else if (retries > 0) setTimeout(() => tryConnect(retries - 1), 1000);
+                if (res.statusCode === 200 || res.statusCode === 404 || res.statusCode === 302) resolve();
+                else if (retries > 0) setTimeout(() => tryConnect(retries - 1), 500);
                 else reject(new Error(`${name} failed to start`));
             }).on('error', () => {
-                if (retries > 0) setTimeout(() => tryConnect(retries - 1), 1000);
+                if (retries > 0) setTimeout(() => tryConnect(retries - 1), 500);
                 else reject(new Error(`${name} connection refused`));
             });
         };

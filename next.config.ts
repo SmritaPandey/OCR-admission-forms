@@ -4,7 +4,7 @@ import path from "node:path";
 const LOADER = path.resolve(__dirname, 'src/visual-edits/component-tagger-loader.js');
 
 const nextConfig: NextConfig = {
-  // Note: 'output: export' removed - desktop app uses Next.js server mode
+  output: 'standalone',  // Creates self-contained server for desktop packaging
   images: {
     unoptimized: true,
     remotePatterns: [
