@@ -30,26 +30,29 @@ jobs:
         choco install poppler --yes
 
     - name: Restore sensitive data from secrets
+      shell: bash
       run: |
-        # Create .env file from secret
-        if ("${{ secrets.ENV_FILE }}") {
-          echo "${{ secrets.ENV_FILE }}" > .env
+        # Create .env file from secret (using bash to avoid PowerShell parsing issues)
+        if [ -n "${{ secrets.ENV_FILE }}" ]; then
+          echo '${{ secrets.ENV_FILE }}' > .env
           echo "Created .env file"
-        }
+        fi
         
         # Create Google Cloud credentials from secret
-        if ("${{ secrets.GOOGLE_CLOUD_CREDENTIALS }}") {
-          echo "${{ secrets.GOOGLE_CLOUD_CREDENTIALS }}" > google-cloud-credentials.json
+        if [ -n "${{ secrets.GOOGLE_CLOUD_CREDENTIALS }}" ]; then
+          echo '${{ secrets.GOOGLE_CLOUD_CREDENTIALS }}' > google-cloud-credentials.json
           echo "Created credentials file"
-        }
-        
-        # Decode and restore database from base64 secret
+        fi
+
+    - name: Restore database from secret
+      if: ${{ secrets.DATABASE_BASE64 != '' }}
+      shell: pwsh
+      run: |
         $dbBase64 = "${{ secrets.DATABASE_BASE64 }}"
         if ($dbBase64 -and $dbBase64.Length -gt 10) {
           [System.IO.File]::WriteAllBytes("admission_forms.db", [System.Convert]::FromBase64String($dbBase64))
           echo "Restored database"
         }
-      shell: pwsh
 
     - name: Build Backend (PyInstaller)
       working-directory: ./backend
@@ -64,9 +67,8 @@ jobs:
     - name: Install Frontend Dependencies
       run: npm install --legacy-peer-deps
 
-    - name: Build Frontend (Static Export)
+    - name: Build Frontend (Next.js Standalone)
       run: npm run build
-      # Creates static files in 'out' folder
 
     - name: Install Electron Dependencies
       working-directory: ./electron
