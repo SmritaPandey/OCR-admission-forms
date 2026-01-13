@@ -17,6 +17,10 @@
     ],
     "author": "Smrita Pandey",
     "license": "ISC",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/SmritaPandey/OCR-admission-forms"
+    },
     "devDependencies": {
         "electron": "^28.1.0",
         "electron-builder": "^24.9.1"
@@ -26,6 +30,7 @@
     },
     "build": {
         "appId": "com.smrita.ocrformextractor",
+        "publish": null,
         "win": {
             "target": "nsis",
             "icon": "resources/icon.ico"
