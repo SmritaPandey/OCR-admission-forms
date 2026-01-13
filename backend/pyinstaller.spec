@@ -15,14 +15,13 @@ a = Analysis(
     pathex=[],
     binaries=[],
     datas=[
-        ('alembic.ini', '.'),
-        # Add other static data if needed
+        # alembic.ini removed - not required for runtime
     ],
     hiddenimports=hidden_imports,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=['models', 'tests'],  # Explicitly exclude the heavy models directory
+    excludes=['models', 'tests', 'tesserocr'],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=block_cipher,
@@ -41,7 +40,7 @@ exe = EXE(
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
-    console=True,  # Set to False to hide console window in production
+    console=True,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
