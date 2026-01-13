@@ -1,24 +1,30 @@
 "use client";
 
+// Required for Next.js static export - returns empty array for dynamic routes
+// The actual IDs will be handled at runtime via client-side navigation
+export function generateStaticParams() {
+  return [];
+}
+
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { apiService, StudentProfileDetail } from '@/lib/api';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle 
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
-  User, 
-  FileText, 
-  ChevronLeft, 
-  Mail, 
-  Phone, 
-  MapPin, 
+import {
+  User,
+  FileText,
+  ChevronLeft,
+  Mail,
+  Phone,
+  MapPin,
   Calendar,
   Eye,
   Download
@@ -30,7 +36,7 @@ export default function StudentProfilePage() {
   const { id } = useParams();
   const router = useRouter();
   const profileId = parseInt(id as string);
-  
+
   const [profile, setProfile] = useState<StudentProfileDetail | null>(null);
   const [loading, setLoading] = useState(true);
 

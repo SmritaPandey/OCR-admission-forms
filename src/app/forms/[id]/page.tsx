@@ -1,5 +1,11 @@
 "use client";
 
+// Required for Next.js static export - returns empty array for dynamic routes
+// The actual IDs will be handled at runtime via client-side navigation
+export function generateStaticParams() {
+  return [];
+}
+
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { apiService, FormDetail, FormVerification, OCRProvider } from '@/lib/api';
