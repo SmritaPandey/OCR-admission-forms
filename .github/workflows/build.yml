@@ -40,14 +40,14 @@ jobs:
         node-version: 20
 
     - name: Install Frontend Dependencies
-      run: npm install
+      run: npm install --legacy-peer-deps
 
     - name: Build Frontend (Next.js Export)
       run: npm run build
 
     - name: Install Electron Dependencies
       working-directory: ./electron
-      run: npm install
+      run: npm install --legacy-peer-deps
 
     - name: Build Electron App (Windows)
       working-directory: ./electron
