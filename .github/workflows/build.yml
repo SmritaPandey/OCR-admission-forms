@@ -50,6 +50,12 @@ jobs:
       working-directory: ./electron
       run: npm install --legacy-peer-deps
 
+    - name: Generate Windows Icon
+      working-directory: ./electron
+      run: |
+        npm install png-to-ico --save-dev
+        npx png-to-ico resources/icon.png > resources/icon.ico
+
     - name: Build Electron App (Windows)
       working-directory: ./electron
       run: npm run dist
