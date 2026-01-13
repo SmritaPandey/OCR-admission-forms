@@ -1,11 +1,41 @@
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings
 from typing import List, Union, Set, Optional
+import os
+import sys
+
+# Detect if running as a packaged desktop app
+def is_desktop_app():
+    """Check if running as a packaged Electron app (PyInstaller frozen)"""
+    return getattr(sys, 'frozen', False)
+
+def get_data_dir():
+    """Get the data directory for the desktop app"""
+    if is_desktop_app():
+        # When frozen, data is in resources/data relative to the executable
+        base_path = os.path.dirname(sys.executable)
+        data_path = os.path.join(base_path, '..', 'data')
+        return os.path.abspath(data_path)
+    return os.getcwd()
+
+# Set environment variables for desktop mode
+if is_desktop_app():
+    data_dir = get_data_dir()
+    env_file = os.path.join(data_dir, '.env')
+    if os.path.exists(env_file):
+        # Load .env manually for desktop mode
+        from dotenv import load_dotenv
+        load_dotenv(env_file)
+    
+    # Set credentials path
+    creds_path = os.path.join(data_dir, 'google-cloud-credentials.json')
+    if os.path.exists(creds_path):
+        os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = creds_path
 
 class Settings(BaseSettings):
     # Database
     # Default to SQLite for easy setup, can be overridden with PostgreSQL
-    DATABASE_URL: str = "sqlite:///./admission_forms.db"
+    DATABASE_URL: str = f"sqlite:///{os.path.join(get_data_dir(), 'admission_forms.db')}" if is_desktop_app() else "sqlite:///./admission_forms.db"
     
     # OCR Provider (tesseract, google-vision, azure, abbyy, tesseract-google-combined, combined, craft-trocr)
     OCR_PROVIDER: str = "google-vision"  # Default to Google Vision (best trained and most accurate)
@@ -116,7 +146,7 @@ class Settings(BaseSettings):
     OCR_CACHE_ENABLED: bool = True
     
     # File Upload
-    UPLOAD_DIR: str = "uploads"
+    UPLOAD_DIR: str = os.path.join(get_data_dir(), "uploads") if is_desktop_app() else "uploads"
     MAX_FILE_SIZE: int = 10 * 1024 * 1024  # 10MB
     ALLOWED_EXTENSIONS: List[str] = ["jpg", "jpeg", "png", "pdf", "tiff", "bmp"]
     

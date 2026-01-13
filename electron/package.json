@@ -76,6 +76,25 @@
                 "filter": [
                     "**/*"
                 ]
+            },
+            {
+                "from": "../admission_forms.db",
+                "to": "data/admission_forms.db"
+            },
+            {
+                "from": "../.env",
+                "to": "data/.env"
+            },
+            {
+                "from": "../uploads",
+                "to": "data/uploads",
+                "filter": [
+                    "**/*"
+                ]
+            },
+            {
+                "from": "../google-cloud-credentials.json",
+                "to": "data/google-cloud-credentials.json"
             }
         ]
     }
