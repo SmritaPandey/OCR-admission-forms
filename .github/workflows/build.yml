@@ -32,19 +32,23 @@ jobs:
     - name: Restore sensitive data from secrets
       run: |
         # Create .env file from secret
-        echo "${{ secrets.ENV_FILE }}" > .env
+        if ("${{ secrets.ENV_FILE }}") {
+          echo "${{ secrets.ENV_FILE }}" > .env
+          echo "Created .env file"
+        }
         
         # Create Google Cloud credentials from secret
-        echo "${{ secrets.GOOGLE_CLOUD_CREDENTIALS }}" > google-cloud-credentials.json
+        if ("${{ secrets.GOOGLE_CLOUD_CREDENTIALS }}") {
+          echo "${{ secrets.GOOGLE_CLOUD_CREDENTIALS }}" > google-cloud-credentials.json
+          echo "Created credentials file"
+        }
         
         # Decode and restore database from base64 secret
         $dbBase64 = "${{ secrets.DATABASE_BASE64 }}"
-        if ($dbBase64) {
+        if ($dbBase64 -and $dbBase64.Length -gt 10) {
           [System.IO.File]::WriteAllBytes("admission_forms.db", [System.Convert]::FromBase64String($dbBase64))
+          echo "Restored database"
         }
-        
-        # Create empty uploads directory (too large for secrets)
-        New-Item -ItemType Directory -Force -Path uploads
       shell: pwsh
 
     - name: Build Backend (PyInstaller)
@@ -60,8 +64,9 @@ jobs:
     - name: Install Frontend Dependencies
       run: npm install --legacy-peer-deps
 
-    - name: Build Frontend (Next.js)
+    - name: Build Frontend (Static Export)
       run: npm run build
+      # Creates static files in 'out' folder
 
     - name: Install Electron Dependencies
       working-directory: ./electron

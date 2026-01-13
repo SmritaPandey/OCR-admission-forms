@@ -1,7 +1,8 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from backend.config import settings
+from fastapi.responses import FileResponse, HTMLResponse
+from backend.config import settings, is_desktop_app, get_data_dir
 from backend.database import engine, Base
 from backend.api.routes import upload, forms, export, files, documents, students, students_export, batch_upload, annotation, training, auto_label
 import os
@@ -64,11 +65,70 @@ app.include_router(auto_label.router, prefix="/api", tags=["auto-label"])
 # Serve uploaded files
 app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
 
-@app.get("/")
-async def root():
-    return {"message": "Student Admission Form Digitization System API"}
+# Determine frontend path
+def get_frontend_path():
+    """Get path to static frontend files"""
+    if is_desktop_app():
+        # When running as packaged desktop app
+        import sys
+        base_path = os.path.dirname(sys.executable)
+        frontend_path = os.path.join(base_path, '..', 'frontend')
+        return os.path.abspath(frontend_path)
+    else:
+        # Development: frontend files in 'out' directory
+        return os.path.join(os.path.dirname(os.path.dirname(__file__)), 'out')
+
+FRONTEND_PATH = get_frontend_path()
+
+# Serve static frontend files (for desktop app)
+if os.path.exists(FRONTEND_PATH):
+    print(f"Serving frontend from: {FRONTEND_PATH}")
+    
+    @app.get("/")
+    async def serve_index():
+        """Serve the main index.html"""
+        index_path = os.path.join(FRONTEND_PATH, 'index.html')
+        if os.path.exists(index_path):
+            return FileResponse(index_path, media_type='text/html')
+        return HTMLResponse("<h1>Frontend not found</h1>", status_code=404)
+    
+    # Mount static files (CSS, JS, images, etc.)
+    app.mount("/_next", StaticFiles(directory=os.path.join(FRONTEND_PATH, '_next')), name="next_static")
+    
+    # Catch-all for SPA routes - must be LAST
+    @app.get("/{full_path:path}")
+    async def serve_spa(request: Request, full_path: str):
+        """Handle SPA routing - serve index.html for all routes"""
+        # Check if it's an API route
+        if full_path.startswith('api/'):
+            return HTMLResponse("Not found", status_code=404)
+        
+        # Check if file exists
+        file_path = os.path.join(FRONTEND_PATH, full_path)
+        if os.path.isfile(file_path):
+            return FileResponse(file_path)
+        
+        # For directory paths, look for index.html
+        if full_path and not full_path.endswith('/'):
+            dir_path = os.path.join(FRONTEND_PATH, full_path)
+            if os.path.isdir(dir_path):
+                index_path = os.path.join(dir_path, 'index.html')
+                if os.path.exists(index_path):
+                    return FileResponse(index_path, media_type='text/html')
+        
+        # Fallback to main index.html for SPA routing
+        index_path = os.path.join(FRONTEND_PATH, 'index.html')
+        if os.path.exists(index_path):
+            return FileResponse(index_path, media_type='text/html')
+        
+        return HTMLResponse("<h1>Page not found</h1>", status_code=404)
+else:
+    print(f"Frontend path not found: {FRONTEND_PATH} - API only mode")
+    
+    @app.get("/")
+    async def root():
+        return {"message": "Student Admission Form Digitization System API"}
 
 @app.get("/health")
 async def health():
     return {"status": "healthy"}
-

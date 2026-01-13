@@ -12,8 +12,7 @@
     "keywords": [
         "Electron",
         "OCR",
-        "FastAPI",
-        "Next.js"
+        "FastAPI"
     ],
     "author": "Smrita Pandey",
     "license": "ISC",
@@ -31,6 +30,7 @@
     "build": {
         "appId": "com.smrita.ocrformextractor",
         "publish": null,
+        "asar": true,
         "win": {
             "target": "nsis",
             "icon": "resources/icon.ico"
@@ -42,6 +42,12 @@
         "linux": {
             "target": "AppImage",
             "icon": "resources/icon.png"
+        },
+        "nsis": {
+            "oneClick": false,
+            "allowToChangeInstallationDirectory": true,
+            "installerIcon": "resources/icon.ico",
+            "uninstallerIcon": "resources/icon.ico"
         },
         "files": [
             "**/*",
@@ -58,21 +64,21 @@
             },
             {
                 "from": "../.next/standalone",
-                "to": "standalone",
+                "to": "nextjs",
                 "filter": [
                     "**/*"
                 ]
             },
             {
                 "from": "../.next/static",
-                "to": "standalone/.next/static",
+                "to": "nextjs/.next/static",
                 "filter": [
                     "**/*"
                 ]
             },
             {
                 "from": "../public",
-                "to": "standalone/public",
+                "to": "nextjs/public",
                 "filter": [
                     "**/*"
                 ]
@@ -84,13 +90,6 @@
             {
                 "from": "../.env",
                 "to": "data/.env"
-            },
-            {
-                "from": "../uploads",
-                "to": "data/uploads",
-                "filter": [
-                    "**/*"
-                ]
             },
             {
                 "from": "../google-cloud-credentials.json",
