@@ -42,8 +42,9 @@ jobs:
     - name: Install Frontend Dependencies
       run: npm install --legacy-peer-deps
 
-    - name: Build Frontend (Next.js Export)
+    - name: Build Frontend (Next.js)
       run: npm run build
+      # This creates .next folder with production build
 
     - name: Install Electron Dependencies
       working-directory: ./electron

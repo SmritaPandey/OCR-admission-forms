@@ -52,11 +52,28 @@
                 ]
             },
             {
-                "from": "../out",
-                "to": "frontend",
+                "from": "../.next",
+                "to": ".next",
                 "filter": [
                     "**/*"
                 ]
+            },
+            {
+                "from": "../node_modules",
+                "to": "node_modules",
+                "filter": [
+                    "next/**/*",
+                    "react/**/*",
+                    "react-dom/**/*"
+                ]
+            },
+            {
+                "from": "../package.json",
+                "to": "package.json"
+            },
+            {
+                "from": "../next.config.ts",
+                "to": "next.config.ts"
             }
         ]
     }

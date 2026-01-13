@@ -6,20 +6,16 @@ const treeKill = require('tree-kill');
 
 let mainWindow;
 let apiProcess;
+let nextProcess;
 const API_PORT = 8000;
+const NEXT_PORT = 3000;
 
-// Determine environment
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 
 function getBackendPath() {
     if (isDev) {
-        // In dev, assume venv is active or python is accessible
-        // For simplicity in dev, we might assume the user runs the backend manually?
-        // OR we strive to spawn it. Let's try to spawn it relative to project root.
-        return { command: 'python', args: ['-m', 'uvicorn', 'backend.main:app', '--reload', '--port', '8000'] };
+        return { command: 'python', args: ['-m', 'uvicorn', 'backend.main:app', '--reload', '--port', String(API_PORT)] };
     } else {
-        // In production, the backend is an executable in resources/backend
-        // Windows: api.exe, Mac/Linux: api
         const executableName = process.platform === 'win32' ? 'api.exe' : 'api';
         return {
             command: path.join(process.resourcesPath, 'backend', executableName),
@@ -36,16 +32,39 @@ function startBackend() {
 
     apiProcess = spawn(command, args, {
         cwd: cwd,
-        shell: isDev, // Needed for python in dev usually
-        env: { ...process.env, PORT: API_PORT.toString() }
+        shell: isDev,
+        env: { ...process.env, PORT: String(API_PORT) }
     });
 
     apiProcess.stdout.on('data', (data) => console.log(`Backend: ${data}`));
     apiProcess.stderr.on('data', (data) => console.error(`Backend Error: ${data}`));
+    apiProcess.on('close', (code) => console.log(`Backend process exited with code ${code}`));
+}
 
-    apiProcess.on('close', (code) => {
-        console.log(`Backend process exited with code ${code}`);
-    });
+function startNextServer() {
+    const cwd = isDev ? path.join(__dirname, '..') : process.resourcesPath;
+
+    if (isDev) {
+        // In dev, run next dev
+        console.log('Starting Next.js dev server...');
+        nextProcess = spawn('npm', ['run', 'dev'], {
+            cwd: cwd,
+            shell: true,
+            env: { ...process.env, PORT: String(NEXT_PORT) }
+        });
+    } else {
+        // In prod, run next start (requires .next folder to be packaged)
+        console.log('Starting Next.js production server...');
+        nextProcess = spawn('node', [path.join(cwd, 'node_modules/next/dist/bin/next'), 'start', '-p', String(NEXT_PORT)], {
+            cwd: cwd,
+            shell: process.platform === 'win32',
+            env: { ...process.env }
+        });
+    }
+
+    nextProcess.stdout.on('data', (data) => console.log(`Next.js: ${data}`));
+    nextProcess.stderr.on('data', (data) => console.error(`Next.js Error: ${data}`));
+    nextProcess.on('close', (code) => console.log(`Next.js process exited with code ${code}`));
 }
 
 function createWindow() {
@@ -61,29 +80,24 @@ function createWindow() {
         },
     });
 
-    // Load Frontend
+    // Always load from Next.js server
+    mainWindow.loadURL(`http://localhost:${NEXT_PORT}`);
+
     if (isDev) {
-        // In dev, assume Next.js is running on 3000
-        mainWindow.loadURL('http://localhost:3000');
         mainWindow.webContents.openDevTools();
-    } else {
-        // In prod, load from static export
-        const startUrl = path.join(process.resourcesPath, 'frontend', 'index.html');
-        mainWindow.loadFile(startUrl);
     }
 }
 
-// Check if backend is ready
-function checkBackendReady() {
+function checkServerReady(port, name) {
     return new Promise((resolve, reject) => {
-        const tryConnect = (retries = 20) => {
-            http.get(`http://localhost:${API_PORT}/docs`, (res) => {
-                if (res.statusCode === 200) resolve();
+        const tryConnect = (retries = 30) => {
+            http.get(`http://localhost:${port}`, (res) => {
+                if (res.statusCode === 200 || res.statusCode === 404) resolve();
                 else if (retries > 0) setTimeout(() => tryConnect(retries - 1), 1000);
-                else reject(new Error('Backend failed to start'));
+                else reject(new Error(`${name} failed to start`));
             }).on('error', () => {
                 if (retries > 0) setTimeout(() => tryConnect(retries - 1), 1000);
-                else reject(new Error('Backend connection refused'));
+                else reject(new Error(`${name} connection refused`));
             });
         };
         tryConnect();
@@ -92,14 +106,19 @@ function checkBackendReady() {
 
 app.whenReady().then(async () => {
     startBackend();
+    startNextServer();
+
     try {
-        await checkBackendReady();
+        console.log('Waiting for servers to start...');
+        await Promise.all([
+            checkServerReady(API_PORT, 'Backend'),
+            checkServerReady(NEXT_PORT, 'Next.js')
+        ]);
+        console.log('All servers ready!');
         createWindow();
     } catch (err) {
-        console.error('Failed to start backend:', err);
-        // Open window anyway to show error? or dialog?
-        // For now, crash or show simpler window
-        createWindow();
+        console.error('Failed to start servers:', err);
+        createWindow(); // Open anyway to show error
     }
 
     app.on('activate', () => {
@@ -115,6 +134,11 @@ app.on('will-quit', () => {
     if (apiProcess) {
         treeKill(apiProcess.pid, 'SIGTERM', (err) => {
             if (err) console.error('Failed to kill backend process:', err);
+        });
+    }
+    if (nextProcess) {
+        treeKill(nextProcess.pid, 'SIGTERM', (err) => {
+            if (err) console.error('Failed to kill Next.js process:', err);
         });
     }
 });
