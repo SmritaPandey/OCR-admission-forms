@@ -90,7 +90,7 @@ export interface FormExtractionResponse {
   result: ExtractedData;
 }
 
-export type DocumentCategory = 
+export type DocumentCategory =
   | "ID Proof"
   | "Academic Certificate"
   | "Medical Certificate"
@@ -136,7 +136,7 @@ export interface FormDetail extends FormResponse {
   extracted_data?: ExtractedData;
   student_profile_id?: number;
   documents?: Document[];
-  
+
   // Academic & Admission Details
   academic_session?: string;
   course?: string;
@@ -146,7 +146,7 @@ export interface FormDetail extends FormResponse {
   cuet_score?: string;
   college_roll_no?: string;
   date_of_admission?: string;
-  
+
   // Personal Details
   student_name?: string;
   first_name?: string;
@@ -161,7 +161,7 @@ export interface FormDetail extends FormResponse {
   blood_group?: string;
   below_poverty_line?: string;
   minority_category?: string;
-  
+
   // Address Details
   permanent_address?: string;
   permanent_address_line1?: string;
@@ -178,14 +178,14 @@ export interface FormDetail extends FormResponse {
   pincode?: string;
   city?: string;
   state?: string;
-  
+
   // Contact Details
   phone_number?: string;
   alternate_phone?: string;
   email?: string;
   emergency_contact_name?: string;
   emergency_contact_phone?: string;
-  
+
   // CUET Marks
   cuet_subject_1?: string;
   cuet_total_score_1?: string;
@@ -206,7 +206,7 @@ export interface FormDetail extends FormResponse {
   cuet_total_score_6?: string;
   cuet_score_obtained_6?: string;
   cuet_total_score?: string;
-  
+
   // Qualifying Examination
   twelfth_year?: string;
   twelfth_board?: string;
@@ -215,7 +215,7 @@ export interface FormDetail extends FormResponse {
   twelfth_percentage?: string;
   twelfth_school?: string;
   hindi_studied_upto?: string;
-  
+
   // Mother's Occupational Details
   mother_name?: string;
   mother_occupation?: string;
@@ -226,7 +226,7 @@ export interface FormDetail extends FormResponse {
   mother_landline_code?: string;
   mother_landline?: string;
   mother_phone?: string;
-  
+
   // Father's Occupational Details
   father_name?: string;
   father_occupation?: string;
@@ -237,7 +237,7 @@ export interface FormDetail extends FormResponse {
   father_landline_code?: string;
   father_landline?: string;
   father_phone?: string;
-  
+
   // Local Guardian's Details
   guardian_name?: string;
   guardian_relation?: string;
@@ -248,14 +248,14 @@ export interface FormDetail extends FormResponse {
   guardian_landline_code?: string;
   guardian_landline?: string;
   guardian_phone?: string;
-  
+
   // Personal Information
   annual_income?: string;
-  
+
   // Other Information
   du_enrollment_number?: string;
   hindi_medium_preference?: string;
-  
+
   // Category Certificate Details
   category_certificate_authority?: string;
   category_certificate_number?: string;
@@ -263,7 +263,7 @@ export interface FormDetail extends FormResponse {
   disability_percentage?: string;
   disability_type?: string;
   udid_number?: string;
-  
+
   // Educational Qualifications (Legacy)
   tenth_board?: string;
   tenth_year?: string;
@@ -271,13 +271,13 @@ export interface FormDetail extends FormResponse {
   tenth_school?: string;
   previous_qualification?: string;
   graduation_details?: string;
-  
+
   // Course Application Details (Legacy)
   course_applied?: string;
   application_number?: string;
   enrollment_number?: string;
   admission_date?: string;
-  
+
   // Document Checklist (Page 4)
   doc_admission_form?: string;
   doc_undertaking_ragging?: string;
@@ -293,7 +293,7 @@ export interface FormDetail extends FormResponse {
   doc_sports_eca?: string;
   doc_originals?: string;
   doc_photo_id?: string;
-  
+
   additional_info?: any;
   verified_date?: string;
 }
@@ -442,7 +442,7 @@ export interface FormVerification {
   twelfth_school?: string;
   previous_qualification?: string;
   graduation_details?: string;
-  
+
   // Document Checklist (Page 4)
   doc_admission_form?: string;
   doc_undertaking_ragging?: string;
@@ -458,7 +458,7 @@ export interface FormVerification {
   doc_sports_eca?: string;
   doc_originals?: string;
   doc_photo_id?: string;
-  
+
   additional_info?: any;
 }
 
@@ -507,9 +507,15 @@ export const apiService = {
   },
 
   // List forms
-  listForms: async (skip: number = 0, limit: number = 20, status?: string): Promise<FormDetail[]> => {
+  listForms: async (
+    skip: number = 0,
+    limit: number = 20,
+    status?: string,
+    sort_by?: string,
+    sort_order?: string
+  ): Promise<FormDetail[]> => {
     const response = await api.get<FormDetail[]>('/api/forms/', {
-      params: { skip, limit, status },
+      params: { skip, limit, status, sort_by, sort_order },
     });
     return response.data;
   },
@@ -574,6 +580,14 @@ export const apiService = {
     await api.delete(`/api/forms/${formId}`);
   },
 
+  // Bulk delete forms
+  bulkDeleteForms: async (formIds: number[]): Promise<void> => {
+    await api.post('/api/forms/bulk-delete', formIds);
+  },
+
+  // Helper to get base URL for direct links (like exports)
+  getBaseUrl: () => API_BASE_URL,
+
   // Upload multiple files for a form (multiple pages)
   uploadFormPages: async (files: File[], ocrProvider?: string): Promise<FormResponse> => {
     const formData = new FormData();
@@ -603,7 +617,7 @@ export const apiService = {
     if (description) formData.append('description', description);
     if (formId) formData.append('form_id', formId.toString());
     if (studentProfileId) formData.append('student_profile_id', studentProfileId.toString());
-    
+
     const response = await api.post<Document>('/api/documents/upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
@@ -672,18 +686,18 @@ export const apiService = {
       pincode?: string;
     }
   ): Promise<StudentProfile[]> => {
-    const params: any = { 
-      skip, 
-      limit, 
-      student_name: studentName, 
+    const params: any = {
+      skip,
+      limit,
+      student_name: studentName,
       roll_number: rollNumber,
-      aadhar_number: aadharNumber 
+      aadhar_number: aadharNumber
     };
-    
+
     if (filters) {
       Object.assign(params, filters);
     }
-    
+
     const response = await api.get<StudentProfile[]>('/api/students/', { params });
     return response.data;
   },
@@ -902,7 +916,7 @@ export const apiService = {
     });
     if (ocrProvider) formData.append('ocr_provider', ocrProvider);
     formData.append('pages_per_form', pagesPerForm.toString());
-    
+
     const response = await api.post('/api/batch-upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
@@ -962,7 +976,7 @@ export const apiService = {
     formData.append('document_category', documentCategory);
     if (studentProfileId) formData.append('student_profile_id', studentProfileId.toString());
     if (formId) formData.append('form_id', formId.toString());
-    
+
     const response = await api.post<Document[]>('/api/documents/bulk-upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',

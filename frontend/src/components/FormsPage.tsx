@@ -42,44 +42,47 @@ function FormsPage() {
   const [itemsPerPage, setItemsPerPage] = useState(50);
   const [totalCount, setTotalCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>(''); // Empty means all statuses
+  const [statusFilter, setStatusFilter] = useState<string>('');
+
+  const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' }>({
+    key: 'upload_date',
+    direction: 'desc'
+  });
+  const [selectedForms, setSelectedForms] = useState<number[]>([]);
 
   const loadForms = useCallback(async () => {
     try {
       setLoading(true);
-      
       const skip = (currentPage - 1) * itemsPerPage;
-      
-      // Use status filter - backend listForms accepts status parameter
-      // If statusFilter is empty, pass undefined to get all forms (all statuses)
       const statusParam = statusFilter && statusFilter !== '' ? statusFilter : undefined;
-      const allForms = await apiService.listForms(skip, itemsPerPage, statusParam);
-      
-      // Filter by search query if provided (client-side)
-      // Note: For large datasets, search should be server-side
+      const allForms = await apiService.listForms(
+        skip,
+        itemsPerPage,
+        statusParam,
+        sortConfig.key,
+        sortConfig.direction
+      );
+
       const searchFilteredForms = searchQuery.trim()
-        ? allForms.filter(form => 
-            form.filename?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            form.student_name?.toLowerCase().includes(searchQuery.toLowerCase())
-          )
+        ? allForms.filter(form =>
+          form.filename?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          form.student_name?.toLowerCase().includes(searchQuery.toLowerCase())
+        )
         : allForms;
-      
+
       setForms(searchFilteredForms);
-      
-      // Estimate total - if we got less than requested, that's likely the total for this page
+
       if (searchFilteredForms.length < itemsPerPage) {
         setTotalCount(skip + searchFilteredForms.length);
       } else {
-        // Estimate there are more pages
         setTotalCount(skip + itemsPerPage + 1);
       }
     } catch (error) {
       console.error('Failed to load forms:', error);
-      alert('Failed to load forms. Please try again.');
     } finally {
       setLoading(false);
     }
-  }, [currentPage, itemsPerPage, statusFilter, searchQuery]);
+  }, [currentPage, itemsPerPage, statusFilter, searchQuery, sortConfig]);
 
   useEffect(() => {
     loadForms();
@@ -93,7 +96,7 @@ function FormsPage() {
 
   const handleStatusChange = (status: string) => {
     setStatusFilter(status);
-    setCurrentPage(1); // Reset to first page when status changes
+    setCurrentPage(1);
   };
 
   const handleResetFilters = () => {
@@ -112,21 +115,58 @@ function FormsPage() {
     setCurrentPage(1);
   };
 
+  const handleSort = (key: string) => {
+    setSortConfig(prev => ({
+      key,
+      direction: prev.key === key && prev.direction === 'desc' ? 'asc' : 'desc'
+    }));
+    setCurrentPage(1);
+  };
+
+  const handleExport = async (format: string) => {
+    window.location.href = `${apiService.getBaseUrl()}/api/forms/export?format=${format}${statusFilter ? `&status=${statusFilter}` : ''}`;
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedForms.length === forms.length && forms.length > 0) {
+      setSelectedForms([]);
+    } else {
+      setSelectedForms(forms.map(f => f.id));
+    }
+  };
+
+  const toggleSelect = (id: number) => {
+    setSelectedForms(prev =>
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedForms.length === 0) return;
+    if (!window.confirm(`Are you sure you want to delete ${selectedForms.length} selected forms?`)) return;
+
+    try {
+      await apiService.bulkDeleteForms(selectedForms);
+      setSelectedForms([]);
+      loadForms();
+    } catch (error: any) {
+      alert('Failed to delete forms');
+    }
+  };
+
   const handleDelete = async (formId: number, filename: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
-    if (!window.confirm(`Are you sure you want to delete "${filename}"? This action cannot be undone.`)) {
+
+    if (!window.confirm(`Are you sure you want to delete "${filename}"?`)) {
       return;
     }
 
     try {
       await apiService.deleteForm(formId);
-      setForms(forms.filter(f => f.id !== formId));
-      // Reload to get updated count
       loadForms();
     } catch (error: any) {
-      alert(`Failed to delete form: ${error.response?.data?.detail || error.message}`);
+      alert('Failed to delete form');
     }
   };
 
@@ -149,11 +189,26 @@ function FormsPage() {
           </div>
         </div>
         <div className="page-actions">
+          {selectedForms.length > 0 && (
+            <button onClick={handleBulkDelete} className="btn btn-destructive btn-sm mr-2">
+              Delete Selected ({selectedForms.length})
+            </button>
+          )}
+          <div className="export-dropdown">
+            <button className="btn btn-secondary btn-sm dropdown-trigger">
+              Export Data ↓
+            </button>
+            <div className="dropdown-menu">
+              <button onClick={() => handleExport('csv')} className="dropdown-item text-xs">CSV Format</button>
+              <button onClick={() => handleExport('excel')} className="dropdown-item text-xs">Excel Spreadsheet</button>
+              <button onClick={() => handleExport('pdf')} className="dropdown-item text-xs">PDF Document</button>
+              <button onClick={() => handleExport('json')} className="dropdown-item text-xs">JSON Raw</button>
+            </div>
+          </div>
           <span className="total-badge">{totalCount.toLocaleString()} total</span>
         </div>
       </div>
 
-      {/* Filters Bar */}
       <div className="filters-bar-container">
         <form onSubmit={handleSearch} className="filters-form">
           <div className="filters-row">
@@ -196,7 +251,6 @@ function FormsPage() {
         </form>
       </div>
 
-      {/* Table */}
       {loading && forms.length === 0 ? (
         <div className="loading-state">
           <div className="spinner"></div>
@@ -226,18 +280,34 @@ function FormsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHeaderCell>ID</TableHeaderCell>
-                  <TableHeaderCell>Filename</TableHeaderCell>
-                  <TableHeaderCell>Student Name</TableHeaderCell>
-                  <TableHeaderCell>Status</TableHeaderCell>
+                  <TableHeaderCell>
+                    <input type="checkbox" checked={selectedForms.length === forms.length && forms.length > 0} onChange={toggleSelectAll} />
+                  </TableHeaderCell>
+                  <TableHeaderCell onClick={() => handleSort('id')} className="cursor-pointer">
+                    ID {sortConfig.key === 'id' && (sortConfig.direction === 'desc' ? '↓' : '↑')}
+                  </TableHeaderCell>
+                  <TableHeaderCell onClick={() => handleSort('filename')} className="cursor-pointer">
+                    Filename {sortConfig.key === 'filename' && (sortConfig.direction === 'desc' ? '↓' : '↑')}
+                  </TableHeaderCell>
+                  <TableHeaderCell onClick={() => handleSort('student_name')} className="cursor-pointer">
+                    Student Name {sortConfig.key === 'student_name' && (sortConfig.direction === 'desc' ? '↓' : '↑')}
+                  </TableHeaderCell>
+                  <TableHeaderCell onClick={() => handleSort('status')} className="cursor-pointer">
+                    Status {sortConfig.key === 'status' && (sortConfig.direction === 'desc' ? '↓' : '↑')}
+                  </TableHeaderCell>
                   <TableHeaderCell>OCR Provider</TableHeaderCell>
-                  <TableHeaderCell>Upload Date</TableHeaderCell>
+                  <TableHeaderCell onClick={() => handleSort('upload_date')} className="cursor-pointer">
+                    Upload Date {sortConfig.key === 'upload_date' && (sortConfig.direction === 'desc' ? '↓' : '↑')}
+                  </TableHeaderCell>
                   <TableHeaderCell>Actions</TableHeaderCell>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {forms.map((form) => (
                   <TableRow key={form.id}>
+                    <TableCell>
+                      <input type="checkbox" checked={selectedForms.includes(form.id)} onChange={() => toggleSelect(form.id)} />
+                    </TableCell>
                     <TableCell className="font-medium">{form.id}</TableCell>
                     <TableCell className="font-semibold">
                       <Link to={`/forms/${form.id}`} className="form-link">

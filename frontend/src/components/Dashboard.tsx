@@ -23,10 +23,10 @@ function Dashboard() {
       setLoading(true);
       const data = await apiService.listForms(0, 10);
       setForms(data);
-      
+
       // Calculate stats
       const allForms = await apiService.listForms(0, 1000);
-      
+
       // Count documents
       let documentCount = 0;
       try {
@@ -35,7 +35,7 @@ function Dashboard() {
       } catch (err) {
         console.error('Failed to load documents:', err);
       }
-      
+
       // Count students
       let studentCount = 0;
       try {
@@ -44,7 +44,7 @@ function Dashboard() {
       } catch (err) {
         console.error('Failed to load students:', err);
       }
-      
+
       setStats({
         total: allForms.length,
         verified: allForms.filter(f => f.status === 'verified').length,
@@ -122,48 +122,48 @@ function Dashboard() {
 
   return (
     <div className="dashboard">
-      <section className="dashboard-hero">
+      <section className="dashboard-hero premium-card">
         <div className="hero-content">
-          <p className="hero-eyebrow">Admissions Cycle {currentYear} – {nextYear}</p>
-          <h1>Admissions Command Center</h1>
-          <p className="hero-copy">
+          <p className="hero-eyebrow badge badge-primary">Admissions Cycle {currentYear} – {nextYear}</p>
+          <h1 className="text-premium">Admissions Command Center</h1>
+          <p className="hero-copy text-muted">
             Monitor intake momentum, track verification progress, and coordinate applicant follow-up
             — all from a single, college-ready workspace.
           </p>
           <div className="hero-actions">
-            <Link to="/upload" className="btn btn-primary">
+            <Link to="/upload" className="btn btn-primary btn-lg shadow-sm">
               Upload New Form
             </Link>
-            <Link to="/search" className="btn btn-outline">
+            <Link to="/search" className="btn btn-secondary btn-lg">
               Advanced Search
             </Link>
           </div>
         </div>
         <div className="hero-summary">
-          <div className="summary-card">
+          <div className="summary-card glassmorphism">
             <span className="summary-label">Verified</span>
-            <span className="summary-value">{stats.verified}</span>
-            <span className="summary-description">Students cleared for onboarding</span>
+            <span className="summary-value text-success">{stats.verified}</span>
+            <span className="summary-description">Students cleared</span>
           </div>
-          <div className="summary-card">
-            <span className="summary-label">Pending Review</span>
-            <span className="summary-value">{stats.pending}</span>
-            <span className="summary-description">Awaiting quality checks</span>
+          <div className="summary-card glassmorphism">
+            <span className="summary-label">Pending</span>
+            <span className="summary-value text-warning">{stats.pending}</span>
+            <span className="summary-description">Awaiting checks</span>
           </div>
-          <div className="summary-card">
-            <span className="summary-label">Documents on File</span>
-            <span className="summary-value">{stats.documents}</span>
-            <span className="summary-description">Supporting records archived</span>
+          <div className="summary-card glassmorphism">
+            <span className="summary-label">Records</span>
+            <span className="summary-value text-primary">{stats.documents}</span>
+            <span className="summary-description">Files archived</span>
           </div>
         </div>
       </section>
 
       <div className="stats-grid">
         {overviewStats.map((item) => (
-          <div className="stat-card" key={item.label}>
-            <span className="stat-chip">{item.label}</span>
-            <div className="stat-value">{item.value}</div>
-            <p className="stat-description">{item.description}</p>
+          <div className="stat-card hover-lift" key={item.label}>
+            <span className="stat-chip badge badge-outline">{item.label}</span>
+            <div className="stat-value">{item.value.toLocaleString()}</div>
+            <p className="stat-description text-xs text-muted">{item.description}</p>
           </div>
         ))}
       </div>

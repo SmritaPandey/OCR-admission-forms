@@ -29,7 +29,7 @@ function StudentsPage() {
     try {
       setLoading(true);
       const skip = (currentPage - 1) * itemsPerPage;
-      
+
       // For now, we'll estimate total by loading a larger batch and counting
       // In a production system, the API should return total count
       const data = await apiService.listStudentProfiles(
@@ -37,9 +37,9 @@ function StudentsPage() {
         itemsPerPage,
         searchQuery.trim() || undefined
       );
-      
+
       setStudents(data);
-      
+
       // Estimate total: if we got less than requested, that's the total
       // Otherwise, estimate based on current page
       if (data.length < itemsPerPage) {
@@ -95,6 +95,17 @@ function StudentsPage() {
           </div>
         </div>
         <div className="page-actions">
+          <div className="export-dropdown">
+            <button className="btn btn-secondary btn-sm dropdown-trigger">
+              Export Students ↓
+            </button>
+            <div className="dropdown-menu">
+              <button onClick={() => window.location.href = `${apiService.getBaseUrl()}/api/students/export/csv`} className="dropdown-item text-xs">CSV Data</button>
+              <button onClick={() => window.location.href = `${apiService.getBaseUrl()}/api/students/export/excel`} className="dropdown-item text-xs">Excel Sheet</button>
+              <button onClick={() => window.location.href = `${apiService.getBaseUrl()}/api/students/export/pdf`} className="dropdown-item text-xs">PDF Report</button>
+              <button onClick={() => window.location.href = `${apiService.getBaseUrl()}/api/students/export/json`} className="dropdown-item text-xs">JSON Raw</button>
+            </div>
+          </div>
           <span className="total-badge">{totalCount.toLocaleString()} total</span>
         </div>
       </div>

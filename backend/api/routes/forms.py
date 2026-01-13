@@ -1,7 +1,8 @@
 import logging
 
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, HTTPException, Depends, Query, Body
 from sqlalchemy.orm import Session
+from sqlalchemy import or_, and_, desc, asc
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta
 from backend.database import get_db, AdmissionForm, FormStatus, StudentDocument
@@ -64,15 +65,24 @@ async def list_forms(
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=1000),
     status: Optional[FormStatus] = None,
+    sort_by: Optional[str] = Query("upload_date", description="Field to sort by"),
+    sort_order: Optional[str] = Query("desc", regex="^(asc|desc)$"),
     db: Session = Depends(get_db)
 ):
-    """List all admission forms with pagination"""
+    """List all admission forms with pagination and sorting"""
     query = db.query(AdmissionForm)
     
     if status:
         query = query.filter(AdmissionForm.status == status)
     
-    forms = query.order_by(AdmissionForm.upload_date.desc()).offset(skip).limit(limit).all()
+    # Map sort_by field
+    sort_field = getattr(AdmissionForm, sort_by, AdmissionForm.upload_date)
+    if sort_order == "desc":
+        query = query.order_by(desc(sort_field))
+    else:
+        query = query.order_by(asc(sort_field))
+    
+    forms = query.offset(skip).limit(limit).all()
     
     # Include documents for each form
     from backend.models.document import DocumentResponse
@@ -798,84 +808,67 @@ async def update_form(
     db: Session = Depends(get_db)
 ):
     """Update form data. Use verify=True to mark as verified and link to student profile."""
+    if verify:
+        return await verify_form(form_id, verification, db)
+    
     form = db.query(AdmissionForm).filter(AdmissionForm.id == form_id).first()
     if not form:
         raise HTTPException(status_code=404, detail="Form not found")
+        
+    # Standard update logic
+    for field, value in verification.model_dump(exclude_unset=True).items():
+        if hasattr(form, field):
+            setattr(form, field, value)
+            
+    db.commit()
+    db.refresh(form)
+    return form
+
+@router.delete("/{form_id}", status_code=204)
+async def delete_form(form_id: int, db: Session = Depends(get_db)):
+    """Delete a specific admission form and its files"""
+    form = db.query(AdmissionForm).filter(AdmissionForm.id == form_id).first()
+    if not form:
+        raise HTTPException(status_code=404, detail="Form not found")
+        
+    # Delete physical file
+    try:
+        from pathlib import Path
+        upload_dir = Path(settings.UPLOAD_DIR).resolve()
+        full_file_path = upload_dir / form.file_path
+        if full_file_path.exists():
+            import os
+            os.remove(full_file_path)
+    except Exception as e:
+        logger.warning(f"Could not delete file for form {form_id}: {e}")
+        
+    db.delete(form)
+    db.commit()
+    return None
+
+@router.post("/bulk-delete", status_code=204)
+async def bulk_delete_forms(
+    form_ids: List[int] = Body(...),
+    db: Session = Depends(get_db)
+):
+    """Bulk delete admission forms"""
+    forms = db.query(AdmissionForm).filter(AdmissionForm.id.in_(form_ids)).all()
     
-    # Update form with ALL provided data
-    all_fields = [
-        # Basic Personal Details
-        'student_name', 'first_name', 'middle_name', 'surname',
-        'date_of_birth', 'gender', 'category', 'nationality', 'religion',
-        'aadhar_number', 'blood_group', 'below_poverty_line', 'minority_category',
+    for form in forms:
+        try:
+            from pathlib import Path
+            upload_dir = Path(settings.UPLOAD_DIR).resolve()
+            full_file_path = upload_dir / form.file_path
+            if full_file_path.exists():
+                import os
+                os.remove(full_file_path)
+        except Exception as e:
+            logger.warning(f"Could not delete file for form {form.id}: {e}")
         
-        # Academic & Admission Details
-        'academic_session', 'course', 'admission_category', 'admission_category_other',
-        'du_portal_form_number', 'cuet_score', 'college_roll_no', 'date_of_admission',
-        'course_applied', 'application_number', 'enrollment_number', 'admission_date',
-        'du_enrollment_number', 'hindi_medium_preference',
+        db.delete(form)
         
-        # Address Details
-        'permanent_address', 'permanent_address_line1', 'permanent_address_line2', 
-        'permanent_address_line3', 'permanent_state', 'permanent_pincode',
-        'correspondence_address', 'correspondence_address_line1', 'correspondence_address_line2',
-        'correspondence_address_line3', 'correspondence_state', 'correspondence_pincode',
-        'pincode', 'city', 'state',
-        
-        # Contact Details
-        'phone_number', 'alternate_phone', 'email', 
-        'emergency_contact_name', 'emergency_contact_phone',
-        
-        # Mother's Details
-        'mother_name', 'mother_occupation', 'mother_designation', 'mother_organization',
-        'mother_email', 'mother_mobile', 'mother_landline_code', 'mother_landline', 'mother_phone',
-        
-        # Father's Details
-        'father_name', 'father_occupation', 'father_designation', 'father_organization',
-        'father_email', 'father_mobile', 'father_landline_code', 'father_landline', 'father_phone',
-        
-        # Guardian Details
-        'guardian_name', 'guardian_relation', 'guardian_residential_address', 'guardian_organization',
-        'guardian_email', 'guardian_mobile', 'guardian_landline_code', 'guardian_landline', 'guardian_phone',
-        
-        # Family Income
-        'annual_income',
-        
-        # Academic History
-        'tenth_board', 'tenth_year', 'tenth_percentage', 'tenth_school',
-        'twelfth_board', 'twelfth_year', 'twelfth_percentage', 'twelfth_school',
-        'twelfth_roll_number', 'twelfth_institution', 'hindi_studied_upto',
-        'previous_qualification', 'graduation_details',
-        
-        # Certificate Details
-        'category_certificate_authority', 'category_certificate_number', 'category_certificate_date',
-        'disability_percentage', 'disability_type', 'udid_number',
-        
-        # CUET Marks (1-6 are columns, 7-10 go to additional_info)
-        'cuet_subject_1', 'cuet_total_score_1', 'cuet_score_obtained_1',
-        'cuet_subject_2', 'cuet_total_score_2', 'cuet_score_obtained_2',
-        'cuet_subject_3', 'cuet_total_score_3', 'cuet_score_obtained_3',
-        'cuet_subject_4', 'cuet_total_score_4', 'cuet_score_obtained_4',
-        'cuet_subject_5', 'cuet_total_score_5', 'cuet_score_obtained_5',
-        'cuet_subject_6', 'cuet_total_score_6', 'cuet_score_obtained_6',
-        'cuet_total_score',
-        
-        # Document Checklist
-        'doc_admission_form', 'doc_undertaking_ragging', 'doc_photographs',
-        'doc_cuet_scorecard', 'doc_class_xii_marksheet', 'doc_class_x_certificate',
-        'doc_class_xii_certificate', 'doc_character_certificate', 'doc_transfer_certificate',
-        'doc_hindi_certificate', 'doc_caste_certificate', 'doc_sports_eca',
-        'doc_originals', 'doc_photo_id',
-    ]
-    
-    for field in all_fields:
-        value = getattr(verification, field, None)
-        if value is not None:
-            # Check if the form model has this field before setting
-            if hasattr(form, field):
-                setattr(form, field, value)
-                
-    # Handle extra CUET subjects (7-10) by storing in additional_info
+    db.commit()
+    return None
     extra_cuet_data = {}
     for i in range(7, 11):
         for suffix in ['subject', 'total_score', 'score_obtained']:

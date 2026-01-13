@@ -6,16 +6,37 @@ import sys
 
 # Detect if running as a packaged desktop app
 def is_desktop_app():
-    """Check if running as a packaged Electron app (PyInstaller frozen)"""
+    """
+    Check if running as a packaged Electron app.
+    Checks both PyInstaller frozen state and DESKTOP_APP environment variable.
+    """
+    # Check for explicit environment variable from Electron
+    if os.environ.get('DESKTOP_APP') == '1':
+        return True
+    # Check for PyInstaller frozen state
     return getattr(sys, 'frozen', False)
 
 def get_data_dir():
     """Get the data directory for the desktop app"""
     if is_desktop_app():
-        # When frozen, data is in resources/data relative to the executable
-        base_path = os.path.dirname(sys.executable)
-        data_path = os.path.join(base_path, '..', 'data')
-        return os.path.abspath(data_path)
+        # Check if DATA_DIR environment variable is set (from Electron)
+        # This is the preferred way as Electron handles the AppData path
+        data_dir_env = os.environ.get('DATA_DIR')
+        if data_dir_env:
+            # Create directory if it doesn't exist
+            try:
+                os.makedirs(data_dir_env, exist_ok=True)
+            except Exception:
+                pass  # Will fail later if we can't create it
+            return os.path.abspath(data_dir_env)
+        
+        # Fallback for when frozen but no DATA_DIR set (shouldn't happen with correct Electron setup)
+        if getattr(sys, 'frozen', False):
+            base_path = os.path.dirname(sys.executable)
+            # Try to write relative to executable (might fail in Program Files)
+            # but better than CWD
+            return os.path.abspath(os.path.join(base_path, 'data'))
+            
     return os.getcwd()
 
 # Set environment variables for desktop mode
@@ -31,11 +52,17 @@ if is_desktop_app():
     creds_path = os.path.join(data_dir, 'google-cloud-credentials.json')
     if os.path.exists(creds_path):
         os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = creds_path
+        
+    # Force set critical paths to ensure absolute paths in AppData are used
+    # This overrides any local .env files that might be present
+    os.environ['DATABASE_URL'] = f"sqlite:///{os.path.join(data_dir, 'admission_forms.db')}"
+    os.environ['UPLOAD_DIR'] = os.path.join(data_dir, "uploads")
 
 class Settings(BaseSettings):
     # Database
     # Default to SQLite for easy setup, can be overridden with PostgreSQL
-    DATABASE_URL: str = f"sqlite:///{os.path.join(get_data_dir(), 'admission_forms.db')}" if is_desktop_app() else "sqlite:///./admission_forms.db"
+    # In desktop mode, this is overridden by os.environ above
+    DATABASE_URL: str = "sqlite:///./admission_forms.db"
     
     # OCR Provider (tesseract, google-vision, azure, abbyy, tesseract-google-combined, combined, craft-trocr)
     OCR_PROVIDER: str = "google-vision"  # Default to Google Vision (best trained and most accurate)
@@ -146,7 +173,8 @@ class Settings(BaseSettings):
     OCR_CACHE_ENABLED: bool = True
     
     # File Upload
-    UPLOAD_DIR: str = os.path.join(get_data_dir(), "uploads") if is_desktop_app() else "uploads"
+    # In desktop mode, this is overridden by os.environ above
+    UPLOAD_DIR: str = "uploads"
     MAX_FILE_SIZE: int = 10 * 1024 * 1024  # 10MB
     ALLOWED_EXTENSIONS: List[str] = ["jpg", "jpeg", "png", "pdf", "tiff", "bmp"]
     

@@ -108,7 +108,7 @@ def form_to_json_dict(form: AdmissionForm) -> Dict[str, Any]:
 
 @router.get("/export")
 async def export_forms(
-    format: str = Query("csv", regex="^(csv|json)$"),
+    format: str = Query("csv", regex="^(csv|json|excel|pdf)$"),
     status: Optional[FormStatus] = Query(None),
     student_name: Optional[str] = Query(None),
     phone_number: Optional[str] = Query(None),
@@ -163,8 +163,95 @@ async def export_forms(
     
     if format == "csv":
         return export_to_csv(forms)
+    elif format == "excel":
+        return export_to_excel_forms(forms)
+    elif format == "pdf":
+        return export_to_pdf_forms(forms)
     else:
         return export_to_json(forms, filters_snapshot)
+
+def export_to_excel_forms(forms: Iterable[AdmissionForm]) -> StreamingResponse:
+    """Export forms to Excel format"""
+    import pandas as pd
+    
+    all_data = []
+    for form in forms:
+        record = form_to_json_dict(form)
+        # Flatten additional_info if needed or handle as string
+        if "additional_info" in record and record["additional_info"]:
+            record["additional_info"] = json.dumps(record["additional_info"])
+        all_data.append(record)
+        
+    df = pd.DataFrame(all_data)
+    
+    # Map internal IDs to Headers
+    header_map = {attr: header for attr, header in EXPORT_FIELDS}
+    df = df.rename(columns=header_map)
+    
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, sheet_name='Admission Forms', index=False)
+    
+    output.seek(0)
+    return StreamingResponse(
+        output,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=admission_forms.xlsx"}
+    )
+
+def export_to_pdf_forms(forms: Iterable[AdmissionForm]) -> StreamingResponse:
+    """Export forms to PDF format"""
+    try:
+        from reportlab.lib import colors
+        from reportlab.lib.pagesizes import A4, landscape
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.units import inch
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+        from reportlab.lib.enums import TA_CENTER
+        
+        output = io.BytesIO()
+        doc = SimpleDocTemplate(output, pagesize=landscape(A4), topMargin=0.5*inch, bottomMargin=0.5*inch)
+        
+        styles = getSampleStyleSheet()
+        title_style = ParagraphStyle('Title', parent=styles['Heading1'], alignment=TA_CENTER)
+        
+        elements = [Paragraph("Admission Forms Export", title_style), Spacer(1, 20)]
+        
+        # Select key fields for PDF (A4 landscape can't fit all 75 fields)
+        key_fields = [
+            ("id", "ID"), ("student_name", "Student Name"), ("status", "Status"),
+            ("course_applied", "Course"), ("phone_number", "Phone"), ("upload_date", "Date")
+        ]
+        
+        table_data = [[header for _, header in key_fields]]
+        for form in forms:
+            row = []
+            for attr, _ in key_fields:
+                val = getattr(form, attr, "")
+                if isinstance(val, datetime): val = val.strftime("%Y-%m-%d")
+                elif isinstance(val, FormStatus): val = val.value
+                row.append(str(val) if val is not None else "-")
+            table_data.append(row)
+            
+        t = Table(table_data)
+        t.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), colors.navy),
+            ('TEXTCOLOR', (0,0), (-1,0), colors.whitesmoke),
+            ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+            ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+            ('GRID', (0,0), (-1,-1), 0.5, colors.grey)
+        ]))
+        elements.append(t)
+        
+        doc.build(elements)
+        output.seek(0)
+        return StreamingResponse(
+            output,
+            media_type="application/pdf",
+            headers={"Content-Disposition": "attachment; filename=admission_forms.pdf"}
+        )
+    except ImportError:
+        raise HTTPException(status_code=500, detail="PDF export requires reportlab library. Install with: pip install reportlab")
 
 def export_to_csv(forms: Iterable[AdmissionForm]) -> StreamingResponse:
     """Export forms to CSV format using a streaming response."""

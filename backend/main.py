@@ -15,7 +15,23 @@ except Exception as e:
     print("The server will start, but database operations may fail.")
 
 # Ensure upload directory exists
-os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
+print(f"DEBUG: Starting backend")
+print(f"DEBUG: is_desktop_app() = {is_desktop_app()}")
+print(f"DEBUG: get_data_dir() = {get_data_dir()}")
+print(f"DEBUG: settings.DATABASE_URL = {settings.DATABASE_URL}")
+print(f"DEBUG: settings.UPLOAD_DIR = {settings.UPLOAD_DIR}")
+
+try:
+    os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
+except PermissionError as e:
+    print(f"WARNING: Could not create upload directory {settings.UPLOAD_DIR}: {e}")
+    print(f"DATA_DIR environment variable: {os.environ.get('DATA_DIR', 'NOT SET')}")
+    # Try to use a fallback location
+    import tempfile
+    fallback_upload_dir = os.path.join(tempfile.gettempdir(), "ocr_form_extractor", "uploads")
+    os.makedirs(fallback_upload_dir, exist_ok=True)
+    settings.UPLOAD_DIR = fallback_upload_dir
+    print(f"Using fallback upload directory: {fallback_upload_dir}")
 
 app = FastAPI(
     title="Student Admission Form Digitization System",
@@ -39,11 +55,11 @@ if hasattr(settings, 'ENVIRONMENT') and settings.ENVIRONMENT == "production":
         allow_headers=["*"],
     )
 else:
-    # Development: Allow all localhost origins using regex pattern
-    # This allows any port on localhost (5173, 5174, 5175, etc.)
+    # Development or Desktop: Allow all localhost origins and file:// protocol
+    # This allows any port on localhost (5173, 5174, 5175, etc.) and file:// for Electron
     app.add_middleware(
         CORSMiddleware,
-        allow_origin_regex=r"http://(localhost|127\.0\.0\.1):\d+",
+        allow_origin_regex=r"(http://(localhost|127\.0\.0\.1):\d+|file://.*)",
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -67,16 +83,29 @@ app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads"
 
 # Determine frontend path
 def get_frontend_path():
-    """Get path to static frontend files"""
+    """Get the path to frontend static files"""
+    base_dir = os.path.dirname(os.path.dirname(__file__))
+    
     if is_desktop_app():
-        # When running as packaged desktop app
+        # Desktop mode: check multiple possible locations
         import sys
-        base_path = os.path.dirname(sys.executable)
-        frontend_path = os.path.join(base_path, '..', 'frontend')
-        return os.path.abspath(frontend_path)
+        possible_paths = [
+            os.path.join(os.path.dirname(sys.executable), '..', 'frontend'),  # Packaged app
+            os.path.join(base_dir, 'frontend', 'dist'),  # Vite build
+            os.path.join(base_dir, 'out'),  # Next.js build (legacy)
+        ]
+        for path in possible_paths:
+            abs_path = os.path.abspath(path)
+            if os.path.exists(abs_path) and os.path.exists(os.path.join(abs_path, 'index.html')):
+                return abs_path
+        # Return first path even if not found (for error message)
+        return os.path.abspath(possible_paths[0])
     else:
-        # Development: frontend files in 'out' directory
-        return os.path.join(os.path.dirname(os.path.dirname(__file__)), 'out')
+        # Development: check Vite's dist folder first, then 'out'
+        vite_path = os.path.join(base_dir, 'frontend', 'dist')
+        if os.path.exists(vite_path):
+            return vite_path
+        return os.path.join(base_dir, 'out')
 
 FRONTEND_PATH = get_frontend_path()
 
@@ -92,8 +121,14 @@ if os.path.exists(FRONTEND_PATH):
             return FileResponse(index_path, media_type='text/html')
         return HTMLResponse("<h1>Frontend not found</h1>", status_code=404)
     
-    # Mount static files (CSS, JS, images, etc.)
-    app.mount("/_next", StaticFiles(directory=os.path.join(FRONTEND_PATH, '_next')), name="next_static")
+    # Mount static files (support both Next.js and Vite)
+    next_dir = os.path.join(FRONTEND_PATH, '_next')
+    if os.path.exists(next_dir):
+        app.mount("/_next", StaticFiles(directory=next_dir), name="next_static")
+        
+    assets_dir = os.path.join(FRONTEND_PATH, 'assets')
+    if os.path.exists(assets_dir):
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets_static")
     
     # Catch-all for SPA routes - must be LAST
     @app.get("/{full_path:path}")
@@ -104,6 +139,7 @@ if os.path.exists(FRONTEND_PATH):
             return HTMLResponse("Not found", status_code=404)
         
         # Check if file exists
+        # This handles assets like favicon.ico, logo.png, etc.
         file_path = os.path.join(FRONTEND_PATH, full_path)
         if os.path.isfile(file_path):
             return FileResponse(file_path)
