@@ -18,7 +18,7 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  outputFileTracingRoot: path.resolve(__dirname, '../../'),
+  // outputFileTracingRoot removed - was causing nested directory structure in standalone
   typescript: {
     ignoreBuildErrors: true,
   },
