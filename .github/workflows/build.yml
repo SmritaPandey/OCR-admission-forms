@@ -45,13 +45,14 @@ jobs:
         fi
 
     - name: Restore database from secret
-      if: ${{ secrets.DATABASE_BASE64 != '' }}
       shell: pwsh
       run: |
         $dbBase64 = "${{ secrets.DATABASE_BASE64 }}"
         if ($dbBase64 -and $dbBase64.Length -gt 10) {
           [System.IO.File]::WriteAllBytes("admission_forms.db", [System.Convert]::FromBase64String($dbBase64))
           echo "Restored database"
+        } else {
+          echo "No database secret provided, skipping"
         }
 
     - name: Build Backend (PyInstaller)
