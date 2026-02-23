@@ -1,0 +1,326 @@
+@page "/forms"
+@using Microsoft.EntityFrameworkCore
+@using OCRAdmissionForms.Core.Entities
+@using OCRAdmissionForms.Core.Enums
+@using OCRAdmissionForms.Infrastructure.Data
+@inject AppDbContext DbContext
+@inject NavigationManager Navigation
+
+<PageTitle>All Forms - SRCC Student DMS</PageTitle>
+
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="card border-0 mb-4 p-4 glass-effect" style="background: linear-gradient(135deg, var(--srcc-navy) 0%, var(--srcc-navy-light) 100%);">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2 class="fw-bold mb-0 text-white"><span class="bi bi-file-earmark-text-fill me-3"></span>Form Registry</h2>
+                <p class="text-white opacity-75 mb-0 small">Manage all uploaded and processed admission forms</p>
+            </div>
+            <div class="d-flex gap-2">
+                <button class="btn btn-light bg-opacity-25 border-0 text-white px-3" @onclick='() => Navigation.NavigateTo("upload")'>
+                    <span class="bi bi-plus-lg me-2"></span>Upload New
+                </button>
+                <button class="btn btn-light bg-opacity-10 border-0 text-white px-3" @onclick='() => Navigation.NavigateTo("batch-upload")'>
+                    <span class="bi bi-collection me-2"></span>Batch Upload
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Toolbar -->
+    <div class="card border-0 shadow-sm mb-3 p-3 bg-white rounded-4 card-no-hover">
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex gap-2 align-items-center">
+                <span class="text-muted small fw-semibold">@TotalCount records</span>
+                @if (SelectedIds.Any())
+                {
+                    <span class="badge bg-primary rounded-pill">@SelectedIds.Count selected</span>
+                    <button class="btn btn-sm btn-outline-danger rounded-pill px-3" @onclick="DeleteSelected">
+                        <span class="bi bi-trash me-1"></span>Delete Selected
+                    </button>
+                }
+            </div>
+            <div class="d-flex gap-2">
+                <!-- Export Dropdown -->
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-primary rounded-pill px-3 dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        <span class="bi bi-download me-1"></span>Export
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+                        <li><a class="dropdown-item" href="/api/export/forms" target="_blank"><span class="bi bi-file-earmark-excel me-2 text-success"></span>Export Excel</a></li>
+                        <li><a class="dropdown-item" href="/api/export/forms?format=csv" target="_blank"><span class="bi bi-filetype-csv me-2 text-primary"></span>Export CSV</a></li>
+                        <li><a class="dropdown-item" href="/api/export/forms?format=json" target="_blank"><span class="bi bi-filetype-json me-2 text-warning"></span>Export JSON</a></li>
+                    </ul>
+                </div>
+                <!-- AutoVerify -->
+                <button class="btn btn-sm btn-outline-success rounded-pill px-3" @onclick="AutoVerify" disabled="@isAutoVerifying">
+                    @if (isAutoVerifying)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1"></span>
+                    }
+                    else
+                    {
+                        <span class="bi bi-patch-check me-1"></span>
+                    }
+                    Auto-Verify
+                </button>
+            </div>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(toastMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show py-2 small" role="alert">
+            <span class="bi bi-check-circle me-2"></span>@toastMessage
+            <button type="button" class="btn-close btn-close-sm" @onclick="() => toastMessage = null"></button>
+        </div>
+    }
+
+    <!-- Filters Row -->
+    <div class="card border-0 shadow-sm mb-4 p-4 bg-white rounded-4 card-no-hover">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label small fw-bold text-secondary text-uppercase mb-2">Search</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-0"><span class="bi bi-search text-muted"></span></span>
+                    <input type="text" class="form-control bg-light border-0" placeholder="Name, filename, roll number..." @bind="SearchTerm" @bind:event="oninput" @onkeyup="HandleSearch" />
+                </div>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-bold text-secondary text-uppercase mb-2">Status</label>
+                <select class="form-select bg-light border-0" @bind="SelectedStatus" @bind:after="LoadFormData">
+                    <option value="">All</option>
+                    @foreach (var s in Enum.GetValues<FormStatus>())
+                    {
+                        <option value="@s">@s</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-bold text-secondary text-uppercase mb-2">Sort By</label>
+                <select class="form-select bg-light border-0" @bind="SortField" @bind:after="LoadFormData">
+                    <option value="date_desc">Newest First</option>
+                    <option value="date_asc">Oldest First</option>
+                    <option value="name_asc">Name A-Z</option>
+                    <option value="name_desc">Name Z-A</option>
+                    <option value="status">Status</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-primary w-100 py-2 rounded-3" @onclick="LoadFormData">
+                    <span class="bi bi-funnel me-2"></span>Apply
+                </button>
+            </div>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="p-5 text-center">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-3 text-secondary">Loading forms...</p>
+        </div>
+    }
+    else
+    {
+        <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white card-no-hover">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead>
+                        <tr>
+                            <th class="ps-4" style="width: 40px;">
+                                <input type="checkbox" class="form-check-input" @onchange="ToggleSelectAll" />
+                            </th>
+                            <th style="width: 60px;">ID</th>
+                            <th>Filename</th>
+                            <th>Student Name</th>
+                            <th>Course</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                            <th class="text-end pe-4" style="width: 160px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var form in FormList)
+                        {
+                            <tr>
+                                <td class="ps-4">
+                                    <input type="checkbox" class="form-check-input" checked="@SelectedIds.Contains(form.Id)" @onchange="() => ToggleSelect(form.Id)" />
+                                </td>
+                                <td class="fw-bold text-muted">#@form.Id</td>
+                                <td class="text-truncate small" style="max-width: 180px;" title="@form.Filename">@form.Filename</td>
+                                <td class="fw-semibold">@(string.IsNullOrEmpty(form.StudentName) ? "—" : form.StudentName)</td>
+                                <td class="small">@(string.IsNullOrEmpty(form.Course) ? "—" : form.Course)</td>
+                                <td>
+                                    @switch (form.Status)
+                                    {
+                                        case FormStatus.Verified:
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3">✓ Verified</span>
+                                            break;
+                                        case FormStatus.Extracted:
+                                            <span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill px-3">Extracted</span>
+                                            break;
+                                        case FormStatus.Error:
+                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-3">Error</span>
+                                            break;
+                                        default:
+                                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill px-3">@form.Status</span>
+                                            break;
+                                    }
+                                </td>
+                                <td class="text-muted small">@form.UploadDate.ToString("dd MMM yyyy")</td>
+                                <td class="text-end pe-4">
+                                    <div class="d-flex gap-1 justify-content-end">
+                                        <button class="btn btn-sm btn-outline-primary rounded-pill px-3" @onclick='() => Navigation.NavigateTo($"forms/{form.Id}")'>
+                                            <span class="bi bi-eye me-1"></span>View
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger rounded-pill px-2" @onclick="() => DeleteForm(form.Id)">
+                                            <span class="bi bi-trash"></span>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <div class="card-footer bg-white border-top d-flex justify-content-between align-items-center p-3">
+                <span class="text-muted small">Showing @(((_currentPage - 1) * PageSize) + 1)–@(Math.Min(_currentPage * PageSize, TotalCount)) of @TotalCount</span>
+                <div class="d-flex gap-2 align-items-center">
+                    <button class="btn btn-sm btn-outline-secondary px-3" disabled="@(_currentPage <= 1)" @onclick="PrevPage">
+                        <span class="bi bi-chevron-left"></span> Prev
+                    </button>
+                    <span class="badge bg-light text-dark border px-3 py-2">Page @_currentPage / @TotalPages</span>
+                    <button class="btn btn-sm btn-outline-secondary px-3" disabled="@(_currentPage >= TotalPages)" @onclick="NextPage">
+                        Next <span class="bi bi-chevron-right"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Delete Confirmation Modal -->
+@if (showDeleteConfirm)
+{
+    <div class="modal-overlay" @onclick="() => showDeleteConfirm = false">
+        <div class="modal-dialog-custom" @onclick:stopPropagation>
+            <h5 class="fw-bold mb-3"><span class="bi bi-exclamation-triangle text-danger me-2"></span>Confirm Delete</h5>
+            <p class="text-secondary">@deleteMessage</p>
+            <div class="d-flex gap-2 justify-content-end">
+                <button class="btn btn-light" @onclick="() => showDeleteConfirm = false">Cancel</button>
+                <button class="btn btn-danger" @onclick="ConfirmDelete">Delete</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private const int PageSize = 25;
+    private List<AdmissionForm> FormList = new();
+    private string SearchTerm = "";
+    private string? SelectedStatus;
+    private string SortField = "date_desc";
+    private int _currentPage = 1;
+    private int TotalCount = 0;
+    private int TotalPages => (int)Math.Ceiling((double)TotalCount / PageSize);
+    private bool isLoading = true;
+
+    private HashSet<int> SelectedIds = new();
+    private bool showDeleteConfirm = false;
+    private string deleteMessage = "";
+    private List<int> pendingDeleteIds = new();
+    private bool isAutoVerifying = false;
+    private string? toastMessage;
+
+    protected override async Task OnInitializedAsync() => await LoadFormData();
+
+    private async Task LoadFormData()
+    {
+        isLoading = true;
+        try
+        {
+            var query = DbContext.AdmissionForms.AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(SearchTerm))
+            {
+                query = query.Where(f => f.StudentName.Contains(SearchTerm) 
+                    || f.Filename.Contains(SearchTerm) 
+                    || f.CollegeRollNo.Contains(SearchTerm));
+            }
+
+            if (!string.IsNullOrEmpty(SelectedStatus) && Enum.TryParse<FormStatus>(SelectedStatus, out var status))
+            {
+                query = query.Where(f => f.Status == status);
+            }
+
+            query = SortField switch
+            {
+                "date_asc" => query.OrderBy(f => f.UploadDate),
+                "name_asc" => query.OrderBy(f => f.StudentName),
+                "name_desc" => query.OrderByDescending(f => f.StudentName),
+                "status" => query.OrderBy(f => f.Status),
+                _ => query.OrderByDescending(f => f.UploadDate)
+            };
+
+            TotalCount = await query.CountAsync();
+            FormList = await query.Skip((_currentPage - 1) * PageSize).Take(PageSize).ToListAsync();
+            SelectedIds.Clear();
+        }
+        finally { isLoading = false; }
+    }
+
+    private async Task HandleSearch(KeyboardEventArgs e) { if (e.Key == "Enter") { _currentPage = 1; await LoadFormData(); } }
+    private async Task PrevPage() { if (_currentPage > 1) { _currentPage--; await LoadFormData(); } }
+    private async Task NextPage() { if (_currentPage < TotalPages) { _currentPage++; await LoadFormData(); } }
+
+    private void ToggleSelect(int id) { if (!SelectedIds.Remove(id)) SelectedIds.Add(id); }
+    private void ToggleSelectAll(ChangeEventArgs e)
+    {
+        if ((bool)(e.Value ?? false)) SelectedIds = FormList.Select(f => f.Id).ToHashSet();
+        else SelectedIds.Clear();
+    }
+
+    private void DeleteForm(int id) { pendingDeleteIds = new List<int> { id }; deleteMessage = "Are you sure you want to delete this form? This action cannot be undone."; showDeleteConfirm = true; }
+    private void DeleteSelected() { pendingDeleteIds = SelectedIds.ToList(); deleteMessage = $"Delete {pendingDeleteIds.Count} selected form(s)? This action cannot be undone."; showDeleteConfirm = true; }
+
+    private async Task ConfirmDelete()
+    {
+        showDeleteConfirm = false;
+        var forms = await DbContext.AdmissionForms.Where(f => pendingDeleteIds.Contains(f.Id)).ToListAsync();
+        DbContext.AdmissionForms.RemoveRange(forms);
+        await DbContext.SaveChangesAsync();
+        toastMessage = $"{forms.Count} form(s) deleted successfully.";
+        pendingDeleteIds.Clear();
+        await LoadFormData();
+    }
+
+    private async Task AutoVerify()
+    {
+        isAutoVerifying = true;
+        try
+        {
+            var extracted = await DbContext.AdmissionForms
+                .Where(f => f.Status == FormStatus.Extracted)
+                .Where(f => f.StudentName != null && f.StudentName != "")
+                .ToListAsync();
+
+            int count = 0;
+            foreach (var form in extracted)
+            {
+                // Auto-verify forms that have essential data filled
+                if (!string.IsNullOrEmpty(form.StudentName) && !string.IsNullOrEmpty(form.Course))
+                {
+                    form.Status = FormStatus.Verified;
+                    count++;
+                }
+            }
+            await DbContext.SaveChangesAsync();
+            toastMessage = $"Auto-verified {count} form(s) with complete data.";
+            await LoadFormData();
+        }
+        finally { isAutoVerifying = false; }
+    }
+}

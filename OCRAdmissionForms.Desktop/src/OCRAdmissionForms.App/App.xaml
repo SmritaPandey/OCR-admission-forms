@@ -1,0 +1,101 @@
+﻿<Application x:Class="OCRAdmissionForms.App.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.modernwpf.com/2019"
+             StartupUri="MainWindow.xaml">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ui:ThemeResources />
+                <ui:XamlControlsResources />
+            </ResourceDictionary.MergedDictionaries>
+            
+            <!-- SRCC Brand Colors -->
+            <Color x:Key="SrccNavyBlue">#1E3A5F</Color>
+            <Color x:Key="SrccMaroon">#800020</Color>
+            <Color x:Key="SrccGold">#D4AF37</Color>
+            <Color x:Key="SrccOffWhite">#F5F5F5</Color>
+            <Color x:Key="SrccDarkText">#333333</Color>
+            
+            <!-- Color Brushes -->
+            <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource SrccNavyBlue}" />
+            <SolidColorBrush x:Key="SecondaryBrush" Color="{StaticResource SrccMaroon}" />
+            <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource SrccGold}" />
+            <SolidColorBrush x:Key="BackgroundBrush" Color="{StaticResource SrccOffWhite}" />
+            <SolidColorBrush x:Key="TextBrush" Color="{StaticResource SrccDarkText}" />
+            <SolidColorBrush x:Key="SidebarBrush" Color="{StaticResource SrccNavyBlue}" />
+            <SolidColorBrush x:Key="SidebarHoverBrush" Color="#2A4A6F" />
+            <SolidColorBrush x:Key="SidebarActiveBrush" Color="{StaticResource SrccMaroon}" />
+            
+            <!-- Status Colors -->
+            <SolidColorBrush x:Key="SuccessBrush" Color="#10B981" />
+            <SolidColorBrush x:Key="WarningBrush" Color="#F59E0B" />
+            <SolidColorBrush x:Key="ErrorBrush" Color="#EF4444" />
+            <SolidColorBrush x:Key="InfoBrush" Color="#3B82F6" />
+            
+            <!-- Sidebar Button Style -->
+            <Style x:Key="SidebarButton" TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
+                <Setter Property="HorizontalAlignment" Value="Stretch" />
+                <Setter Property="HorizontalContentAlignment" Value="Left" />
+                <Setter Property="Padding" Value="20,14" />
+                <Setter Property="Margin" Value="8,2" />
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="Foreground" Value="White" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="FontSize" Value="14" />
+                <Setter Property="FontWeight" Value="Medium" />
+                <Setter Property="Cursor" Value="Hand" />
+                <Style.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter Property="Background" Value="{StaticResource SidebarHoverBrush}" />
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+            
+            <!-- Active Sidebar Button Style -->
+            <Style x:Key="SidebarButtonActive" TargetType="Button" BasedOn="{StaticResource SidebarButton}">
+                <Setter Property="Background" Value="{StaticResource SidebarActiveBrush}" />
+                <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                <Setter Property="BorderThickness" Value="3,0,0,0" />
+            </Style>
+            
+            <!-- Primary Button Style -->
+            <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
+                <Setter Property="Background" Value="{StaticResource SecondaryBrush}" />
+                <Setter Property="Foreground" Value="White" />
+                <Setter Property="Padding" Value="20,10" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="Cursor" Value="Hand" />
+                <Style.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter Property="Background" Value="#9A1030" />
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+            
+            <!-- Card Style -->
+            <Style x:Key="CardBorder" TargetType="Border">
+                <Setter Property="Background" Value="White" />
+                <Setter Property="BorderBrush" Value="#E5E7EB" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="8" />
+                <Setter Property="Padding" Value="16" />
+            </Style>
+            
+            <!-- Header Text Style -->
+            <Style x:Key="HeaderText" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="24" />
+                <Setter Property="FontWeight" Value="Bold" />
+                <Setter Property="Foreground" Value="{StaticResource PrimaryBrush}" />
+            </Style>
+            
+            <!-- Subheader Text Style -->
+            <Style x:Key="SubheaderText" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="16" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+            </Style>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

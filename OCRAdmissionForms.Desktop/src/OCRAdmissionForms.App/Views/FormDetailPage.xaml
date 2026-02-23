@@ -1,0 +1,988 @@
+<Page x:Class="OCRAdmissionForms.App.Views.FormDetailPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.modernwpf.com/2019"
+      xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+      Title="Form Details">
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" MinWidth="400" />
+            <ColumnDefinition Width="420" />
+        </Grid.ColumnDefinitions>
+
+        <!-- Document Preview Panel -->
+        <Border Grid.Column="0" Background="#1e293b">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <!-- Zoom Controls -->
+                <Border Grid.Row="0" Background="#334155" Padding="12">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <Button x:Name="BtnZoomOut" Click="ZoomOut_Click" Padding="12,8" Background="Transparent" Foreground="White">
+                            <TextBlock Text="-" FontSize="18" FontWeight="Bold" />
+                        </Button>
+                        <TextBlock x:Name="TxtZoomLevel" Text="100%" Foreground="White" VerticalAlignment="Center" Margin="16,0" FontWeight="SemiBold" />
+                        <Button x:Name="BtnZoomIn" Click="ZoomIn_Click" Padding="12,8" Background="Transparent" Foreground="White">
+                            <TextBlock Text="+" FontSize="18" FontWeight="Bold" />
+                        </Button>
+                        <Button x:Name="BtnZoomFit" Click="ZoomFit_Click" Padding="12,8" Background="Transparent" Foreground="White" Margin="16,0,0,0">
+                            <TextBlock Text="Fit" />
+                        </Button>
+                    </StackPanel>
+                </Border>
+
+                <!-- Document Viewer Container -->
+                <Grid Grid.Row="1" Background="#0f172a">
+                    <!-- Image Viewer (for JPG, PNG, etc.) -->
+                    <ScrollViewer x:Name="ImageScroller" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                        <Image x:Name="FormImage" Stretch="None" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="20" />
+                    </ScrollViewer>
+                    
+                    <!-- PDF Viewer (WebView2) -->
+                    <wv2:WebView2 x:Name="PdfViewer" Visibility="Collapsed" />
+                    
+                    <!-- No Preview Message -->
+                    <TextBlock x:Name="TxtNoPreview" Text="No preview available" Foreground="#94a3b8" FontSize="16"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"
+                               Visibility="Collapsed" Margin="40" />
+                </Grid>
+            </Grid>
+        </Border>
+
+        <!-- Form Fields Panel -->
+        <Border Grid.Column="1" Background="White">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <!-- Header -->
+                <Border Grid.Row="0" Padding="16,14,16,12" BorderBrush="#e2e8f0" BorderThickness="0,0,0,1">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="#f8fafc" Offset="0" />
+                            <GradientStop Color="#f1f5f9" Offset="1" />
+                        </LinearGradientBrush>
+                    </Border.Background>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Button x:Name="BtnGoBack" Click="GoBack_Click" Padding="6,4" Margin="0,0,10,0" Background="Transparent" BorderThickness="0" ToolTip="Back to Forms" Cursor="Hand">
+                                <TextBlock Text="← Back" FontSize="12" Foreground="#64748b" />
+                            </Button>
+                            <TextBlock Grid.Column="1" Text="Extracted Data" FontSize="18" FontWeight="SemiBold" Foreground="#0f172a" VerticalAlignment="Center" />
+                            
+                            <!-- Action Buttons moved to Header -->
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                <Button x:Name="BtnSaveHeader" Click="Save_Click" Padding="14,7" Margin="0,0,8,0" 
+                                        Background="#2563eb" Foreground="White" BorderThickness="0" Cursor="Hand">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="💾" Margin="0,0,6,0" FontSize="13" />
+                                        <TextBlock Text="Save" FontSize="12" FontWeight="SemiBold" />
+                                    </StackPanel>
+                                </Button>
+                                <Button x:Name="BtnVerifyHeader" Click="Verify_Click" Padding="14,7" 
+                                        Background="#10b981" Foreground="White" BorderThickness="0" Cursor="Hand">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="✓" Margin="0,0,6,0" FontSize="13" FontWeight="Bold" />
+                                        <TextBlock Text="Verify" FontSize="12" FontWeight="SemiBold" />
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </Grid>
+                        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,10,0,0">
+                            <Button x:Name="BtnAutofill" Click="Autofill_Click" Padding="14,7" Margin="0,0,8,0" Cursor="Hand"
+                                    Background="#eff6ff" Foreground="#1d4ed8" BorderBrush="#bfdbfe" BorderThickness="1" FontWeight="SemiBold">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="⚡" Margin="0,0,6,0" FontSize="13" />
+                                    <TextBlock Text="Autofill Fields" FontSize="12" />
+                                </StackPanel>
+                            </Button>
+                            <Button x:Name="BtnReExtract" Click="ReExtract_Click" Padding="14,7" Cursor="Hand"
+                                    Background="#fef3c7" Foreground="#92400e" BorderBrush="#fcd34d" BorderThickness="1" FontWeight="SemiBold">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="🔄" Margin="0,0,6,0" FontSize="13" />
+                                    <TextBlock Text="Re-extract OCR" FontSize="12" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                        <Border Grid.Row="2" Margin="0,10,0,0" Padding="10,6" Background="#f8fafc" BorderBrush="#e2e8f0" BorderThickness="1" CornerRadius="6">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="🧠" FontSize="14" VerticalAlignment="Center" Margin="0,0,8,0" />
+                                <TextBlock Text="OCR Engine:" FontSize="12" Foreground="#475569" VerticalAlignment="Center" Margin="0,0,8,0" FontWeight="Medium" />
+                                <ComboBox x:Name="CmbOcrProvider" Width="260" FontSize="12" SelectedIndex="0" VerticalAlignment="Center">
+                                    <ComboBoxItem Content="🤖 Gemini AI (Best for Handwriting)" Tag="gemini" />
+                                    <ComboBoxItem Content="🔬 Enhanced Vision + Spatial" Tag="enhanced" />
+                                    <ComboBoxItem Content="🎯 Multi-Provider Consensus" Tag="multi" />
+                                    <ComboBoxItem Content="📐 Basic Spatial Only (Fast)" Tag="spatial" />
+                                </ComboBox>
+                            </StackPanel>
+                        </Border>
+                        <TextBlock x:Name="TxtOcrStatus" Grid.Row="3" Text="Checking OCR status..." FontSize="11" Foreground="#94a3b8" Margin="0,8,0,0" />
+                    </Grid>
+                </Border>
+
+                <!-- Scrollable Fields -->
+                <ScrollViewer Grid.Row="1" Padding="20">
+                    <StackPanel>
+                        <!-- Personal Info Section -->
+                        <TextBlock Text="PERSONAL INFORMATION" FontSize="11" Foreground="#718096" FontWeight="SemiBold" Margin="0,0,0,12" />
+                        <ui:SimpleStackPanel Spacing="12">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,4,0">
+                                    <TextBlock Text="First Name" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtFirstName" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="4,0">
+                                    <TextBlock Text="Middle Name" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtMiddleName" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" Margin="4,0,0,0">
+                                    <TextBlock Text="Surname" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtSurname" />
+                                </StackPanel>
+                            </Grid>
+                            <StackPanel>
+                                <TextBlock Text="Full Name" FontSize="12" Foreground="#718096" />
+                                <TextBox x:Name="TxtStudentName" />
+                            </StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,8,0">
+                                    <TextBlock Text="Date of Birth" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtDOB" ToolTip="Format: DD/MM/YYYY" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                    <TextBlock Text="Gender" FontSize="12" Foreground="#718096" />
+                                    <ComboBox x:Name="CmbGender" IsEditable="True">
+                                        <ComboBoxItem Content="Male" />
+                                        <ComboBoxItem Content="Female" />
+                                        <ComboBoxItem Content="Transgender" />
+                                    </ComboBox>
+                                </StackPanel>
+                            </Grid>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,8,0">
+                                    <TextBlock Text="Category" FontSize="12" Foreground="#718096" />
+                                    <ComboBox x:Name="CmbCategory" IsEditable="True">
+                                        <ComboBoxItem Content="General" />
+                                        <ComboBoxItem Content="OBC" />
+                                        <ComboBoxItem Content="SC" />
+                                        <ComboBoxItem Content="ST" />
+                                        <ComboBoxItem Content="EWS" />
+                                        <ComboBoxItem Content="PwBD" />
+                                    </ComboBox>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                    <TextBlock Text="Blood Group" FontSize="12" Foreground="#718096" />
+                                    <ComboBox x:Name="CmbBloodGroup" IsEditable="True">
+                                        <ComboBoxItem Content="A+" />
+                                        <ComboBoxItem Content="A-" />
+                                        <ComboBoxItem Content="B+" />
+                                        <ComboBoxItem Content="B-" />
+                                        <ComboBoxItem Content="AB+" />
+                                        <ComboBoxItem Content="AB-" />
+                                        <ComboBoxItem Content="O+" />
+                                        <ComboBoxItem Content="O-" />
+                                    </ComboBox>
+                                </StackPanel>
+                            </Grid>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,8,0">
+                                    <TextBlock Text="Nationality" FontSize="12" Foreground="#718096" />
+                                    <ComboBox x:Name="CmbNationality" IsEditable="True">
+                                        <ComboBoxItem Content="Indian" />
+                                        <ComboBoxItem Content="Other" />
+                                    </ComboBox>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                    <TextBlock Text="Religion" FontSize="12" Foreground="#718096" />
+                                    <ComboBox x:Name="CmbReligion" IsEditable="True">
+                                        <ComboBoxItem Content="Hindu" />
+                                        <ComboBoxItem Content="Muslim" />
+                                        <ComboBoxItem Content="Sikh" />
+                                        <ComboBoxItem Content="Christian" />
+                                        <ComboBoxItem Content="Jain" />
+                                        <ComboBoxItem Content="Buddhist" />
+                                        <ComboBoxItem Content="Others" />
+                                    </ComboBox>
+                                </StackPanel>
+                            </Grid>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,8,0">
+                                    <TextBlock Text="Minority Category" FontSize="12" Foreground="#718096" />
+                                    <ComboBox x:Name="CmbMinorityCategory" IsEditable="True">
+                                        <ComboBoxItem Content="NA" />
+                                        <ComboBoxItem Content="Muslim" />
+                                        <ComboBoxItem Content="Christian" />
+                                        <ComboBoxItem Content="Sikh" />
+                                        <ComboBoxItem Content="Jain" />
+                                        <ComboBoxItem Content="Buddhist" />
+                                        <ComboBoxItem Content="Parsi" />
+                                    </ComboBox>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                    <TextBlock Text="Aadhar Number" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtAadhar" ToolTip="12-digit Aadhar number" />
+                                </StackPanel>
+                            </Grid>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,8,0">
+                                    <TextBlock Text="Annual Income" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtAnnualIncome" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                    <TextBlock Text="Below Poverty Line" FontSize="12" Foreground="#718096" />
+                                    <ComboBox x:Name="CmbBelowPovertyLine" IsEditable="True">
+                                        <ComboBoxItem Content="Yes" />
+                                        <ComboBoxItem Content="No" />
+                                    </ComboBox>
+                                </StackPanel>
+                            </Grid>
+                        </ui:SimpleStackPanel>
+
+                        <!-- Parent Info Section -->
+                        <TextBlock Text="PARENT INFORMATION" FontSize="11" Foreground="#718096" FontWeight="SemiBold" Margin="0,24,0,12" />
+                        <ui:SimpleStackPanel Spacing="12">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,8,0">
+                                    <TextBlock Text="Father's Name" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtFatherName" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                    <TextBlock Text="Mother's Name" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtMotherName" />
+                                </StackPanel>
+                            </Grid>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,8,0">
+                                    <TextBlock Text="Father's Occupation" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtFatherOccupation" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                    <TextBlock Text="Mother's Occupation" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtMotherOccupation" />
+                                </StackPanel>
+                            </Grid>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,8,0">
+                                    <TextBlock Text="Father's Designation" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtFatherDesignation" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                    <TextBlock Text="Mother's Designation" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtMotherDesignation" />
+                                </StackPanel>
+                            </Grid>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,8,0">
+                                    <TextBlock Text="Father's Organization" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtFatherOrganization" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                    <TextBlock Text="Mother's Organization" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtMotherOrganization" />
+                                </StackPanel>
+                            </Grid>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,8,0">
+                                    <TextBlock Text="Father's Phone" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtFatherPhone" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                    <TextBlock Text="Mother's Phone" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtMotherPhone" />
+                                </StackPanel>
+                            </Grid>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,8,0">
+                                    <TextBlock Text="Father's Mobile" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtFatherMobile" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                    <TextBlock Text="Mother's Mobile" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtMotherMobile" />
+                                </StackPanel>
+                            </Grid>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,8,0">
+                                    <TextBlock Text="Father's Email" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtFatherEmail" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                    <TextBlock Text="Mother's Email" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtMotherEmail" />
+                                </StackPanel>
+                            </Grid>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,8,0">
+                                    <TextBlock Text="Father's Annual Income" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtFatherAnnualIncome" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                    <TextBlock Text="Mother's Annual Income" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtMotherAnnualIncome" />
+                                </StackPanel>
+                            </Grid>
+                        </ui:SimpleStackPanel>
+
+                        <!-- Contact Section -->
+                        <TextBlock Text="CONTACT DETAILS" FontSize="11" Foreground="#718096" FontWeight="SemiBold" Margin="0,24,0,12" />
+                        <ui:SimpleStackPanel Spacing="12">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,8,0">
+                                    <TextBlock Text="Phone" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtPhone" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                    <TextBlock Text="Alternate Phone" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtAltPhone" />
+                                </StackPanel>
+                            </Grid>
+                            <StackPanel>
+                                <TextBlock Text="Email" FontSize="12" Foreground="#718096" />
+                                <TextBox x:Name="TxtEmail" />
+                            </StackPanel>
+                            <StackPanel>
+                                <TextBlock Text="Permanent Address" FontSize="12" Foreground="#718096" />
+                                <TextBox x:Name="TxtAddress" TextWrapping="Wrap" AcceptsReturn="True" Height="60" />
+                            </StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,8,0">
+                                    <TextBlock Text="Permanent State" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtState" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                    <TextBlock Text="Permanent Pincode" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtPincode" />
+                                </StackPanel>
+                            </Grid>
+                            <StackPanel>
+                                <TextBlock Text="Correspondence Address" FontSize="12" Foreground="#718096" />
+                                <TextBox x:Name="TxtCorrespondenceAddress" TextWrapping="Wrap" AcceptsReturn="True" Height="60" />
+                            </StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,8,0">
+                                    <TextBlock Text="Correspondence State" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtCorrespondenceState" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                    <TextBlock Text="Correspondence Pincode" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtCorrespondencePincode" />
+                                </StackPanel>
+                            </Grid>
+                            <StackPanel>
+                                <TextBlock Text="Local Address" FontSize="12" Foreground="#718096" />
+                                <TextBox x:Name="TxtLocalAddress" TextWrapping="Wrap" AcceptsReturn="True" Height="60" />
+                            </StackPanel>
+                        </ui:SimpleStackPanel>
+
+                        <!-- Academic Section -->
+                        <TextBlock Text="ACADEMIC DETAILS" FontSize="11" Foreground="#718096" FontWeight="SemiBold" Margin="0,24,0,12" />
+                        <ui:SimpleStackPanel Spacing="12">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,8,0">
+                                    <TextBlock Text="Academic Session" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtAcademicSession" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                    <TextBlock Text="Admission Category" FontSize="12" Foreground="#718096" />
+                                    <ComboBox x:Name="CmbAdmissionCategory" IsEditable="True">
+                                        <ComboBoxItem Content="General" />
+                                        <ComboBoxItem Content="OBC" />
+                                        <ComboBoxItem Content="SC" />
+                                        <ComboBoxItem Content="ST" />
+                                        <ComboBoxItem Content="EWS" />
+                                        <ComboBoxItem Content="Sports" />
+                                        <ComboBoxItem Content="PwBD" />
+                                        <ComboBoxItem Content="Foreign" />
+                                        <ComboBoxItem Content="CW" />
+                                        <ComboBoxItem Content="KM" />
+                                        <ComboBoxItem Content="ECA" />
+                                    </ComboBox>
+                                </StackPanel>
+                            </Grid>
+                            <StackPanel>
+                                <TextBlock Text="Course" FontSize="12" Foreground="#718096" />
+                                <ComboBox x:Name="CmbCourse" IsEditable="True">
+                                    <ComboBoxItem Content="B.Com.(H)" />
+                                    <ComboBoxItem Content="B.A.(H) Economics" />
+                                    <ComboBoxItem Content="B.A.(H) English" />
+                                    <ComboBoxItem Content="B.A.(H) Hindi" />
+                                    <ComboBoxItem Content="B.A.(H) History" />
+                                    <ComboBoxItem Content="B.A.(H) Political Science" />
+                                    <ComboBoxItem Content="B.A.(H) Sociology" />
+                                    <ComboBoxItem Content="B.A.(H) Sanskrit" />
+                                    <ComboBoxItem Content="B.A.(Prog.)" />
+                                    <ComboBoxItem Content="B.Com." />
+                                </ComboBox>
+                            </StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,8,0">
+                                    <TextBlock Text="College Roll No" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtRollNo" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                    <TextBlock Text="CUET Score" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtCuetScore" />
+                                </StackPanel>
+                            </Grid>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,8,0">
+                                    <TextBlock Text="DU Portal Form No" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtDuPortalFormNumber" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                    <TextBlock Text="Date of Admission" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtDateOfAdmission" />
+                                </StackPanel>
+                            </Grid>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,8,0">
+                                    <TextBlock Text="12th Board" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtTwelfthBoard" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                    <TextBlock Text="12th Year" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtTwelfthYear" />
+                                </StackPanel>
+                            </Grid>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,8,0">
+                                    <TextBlock Text="12th Percentage" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtTwelfthPercentage" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                    <TextBlock Text="12th Roll Number" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtTwelfthRollNumber" />
+                                </StackPanel>
+                            </Grid>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,8,0">
+                                    <TextBlock Text="12th Institution" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtTwelfthInstitution" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                    <TextBlock Text="Hindi Studied Upto" FontSize="12" Foreground="#718096" />
+                                    <ComboBox x:Name="CmbHindiStudiedUpto" IsEditable="True">
+                                        <ComboBoxItem Content="8th" />
+                                        <ComboBoxItem Content="10th" />
+                                        <ComboBoxItem Content="12th" />
+                                        <ComboBoxItem Content="Graduation" />
+                                        <ComboBoxItem Content="Not Studied" />
+                                    </ComboBox>
+                                </StackPanel>
+                            </Grid>
+                        </ui:SimpleStackPanel>
+
+                        <!-- Guardian Section -->
+                        <TextBlock Text="👤 GUARDIAN DETAILS" FontSize="11" Foreground="#718096" FontWeight="SemiBold" Margin="0,24,0,12" />
+                        <ui:SimpleStackPanel Spacing="12">
+                            <StackPanel>
+                                <TextBlock Text="Guardian Name" FontSize="12" Foreground="#718096" />
+                                <TextBox x:Name="TxtGuardianName" />
+                            </StackPanel>
+                            <StackPanel>
+                                <TextBlock Text="Guardian Address" FontSize="12" Foreground="#718096" />
+                                <TextBox x:Name="TxtGuardianAddress" TextWrapping="Wrap" AcceptsReturn="True" Height="50" />
+                            </StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,8,0">
+                                    <TextBlock Text="Guardian Phone" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtGuardianPhone" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                    <TextBlock Text="Relation" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtGuardianRelation" />
+                                </StackPanel>
+                            </Grid>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,8,0">
+                                    <TextBlock Text="Guardian Email" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtGuardianEmail" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                    <TextBlock Text="Guardian Organization" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtGuardianOrganization" />
+                                </StackPanel>
+                            </Grid>
+                        </ui:SimpleStackPanel>
+
+                        <!-- Other Info Section -->
+                        <TextBlock Text="ℹ️ OTHER INFORMATION" FontSize="11" Foreground="#718096" FontWeight="SemiBold" Margin="0,24,0,12" />
+                        <ui:SimpleStackPanel Spacing="12">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,8,0">
+                                    <TextBlock Text="DU Enrollment No" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtDuEnrollment" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                    <TextBlock Text="Hindi Medium Preference" FontSize="12" Foreground="#718096" />
+                                    <ComboBox x:Name="CmbHindiMedium" IsEditable="True">
+                                        <ComboBoxItem Content="Yes" />
+                                        <ComboBoxItem Content="No" />
+                                    </ComboBox>
+                                </StackPanel>
+                            </Grid>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,8,0">
+                                    <TextBlock Text="Declaration Date" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtDeclarationDate" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                    <TextBlock Text="Declaration Place" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtDeclarationPlace" />
+                                </StackPanel>
+                            </Grid>
+                        </ui:SimpleStackPanel>
+
+                        <!-- CUET Subject Details Section -->
+                        <TextBlock Text="📊 CUET SUBJECT DETAILS" FontSize="11" Foreground="#718096" FontWeight="SemiBold" Margin="0,24,0,12" />
+                        <Border BorderBrush="#e5e7eb" BorderThickness="1" CornerRadius="4" Padding="8">
+                            <ui:SimpleStackPanel Spacing="8">
+                                <!-- Header Row -->
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="2*" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Subject" FontSize="11" FontWeight="SemiBold" Foreground="#475569" />
+                                    <TextBlock Grid.Column="1" Text="Max" FontSize="11" FontWeight="SemiBold" Foreground="#475569" />
+                                    <TextBlock Grid.Column="2" Text="Obtained" FontSize="11" FontWeight="SemiBold" Foreground="#475569" />
+                                </Grid>
+                                <!-- Subject 1 -->
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="2*" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox x:Name="TxtCuetSubject1" Margin="0,0,4,0" />
+                                    <TextBox x:Name="TxtCuetMax1" Grid.Column="1" Margin="2,0" />
+                                    <TextBox x:Name="TxtCuetObtained1" Grid.Column="2" Margin="4,0,0,0" />
+                                </Grid>
+                                <!-- Subject 2 -->
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="2*" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox x:Name="TxtCuetSubject2" Margin="0,0,4,0" />
+                                    <TextBox x:Name="TxtCuetMax2" Grid.Column="1" Margin="2,0" />
+                                    <TextBox x:Name="TxtCuetObtained2" Grid.Column="2" Margin="4,0,0,0" />
+                                </Grid>
+                                <!-- Subject 3 -->
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="2*" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox x:Name="TxtCuetSubject3" Margin="0,0,4,0" />
+                                    <TextBox x:Name="TxtCuetMax3" Grid.Column="1" Margin="2,0" />
+                                    <TextBox x:Name="TxtCuetObtained3" Grid.Column="2" Margin="4,0,0,0" />
+                                </Grid>
+                                <!-- Subject 4 -->
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="2*" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox x:Name="TxtCuetSubject4" Margin="0,0,4,0" />
+                                    <TextBox x:Name="TxtCuetMax4" Grid.Column="1" Margin="2,0" />
+                                    <TextBox x:Name="TxtCuetObtained4" Grid.Column="2" Margin="4,0,0,0" />
+                                </Grid>
+                                <!-- Subject 5 -->
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="2*" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox x:Name="TxtCuetSubject5" Margin="0,0,4,0" />
+                                    <TextBox x:Name="TxtCuetMax5" Grid.Column="1" Margin="2,0" />
+                                    <TextBox x:Name="TxtCuetObtained5" Grid.Column="2" Margin="4,0,0,0" />
+                                </Grid>
+                                <!-- Subject 6 -->
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="2*" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox x:Name="TxtCuetSubject6" Margin="0,0,4,0" />
+                                    <TextBox x:Name="TxtCuetMax6" Grid.Column="1" Margin="2,0" />
+                                    <TextBox x:Name="TxtCuetObtained6" Grid.Column="2" Margin="4,0,0,0" />
+                                </Grid>
+                                <!-- Total -->
+                                <Grid Margin="0,4,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="2*" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="VII. Total" FontWeight="SemiBold" Foreground="#475569" VerticalAlignment="Center" />
+                                    <TextBox x:Name="TxtCuetTotalAll" Grid.Column="1" Margin="2,0" />
+                                    <TextBox x:Name="TxtCuetObtainedAll" Grid.Column="2" Margin="4,0,0,0" />
+                                </Grid>
+                            </ui:SimpleStackPanel>
+                        </Border>
+
+                        <!-- 10th Class Details Section -->
+                        <TextBlock Text="🎓 10TH CLASS DETAILS" FontSize="11" Foreground="#718096" FontWeight="SemiBold" Margin="0,24,0,12" />
+                        <ui:SimpleStackPanel Spacing="12">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,8,0">
+                                    <TextBlock Text="10th Board" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtTenthBoard" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                    <TextBlock Text="10th Year" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtTenthYear" />
+                                </StackPanel>
+                            </Grid>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,8,0">
+                                    <TextBlock Text="10th Percentage" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtTenthPercentage" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                    <TextBlock Text="10th School" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtTenthSchool" />
+                                </StackPanel>
+                            </Grid>
+                        </ui:SimpleStackPanel>
+
+                        <!-- Emergency Contact Section -->
+                        <TextBlock Text="🚨 EMERGENCY CONTACT" FontSize="11" Foreground="#718096" FontWeight="SemiBold" Margin="0,24,0,12" />
+                        <ui:SimpleStackPanel Spacing="12">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,8,0">
+                                    <TextBlock Text="Contact Name" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtEmergencyName" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                    <TextBlock Text="Contact Phone" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtEmergencyPhone" />
+                                </StackPanel>
+                            </Grid>
+                        </ui:SimpleStackPanel>
+
+                        <!-- Declarations Section -->
+                        <TextBlock Text="✍️ DECLARATIONS" FontSize="11" Foreground="#718096" FontWeight="SemiBold" Margin="0,24,0,12" />
+                        <ui:SimpleStackPanel Spacing="12">
+                            <TextBlock Text="Student Declaration" FontSize="11" FontWeight="SemiBold" Foreground="#1e3a5f" />
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,4,0">
+                                    <TextBlock Text="Name" FontSize="11" Foreground="#718096" />
+                                    <TextBox x:Name="TxtStudentDeclName" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="4,0">
+                                    <TextBlock Text="Date" FontSize="11" Foreground="#718096" />
+                                    <TextBox x:Name="TxtStudentDeclDate" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" Margin="4,0,0,0">
+                                    <TextBlock Text="Place" FontSize="11" Foreground="#718096" />
+                                    <TextBox x:Name="TxtStudentDeclPlace" />
+                                </StackPanel>
+                            </Grid>
+                            <TextBlock Text="Parent/Guardian Declaration" FontSize="11" FontWeight="SemiBold" Foreground="#1e3a5f" Margin="0,8,0,0" />
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,8,0">
+                                    <TextBlock Text="Parent/Guardian Name" FontSize="11" Foreground="#718096" />
+                                    <TextBox x:Name="TxtParentGuardianName" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                    <TextBlock Text="Relationship" FontSize="11" Foreground="#718096" />
+                                    <TextBox x:Name="TxtParentRelationship" />
+                                </StackPanel>
+                            </Grid>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,8,0">
+                                    <TextBlock Text="Candidate Name" FontSize="11" Foreground="#718096" />
+                                    <TextBox x:Name="TxtParentCandidateName" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                    <TextBlock Text="Course" FontSize="11" Foreground="#718096" />
+                                    <TextBox x:Name="TxtParentCourse" />
+                                </StackPanel>
+                            </Grid>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,8,0">
+                                    <TextBlock Text="Date" FontSize="11" Foreground="#718096" />
+                                    <TextBox x:Name="TxtParentDeclDate" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                    <TextBlock Text="Place" FontSize="11" Foreground="#718096" />
+                                    <TextBox x:Name="TxtParentDeclPlace" />
+                                </StackPanel>
+                            </Grid>
+                        </ui:SimpleStackPanel>
+
+                        <!-- Certificate Details Section -->
+                        <TextBlock Text="📜 CERTIFICATE DETAILS" FontSize="11" Foreground="#718096" FontWeight="SemiBold" Margin="0,24,0,12" />
+                        <ui:SimpleStackPanel Spacing="12">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,8,0">
+                                    <TextBlock Text="Certificate Authority" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtCertAuthority" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                    <TextBlock Text="Certificate Number" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtCertNumber" />
+                                </StackPanel>
+                            </Grid>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,8,0">
+                                    <TextBlock Text="Certificate Date" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtCertDate" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                    <TextBlock Text="Disability Type" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtDisabilityType" />
+                                </StackPanel>
+                            </Grid>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,8,0">
+                                    <TextBlock Text="Disability %" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtDisabilityPercent" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                    <TextBlock Text="UDID Number" FontSize="12" Foreground="#718096" />
+                                    <TextBox x:Name="TxtUdidNumber" />
+                                </StackPanel>
+                            </Grid>
+                        </ui:SimpleStackPanel>
+
+                        <!-- Document Checklist Section -->
+                        <TextBlock Text="📋 DOCUMENT CHECKLIST" FontSize="11" Foreground="#718096" FontWeight="SemiBold" Margin="0,24,0,12" />
+                        <Border BorderBrush="#e5e7eb" BorderThickness="1" CornerRadius="8" Padding="16">
+                            <ui:SimpleStackPanel Spacing="8">
+                                <CheckBox x:Name="ChkDocAdmissionForm" Content="📄 Admission Form" />
+                                <CheckBox x:Name="ChkDocPhotographs" Content="📷 2 Photographs" />
+                                <CheckBox x:Name="ChkDocCuetScorecard" Content="📊 CUET Scorecard" />
+                                <CheckBox x:Name="ChkDocClassXiiMarksheet" Content="📄 Class XII Marksheet" />
+                                <CheckBox x:Name="ChkDocClassXCertificate" Content="📄 Class X Certificate" />
+                                <CheckBox x:Name="ChkDocClassXiiCertificate" Content="📄 Class XII Certificate" />
+                                <CheckBox x:Name="ChkDocCharacterCertificate" Content="✅ Character Certificate" />
+                                <CheckBox x:Name="ChkDocCasteCertificate" Content="🏷️ Caste Certificate" />
+                                <CheckBox x:Name="ChkDocMigrationCertificate" Content="🔄 Migration Certificate" />
+                                <CheckBox x:Name="ChkDocTransferCertificate" Content="📝 Transfer Certificate (TC)" />
+                                <CheckBox x:Name="ChkDocGapCertificate" Content="⏱️ Gap Certificate" />
+                                <CheckBox x:Name="ChkDocIncomeCertificate" Content="💰 Income Certificate" />
+                                <CheckBox x:Name="ChkDocDomicileCertificate" Content="🏠 Domicile Certificate" />
+                                <CheckBox x:Name="ChkDocAadharCard" Content="🪪 Aadhar Card" />
+                                <CheckBox x:Name="ChkDocMedicalFitness" Content="🏥 Medical Fitness" />
+                                <CheckBox x:Name="ChkDocAntiRagging" Content="📜 Anti-Ragging Undertaking" />
+                            </ui:SimpleStackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!-- Action Buttons -->
+                <Border Grid.Row="2" Padding="20" BorderBrush="#e5e7eb" BorderThickness="0,1,0,0">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Button x:Name="BtnBack" Click="Back_Click" Padding="12,8">
+                            <TextBlock Text="← Back" />
+                        </Button>
+                        <Button Grid.Column="1" x:Name="BtnPrint" Click="Print_Click" Padding="12,8" Margin="6,0,0,0" Background="#800020" Foreground="White">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="🖨" Margin="0,0,6,0" />
+                                <TextBlock Text="Print" />
+                            </StackPanel>
+                        </Button>
+                        <Button Grid.Column="2" x:Name="BtnAttach" Click="AttachDocument_Click" Padding="12,8" Margin="6,0,0,0" Background="#6366f1" Foreground="White" ToolTip="Attach supporting documents">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="📎" Margin="0,0,6,0" />
+                                <TextBlock Text="Attach" />
+                            </StackPanel>
+                        </Button>
+                        <Button Grid.Column="4" x:Name="BtnExport" Click="Export_Click" Padding="12,8" Margin="0,0,0,0" Background="#1e3a5f" Foreground="White">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="📄" Margin="0,0,4,0" />
+                                <TextBlock Text="Export" />
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Border>
+    </Grid>
+</Page>

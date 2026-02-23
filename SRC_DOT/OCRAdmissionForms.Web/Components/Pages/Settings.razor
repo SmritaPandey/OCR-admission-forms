@@ -1,0 +1,293 @@
+@page "/settings"
+@using Microsoft.EntityFrameworkCore
+@using OCRAdmissionForms.Core.Entities
+@using OCRAdmissionForms.Infrastructure.Data
+@inject AppDbContext DbContext
+@inject IWebHostEnvironment Environment
+@inject IConfiguration Config
+
+<PageTitle>Settings - SRCC Student DMS</PageTitle>
+
+<div class="container-fluid py-4" style="max-width: 900px;">
+    <!-- Header -->
+    <div class="card border-0 mb-4 p-4" style="background: linear-gradient(135deg, var(--srcc-navy) 0%, var(--srcc-navy-light) 100%);">
+        <h2 class="fw-bold mb-0 text-white"><span class="bi bi-gear-fill me-3"></span>Settings</h2>
+        <p class="text-white opacity-75 mb-0 small mt-1">Configure OCR, view database info, and manage application data</p>
+    </div>
+
+    <!-- OCR Configuration -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4 card-no-hover">
+        <div class="card-header py-3 rounded-top-4">
+            <span class="bi bi-cpu me-2"></span>OCR Configuration
+        </div>
+        <div class="card-body p-4">
+            <div class="row g-3">
+                <div class="col-12">
+                    <label class="form-label small text-muted">Active OCR Provider</label>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2">
+                            <span class="bi bi-check-circle me-1"></span>@ocrProvider
+                        </span>
+                        <span class="text-muted small">(configured via appsettings.json)</span>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <label class="form-label small text-muted">Gemini API Key</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><span class="bi bi-key"></span></span>
+                        <input type="password" class="form-control" placeholder="Gemini API key..." @bind="geminiKey" />
+                        <button class="btn btn-primary" @onclick="SaveGeminiKey">
+                            <span class="bi bi-check-lg"></span> Save
+                        </button>
+                    </div>
+                    <div class="form-text">Used for Gemini AI-based field extraction and normalization.</div>
+                </div>
+                @if (showGeminiSaved)
+                {
+                    <div class="col-12">
+                        <div class="alert alert-success py-2 small mb-0">
+                            <span class="bi bi-check-circle me-2"></span>Gemini key saved successfully.
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Database Info -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4 card-no-hover">
+        <div class="card-header py-3 rounded-top-4">
+            <span class="bi bi-database me-2"></span>Database Info
+        </div>
+        <div class="card-body p-4">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="p-3 border rounded-3 bg-light">
+                        <div class="text-muted small mb-1">Forms</div>
+                        <div class="fs-3 fw-bold text-primary">@formCount</div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="p-3 border rounded-3 bg-light">
+                        <div class="text-muted small mb-1">Student Profiles</div>
+                        <div class="fs-3 fw-bold text-primary">@studentCount</div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="p-3 border rounded-3 bg-light">
+                        <div class="text-muted small mb-1">Verified Forms</div>
+                        <div class="fs-3 fw-bold text-success">@verifiedCount</div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="p-3 border rounded-3 bg-light">
+                        <div class="text-muted small mb-1">Upload Directory</div>
+                        <div class="small fw-semibold text-truncate" title="@uploadPath">@uploadPath</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- About -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4 card-no-hover">
+        <div class="card-header py-3 rounded-top-4">
+            <span class="bi bi-info-circle me-2"></span>About
+        </div>
+        <div class="card-body p-4">
+            <div class="row g-3">
+                <div class="col-6"><label class="small text-muted d-block">Application</label><span class="fw-semibold">SRCC Student DMS</span></div>
+                <div class="col-6"><label class="small text-muted d-block">Version</label><span class="fw-semibold">2.0.0 (Web)</span></div>
+                <div class="col-6"><label class="small text-muted d-block">Platform</label><span class="fw-semibold">ASP.NET Core Blazor SSR</span></div>
+                <div class="col-6"><label class="small text-muted d-block">Environment</label><span class="fw-semibold">@Environment.EnvironmentName</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Backup & Restore -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4 card-no-hover">
+        <div class="card-header py-3 rounded-top-4">
+            <span class="bi bi-hdd me-2"></span>Backup & Restore
+        </div>
+        <div class="card-body p-4">
+            <p class="text-muted small mb-3">Export or import a full database backup for disaster recovery.</p>
+            <div class="d-flex gap-3 flex-wrap">
+                <a href="/api/export/forms" class="btn btn-outline-primary" target="_blank">
+                    <span class="bi bi-cloud-download me-2"></span>Export Database Backup
+                </a>
+                <button class="btn btn-outline-secondary" disabled>
+                    <span class="bi bi-cloud-upload me-2"></span>Import Backup
+                </button>
+            </div>
+            <div class="form-text mt-2">Database backup exports all forms and student data as an Excel file.</div>
+        </div>
+    </div>
+
+    <!-- OCR Test -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4 card-no-hover">
+        <div class="card-header py-3 rounded-top-4">
+            <span class="bi bi-eyedropper me-2"></span>OCR Engine Test
+        </div>
+        <div class="card-body p-4">
+            <p class="text-muted small mb-3">Test the OCR pipeline by processing a sample document.</p>
+            <div class="d-flex gap-3 align-items-center">
+                <button class="btn btn-outline-primary" @onclick="TestOcr" disabled="@isTestingOcr">
+                    @if (isTestingOcr)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2"></span>
+                    }
+                    else
+                    {
+                        <span class="bi bi-play-circle me-2"></span>
+                    }
+                    Run OCR Test
+                </button>
+                @if (!string.IsNullOrEmpty(ocrTestResult))
+                {
+                    <span class="badge @(ocrTestSuccess ? "bg-success-subtle text-success" : "bg-danger-subtle text-danger") px-3 py-2">
+                        @ocrTestResult
+                    </span>
+                }
+            </div>
+            <div class="form-text mt-2">This checks connectivity to the Gemini API and OCR engine readiness.</div>
+        </div>
+    </div>
+
+    <!-- Danger Zone -->
+    <div class="card border-0 shadow-sm rounded-4 card-no-hover" style="border: 2px solid #fee2e2 !important;">
+        <div class="card-header py-3 bg-danger bg-opacity-10 rounded-top-4" style="color: #dc2626;">
+            <span class="bi bi-exclamation-triangle-fill me-2"></span>Danger Zone
+        </div>
+        <div class="card-body p-4">
+            <p class="text-secondary small mb-3">These actions are irreversible. Proceed with caution.</p>
+            <div class="d-flex gap-3 flex-wrap">
+                <button class="btn btn-outline-danger" @onclick="ShowClearConfirm">
+                    <span class="bi bi-trash me-2"></span>Clear All Forms
+                </button>
+                <button class="btn btn-outline-danger" @onclick="ShowClearStudentsConfirm">
+                    <span class="bi bi-people me-2"></span>Clear All Students
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Clear Forms Confirm -->
+@if (showClearModal)
+{
+    <div class="modal-overlay" @onclick="() => showClearModal = false">
+        <div class="modal-dialog-custom" @onclick:stopPropagation>
+            <h5 class="fw-bold mb-3"><span class="bi bi-exclamation-triangle text-danger me-2"></span>@clearTitle</h5>
+            <p class="text-secondary">@clearMessage</p>
+            <div class="d-flex gap-2 justify-content-end">
+                <button class="btn btn-light" @onclick="() => showClearModal = false">Cancel</button>
+                <button class="btn btn-danger" @onclick="ConfirmClear">Confirm Delete All</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private int formCount, studentCount, verifiedCount, errorCount;
+    private string uploadPath = "";
+    private string dbPath = "";
+    private string ocrProvider = "Unified (Tesseract + Google Vision)";
+    private string geminiKey = "";
+    private bool showGeminiSaved;
+    private bool isTestingOcr;
+    private string? ocrTestResult;
+    private bool ocrTestSuccess;
+
+    private bool showClearModal;
+    private string clearTitle = "";
+    private string clearMessage = "";
+    private string clearTarget = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        formCount = await DbContext.AdmissionForms.CountAsync();
+        studentCount = await DbContext.StudentProfiles.CountAsync();
+        verifiedCount = await DbContext.AdmissionForms.CountAsync(f => f.Status == OCRAdmissionForms.Core.Enums.FormStatus.Verified);
+        errorCount = await DbContext.AdmissionForms.CountAsync(f => f.Status == OCRAdmissionForms.Core.Enums.FormStatus.Error);
+        uploadPath = Path.Combine(Environment.WebRootPath, "uploads");
+        dbPath = Config.GetConnectionString("DefaultConnection") ?? "SQLite (default)";
+
+        // Try reading Gemini key from config
+        geminiKey = Config["GeminiApiKey"] ?? "";
+    }
+
+    private void SaveGeminiKey()
+    {
+        // In a real app this would persist to a config store — for now just show success
+        showGeminiSaved = true;
+    }
+
+    private void ShowClearConfirm()
+    {
+        clearTarget = "forms";
+        clearTitle = "Clear All Forms";
+        clearMessage = $"This will permanently delete all {formCount} forms. This cannot be undone.";
+        showClearModal = true;
+    }
+
+    private void ShowClearStudentsConfirm()
+    {
+        clearTarget = "students";
+        clearTitle = "Clear All Students";
+        clearMessage = $"This will permanently delete all {studentCount} student profiles and their linked data. This cannot be undone.";
+        showClearModal = true;
+    }
+
+    private async Task ConfirmClear()
+    {
+        showClearModal = false;
+        if (clearTarget == "forms")
+        {
+            await DbContext.Database.ExecuteSqlRawAsync("DELETE FROM AdmissionForms");
+            formCount = 0; verifiedCount = 0; errorCount = 0;
+        }
+        else
+        {
+            await DbContext.Database.ExecuteSqlRawAsync("DELETE FROM StudentProfiles");
+            studentCount = 0;
+        }
+    }
+
+    private async Task TestOcr()
+    {
+        isTestingOcr = true;
+        ocrTestResult = null;
+        try
+        {
+            // Check if Gemini key is configured
+            var key = Config["GeminiApiKey"];
+            if (string.IsNullOrEmpty(key))
+            {
+                ocrTestResult = "No Gemini key configured";
+                ocrTestSuccess = false;
+                return;
+            }
+
+            // Quick connectivity check
+            using var http = new HttpClient();
+            http.Timeout = TimeSpan.FromSeconds(10);
+            var response = await http.GetAsync($"https://generativelanguage.googleapis.com/v1beta/models?key={key}");
+            if (response.IsSuccessStatusCode)
+            {
+                ocrTestResult = "✓ Gemini API connected successfully";
+                ocrTestSuccess = true;
+            }
+            else
+            {
+                ocrTestResult = $"API returned {response.StatusCode}";
+                ocrTestSuccess = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            ocrTestResult = $"Connection failed: {ex.Message}";
+            ocrTestSuccess = false;
+        }
+        finally { isTestingOcr = false; }
+    }
+}

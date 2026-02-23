@@ -1,0 +1,268 @@
+@page "/batch-upload"
+@using Microsoft.EntityFrameworkCore
+@using OCRAdmissionForms.Core.Entities
+@using OCRAdmissionForms.Core.Enums
+@using OCRAdmissionForms.Core.Interfaces
+@using OCRAdmissionForms.Infrastructure.Data
+@using OCRAdmissionForms.Infrastructure.Services
+@inject AppDbContext DbContext
+@inject IWebHostEnvironment Environment
+@inject IOcrService OcrService
+@inject IFormExtractorService FormExtractor
+@inject ILogger<BatchUpload> Logger
+
+<PageTitle>Batch Upload - SRCC Student DMS</PageTitle>
+
+<div class="container-fluid py-4" style="max-width: 1000px;">
+    <!-- Header -->
+    <div class="card border-0 mb-4 p-4" style="background: linear-gradient(135deg, var(--srcc-navy) 0%, var(--srcc-navy-light) 100%);">
+        <h2 class="fw-bold mb-0 text-white"><span class="bi bi-collection-fill me-3"></span>Batch Upload</h2>
+        <p class="text-white opacity-75 mb-0 small mt-1">Upload and process multiple admission forms at once</p>
+    </div>
+
+    <!-- File Picker -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4 card-no-hover">
+        <div class="card-body p-4 text-center upload-zone" style="border: 2px dashed #cbd5e1; border-radius: 1rem; background: #fafbfe;">
+            <span class="bi bi-cloud-arrow-up d-block mb-3" style="font-size: 3rem; color: var(--srcc-navy); opacity: 0.3;"></span>
+            <p class="text-secondary mb-3">Select PDF or image files to add to the processing queue</p>
+            <InputFile OnChange="HandleFileSelect" multiple accept=".pdf,.png,.jpg,.jpeg,.tiff,.bmp"
+                class="d-none" id="batchFileInput" />
+            <label for="batchFileInput" class="btn btn-primary btn-lg px-5 rounded-pill cursor-pointer" style="pointer-events: @(isProcessing ? "none" : "auto");">
+                <span class="bi bi-folder2-open me-2"></span>Choose Files
+            </label>
+        </div>
+    </div>
+
+    <!-- Queue Table -->
+    @if (fileQueue.Any())
+    {
+        <div class="card border-0 shadow-sm rounded-4 mb-4 card-no-hover">
+            <div class="card-header py-3 rounded-top-4 d-flex justify-content-between align-items-center">
+                <span><span class="bi bi-list-task me-2"></span>Processing Queue — @fileQueue.Count file(s)</span>
+                <div class="d-flex gap-2">
+                    @if (!isProcessing)
+                    {
+                        <button class="btn btn-sm btn-outline-danger" @onclick="ClearQueue">
+                            <span class="bi bi-x-circle me-1"></span>Clear
+                        </button>
+                    }
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead>
+                        <tr>
+                            <th style="width: 40px;">#</th>
+                            <th>Filename</th>
+                            <th>Size</th>
+                            <th style="width: 180px;">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (int i = 0; i < fileQueue.Count; i++)
+                        {
+                            var item = fileQueue[i];
+                            <tr>
+                                <td class="text-muted">@(i+1)</td>
+                                <td class="fw-semibold small text-truncate" style="max-width: 300px;">@item.FileName</td>
+                                <td class="text-muted small">@FormatSize(item.Size)</td>
+                                <td>
+                                    @switch (item.Status)
+                                    {
+                                        case "Queued":
+                                            <span class="badge bg-secondary-subtle text-secondary px-3 py-2 rounded-pill">
+                                                <span class="bi bi-clock me-1"></span>Queued
+                                            </span>
+                                            break;
+                                        case "Processing":
+                                            <span class="badge bg-info-subtle text-info px-3 py-2 rounded-pill">
+                                                <span class="spinner-border spinner-border-sm me-1"></span>Processing
+                                            </span>
+                                            break;
+                                        case "Done":
+                                            <span class="badge bg-success-subtle text-success px-3 py-2 rounded-pill">
+                                                <span class="bi bi-check-circle me-1"></span>Done
+                                            </span>
+                                            break;
+                                        case var s when s.StartsWith("Error"):
+                                            <span class="badge bg-danger-subtle text-danger px-3 py-2 rounded-pill" title="@item.Status">
+                                                <span class="bi bi-x-circle me-1"></span>Error
+                                            </span>
+                                            break;
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Progress -->
+            @if (isProcessing || processed > 0)
+            {
+                <div class="card-footer bg-white p-3">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="small text-secondary">Progress</span>
+                        <span class="small fw-bold">@processed / @fileQueue.Count</span>
+                    </div>
+                    <div class="progress" style="height: 8px; border-radius: 8px;">
+                        <div class="progress-bar bg-success @(isProcessing ? "progress-bar-animated" : "")" style="width: @progressPercent%; border-radius: 8px;"></div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- Process Button -->
+        <div class="text-center">
+            @if (!isProcessing && processed == 0)
+            {
+                <button class="btn btn-primary btn-lg px-5 py-3 rounded-pill" @onclick="ProcessAll">
+                    <span class="bi bi-play-fill me-2"></span>Process All (@fileQueue.Count Files)
+                </button>
+            }
+            else if (!isProcessing && processed > 0)
+            {
+                <div class="alert alert-success py-3 d-inline-block px-5 rounded-pill">
+                    <span class="bi bi-check-circle me-2"></span>
+                    Batch complete! @successCount succeeded, @errorCount failed.
+                    <a href="forms" class="ms-3 fw-bold text-success text-decoration-none">View Forms →</a>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private class QueueItem
+    {
+        public string FileName { get; set; } = "";
+        public long Size { get; set; }
+        public string Status { get; set; } = "Queued";
+        public Microsoft.AspNetCore.Components.Forms.IBrowserFile? File { get; set; }
+    }
+
+    private List<QueueItem> fileQueue = new();
+    private bool isProcessing;
+    private int processed, successCount, errorCount;
+    private int progressPercent => fileQueue.Count > 0 ? (int)(100.0 * processed / fileQueue.Count) : 0;
+
+    private void HandleFileSelect(InputFileChangeEventArgs e)
+    {
+        foreach (var file in e.GetMultipleFiles(100))
+        {
+            if (!fileQueue.Any(q => q.FileName == file.Name))
+            {
+                fileQueue.Add(new QueueItem { FileName = file.Name, Size = file.Size, File = file });
+            }
+        }
+    }
+
+    private void ClearQueue() { fileQueue.Clear(); processed = 0; successCount = 0; errorCount = 0; }
+
+    private async Task ProcessAll()
+    {
+        isProcessing = true;
+        processed = 0; successCount = 0; errorCount = 0;
+
+        var uploadDir = Path.Combine(Environment.WebRootPath, "uploads");
+        Directory.CreateDirectory(uploadDir);
+
+        foreach (var item in fileQueue)
+        {
+            item.Status = "Processing";
+            StateHasChanged();
+            await Task.Delay(50); // Allow UI to render
+
+            try
+            {
+                // Save file
+                var safeName = $"{DateTime.UtcNow.Ticks}_{item.FileName}";
+                var filePath = Path.Combine(uploadDir, safeName);
+
+                await using (var fs = new FileStream(filePath, FileMode.Create))
+                {
+                    await item.File!.OpenReadStream(maxAllowedSize: 50 * 1024 * 1024).CopyToAsync(fs);
+                }
+
+                // Create Form
+                var form = new AdmissionForm
+                {
+                    Filename = item.FileName,
+                    FilePath = safeName,
+                    Status = FormStatus.Uploaded,
+                    UploadDate = DateTime.UtcNow,
+                    StudentName = ""
+                };
+                DbContext.AdmissionForms.Add(form);
+                await DbContext.SaveChangesAsync();
+
+                // OCR + Extract
+                try
+                {
+                    var ocrResult = await OcrService.ExtractAsync(filePath);
+                    if (!string.IsNullOrEmpty(ocrResult.RawText))
+                    {
+                        var extraction = FormExtractor.Extract(ocrResult.RawText);
+                        MapExtractionToForm(form, extraction.Fields);
+                        form.Status = FormStatus.Extracted;
+                        form.ExtractedDataJson = System.Text.Json.JsonSerializer.Serialize(extraction.Fields);
+                    }
+                }
+                catch (Exception ocrEx)
+                {
+                    Logger.LogWarning(ocrEx, "OCR failed for {File}, keeping as Uploaded", item.FileName);
+                }
+
+                await DbContext.SaveChangesAsync();
+                item.Status = "Done";
+                successCount++;
+            }
+            catch (Exception ex)
+            {
+                item.Status = $"Error: {ex.Message}";
+                errorCount++;
+                Logger.LogError(ex, "Batch processing failed for {File}", item.FileName);
+            }
+
+            processed++;
+            StateHasChanged();
+        }
+
+        isProcessing = false;
+    }
+
+    private void MapExtractionToForm(AdmissionForm form, Dictionary<string, string?> fields)
+    {
+        string Get(string key) => fields.TryGetValue(key, out var v) ? v ?? "" : "";
+
+        form.StudentName = Get("student_name");
+        form.Course = Get("course");
+        form.AcademicSession = Get("academic_session");
+        form.AdmissionCategory = Get("admission_category");
+        form.CollegeRollNo = Get("college_roll_no");
+        form.CuetScore = Get("cuet_score");
+        form.DateOfAdmission = Get("date_of_admission");
+        form.DuPortalFormNumber = Get("du_portal_form_number");
+        form.FirstName = Get("first_name");
+        form.MiddleName = Get("middle_name");
+        form.Surname = Get("surname");
+        form.DateOfBirth = Get("date_of_birth");
+        form.Gender = Get("gender");
+        form.Category = Get("category");
+        form.AadharNumber = Get("aadhar_number");
+        form.BloodGroup = Get("blood_group");
+        form.Religion = Get("religion");
+        form.Nationality = Get("nationality");
+        form.PhoneNumber = Get("phone_number");
+        form.Email = Get("email");
+        form.FatherName = Get("father_name");
+        form.MotherName = Get("mother_name");
+    }
+
+    private string FormatSize(long bytes)
+    {
+        if (bytes < 1024) return $"{bytes} B";
+        if (bytes < 1024 * 1024) return $"{bytes / 1024.0:F1} KB";
+        return $"{bytes / (1024.0 * 1024.0):F1} MB";
+    }
+}

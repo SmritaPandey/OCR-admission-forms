@@ -1,0 +1,27 @@
+# Training Dependencies for OCR Model Training
+# Install these in addition to requirements.txt for training capabilities
+
+# PyTorch (install separately based on your system - see install scripts)
+# macOS: pip install torch torchvision torchaudio
+# Linux/Windows CPU: pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+# Linux/Windows CUDA: pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+
+# Core Training Libraries
+transformers>=4.36.0
+datasets>=2.16.0
+accelerate>=0.25.0
+
+# Image Processing
+pillow>=10.0.0
+opencv-python>=4.8.0
+numpy>=1.24.0
+
+# Training Utilities
+scikit-learn>=1.3.0
+tqdm>=4.65.0
+tensorboard>=2.14.0
+
+# OCR Libraries (already in requirements.txt, but listed here for reference)
+pytesseract>=0.3.10
+pdf2image>=1.16.3
+PyMuPDF>=1.23.0

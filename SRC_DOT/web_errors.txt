@@ -1,0 +1,21 @@
+﻿  Determining projects to restore...
+  All projects are up-to-date for restore.
+C:\Program Files\dotnet\sdk\10.0.100-rc.1.25451.107\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.RuntimeIdentifierInference.targets(345,5): message NETSDK1057: You are using a preview version of .NET. See: https://aka.ms/dotnet-support-policy [C:\Users\as\Documents\GitHub\OCR-admission-forms\SRC_DOT\OCRAdmissionForms.Web\OCRAdmissionForms.Web.csproj]
+C:\Program Files\dotnet\sdk\10.0.100-rc.1.25451.107\Sdks\Microsoft.NET.Sdk\targets\Microsoft.NET.RuntimeIdentifierInference.targets(345,5): message NETSDK1057: You are using a preview version of .NET. See: https://aka.ms/dotnet-support-policy [C:\Users\as\Documents\GitHub\OCR-admission-forms\SRC_DOT\OCRAdmissionForms.Core\OCRAdmissionForms.Core.csproj]
+  OCRAdmissionForms.Core -> C:\Users\as\Documents\GitHub\OCR-admission-forms\SRC_DOT\OCRAdmissionForms.Core\bin\Debug\net10.0\OCRAdmissionForms.Core.dll
+  OCRAdmissionForms.Infrastructure -> C:\Users\as\Documents\GitHub\OCR-admission-forms\SRC_DOT\OCRAdmissionForms.Infrastructure\bin\Debug\net10.0\OCRAdmissionForms.Infrastructure.dll
+C:\Users\as\Documents\GitHub\OCR-admission-forms\SRC_DOT\OCRAdmissionForms.Web\Components\Pages\Upload.razor(68,54): error CS1061: 'IOcrService' does not contain a definition for 'ExtractDataAsync' and no accessible extension method 'ExtractDataAsync' accepting a first argument of type 'IOcrService' could be found (are you missing a using directive or an assembly reference?) [C:\Users\as\Documents\GitHub\OCR-admission-forms\SRC_DOT\OCRAdmissionForms.Web\OCRAdmissionForms.Web.csproj]
+C:\Users\as\Documents\GitHub\OCR-admission-forms\SRC_DOT\OCRAdmissionForms.Web\Controllers\ExportController.cs(61,26): warning CS8602: Dereference of a possibly null reference. [C:\Users\as\Documents\GitHub\OCR-admission-forms\SRC_DOT\OCRAdmissionForms.Web\OCRAdmissionForms.Web.csproj]
+C:\Users\as\Documents\GitHub\OCR-admission-forms\SRC_DOT\OCRAdmissionForms.Web\Components\Pages\Search.razor(76,38): warning CS8602: Dereference of a possibly null reference. [C:\Users\as\Documents\GitHub\OCR-admission-forms\SRC_DOT\OCRAdmissionForms.Web\OCRAdmissionForms.Web.csproj]
+C:\Users\as\Documents\GitHub\OCR-admission-forms\SRC_DOT\OCRAdmissionForms.Web\Controllers\ExportController.cs(167,26): warning CS8602: Dereference of a possibly null reference. [C:\Users\as\Documents\GitHub\OCR-admission-forms\SRC_DOT\OCRAdmissionForms.Web\OCRAdmissionForms.Web.csproj]
+
+Build FAILED.
+
+C:\Users\as\Documents\GitHub\OCR-admission-forms\SRC_DOT\OCRAdmissionForms.Web\Controllers\ExportController.cs(61,26): warning CS8602: Dereference of a possibly null reference. [C:\Users\as\Documents\GitHub\OCR-admission-forms\SRC_DOT\OCRAdmissionForms.Web\OCRAdmissionForms.Web.csproj]
+C:\Users\as\Documents\GitHub\OCR-admission-forms\SRC_DOT\OCRAdmissionForms.Web\Components\Pages\Search.razor(76,38): warning CS8602: Dereference of a possibly null reference. [C:\Users\as\Documents\GitHub\OCR-admission-forms\SRC_DOT\OCRAdmissionForms.Web\OCRAdmissionForms.Web.csproj]
+C:\Users\as\Documents\GitHub\OCR-admission-forms\SRC_DOT\OCRAdmissionForms.Web\Controllers\ExportController.cs(167,26): warning CS8602: Dereference of a possibly null reference. [C:\Users\as\Documents\GitHub\OCR-admission-forms\SRC_DOT\OCRAdmissionForms.Web\OCRAdmissionForms.Web.csproj]
+C:\Users\as\Documents\GitHub\OCR-admission-forms\SRC_DOT\OCRAdmissionForms.Web\Components\Pages\Upload.razor(68,54): error CS1061: 'IOcrService' does not contain a definition for 'ExtractDataAsync' and no accessible extension method 'ExtractDataAsync' accepting a first argument of type 'IOcrService' could be found (are you missing a using directive or an assembly reference?) [C:\Users\as\Documents\GitHub\OCR-admission-forms\SRC_DOT\OCRAdmissionForms.Web\OCRAdmissionForms.Web.csproj]
+    3 Warning(s)
+    1 Error(s)
+
+Time Elapsed 00:00:01.56

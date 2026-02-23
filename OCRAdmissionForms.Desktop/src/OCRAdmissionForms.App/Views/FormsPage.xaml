@@ -1,0 +1,373 @@
+<Page x:Class="OCRAdmissionForms.App.Views.FormsPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.modernwpf.com/2019"
+      Title="Forms">
+
+    <Page.Resources>
+        <!-- Visible CheckBox Style for DataGrid -->
+        <Style x:Key="GridCheckBox" TargetType="CheckBox">
+            <Setter Property="MinWidth" Value="20" />
+            <Setter Property="MinHeight" Value="20" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <Border x:Name="Bd" Width="20" Height="20" CornerRadius="4"
+                                BorderBrush="#cbd5e1" BorderThickness="2" Background="White"
+                                HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <TextBlock x:Name="Check" Text="✓" FontSize="13" FontWeight="Bold"
+                                       Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                       Margin="0,-2,0,0" Visibility="Collapsed" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#2563eb" />
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#2563eb" />
+                                <Setter TargetName="Check" Property="Visibility" Value="Visible" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#93c5fd" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Premium DataGrid Style -->
+        <Style TargetType="DataGrid">
+            <Setter Property="Background" Value="White" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="RowBackground" Value="White" />
+            <Setter Property="AlternatingRowBackground" Value="#f8fafc" />
+            <Setter Property="HorizontalGridLinesBrush" Value="#f1f5f9" />
+            <Setter Property="VerticalGridLinesBrush" Value="Transparent" />
+            <Setter Property="FontSize" Value="13" />
+        </Style>
+        <Style TargetType="DataGridColumnHeader">
+            <Setter Property="Background" Value="#f8fafc" />
+            <Setter Property="Foreground" Value="#475569" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Padding" Value="12,10" />
+            <Setter Property="BorderBrush" Value="#e2e8f0" />
+            <Setter Property="BorderThickness" Value="0,0,0,2" />
+        </Style>
+        <Style TargetType="DataGridRow">
+            <Setter Property="Cursor" Value="Hand" />
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#eff6ff" />
+                </Trigger>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="#dbeafe" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        <Style TargetType="DataGridCell">
+            <Setter Property="Padding" Value="12,0" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="Transparent" />
+                    <Setter Property="Foreground" Value="#0f172a" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Page.Resources>
+
+    <Grid Background="#f1f5f9">
+        <Grid Margin="24">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Header -->
+            <Border Grid.Row="0" Margin="0,0,0,16" Padding="24,20" CornerRadius="12">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0.5">
+                        <GradientStop Color="#1e3a5f" Offset="0" />
+                        <GradientStop Color="#2563eb" Offset="1" />
+                    </LinearGradientBrush>
+                </Border.Background>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <TextBlock Text="Admission Forms" FontSize="26" FontWeight="Bold" Foreground="White" />
+                        <TextBlock x:Name="TxtSubtitle" Text="Manage all processed admission forms" FontSize="13" Foreground="#93c5fd" Margin="0,4,0,0" />
+                    </StackPanel>
+                    <Button Grid.Column="1" x:Name="BtnNew" Click="NewForm_Click" Padding="18,10" 
+                            Background="#3b82f6" Foreground="White" BorderBrush="#60a5fa" BorderThickness="1"
+                            Cursor="Hand" FontWeight="SemiBold">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="＋" FontWeight="Bold" Margin="0,0,8,0" FontSize="15" />
+                            <TextBlock Text="New Form" FontSize="13" />
+                        </StackPanel>
+                    </Button>
+                </Grid>
+            </Border>
+
+            <!-- Toolbar: Search, Filter, Sort, Export -->
+            <Border Grid.Row="1" Background="White" CornerRadius="10" Padding="16,12" Margin="0,0,0,12">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.06" Color="#000000" />
+                </Border.Effect>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Search -->
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" MaxWidth="380" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBox x:Name="TxtSearch" KeyDown="Search_KeyDown" Padding="10,8"
+                                 ui:ControlHelper.PlaceholderText="Search by name, course, or filename..."
+                                 FontSize="13" />
+                        <Button Grid.Column="1" x:Name="BtnSearch" Click="Search_Click" Padding="14,8" 
+                                Margin="8,0,0,0" Background="#e0e7ff" Foreground="#4338ca" 
+                                BorderBrush="#c7d2fe" BorderThickness="1" Cursor="Hand">
+                            <TextBlock Text="🔍 Search" FontSize="12" />
+                        </Button>
+                    </Grid>
+
+                    <!-- Filter by Status -->
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="20,0,0,0">
+                        <TextBlock Text="Status:" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="#64748b" FontSize="12" />
+                        <ComboBox x:Name="CmbStatus" SelectionChanged="Status_Changed" Width="130" FontSize="12">
+                            <ComboBoxItem Content="All" IsSelected="True" />
+                            <ComboBoxItem Content="Uploaded" />
+                            <ComboBoxItem Content="Extracted" />
+                            <ComboBoxItem Content="Verified" />
+                            <ComboBoxItem Content="Error" />
+                        </ComboBox>
+                    </StackPanel>
+
+                    <!-- Sort -->
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="12,0,0,0">
+                        <TextBlock Text="Sort:" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="#64748b" FontSize="12" />
+                        <ComboBox x:Name="CmbSort" SelectionChanged="Sort_Changed" Width="140" FontSize="12">
+                            <ComboBoxItem Content="Date (Newest)" IsSelected="True" />
+                            <ComboBoxItem Content="Date (Oldest)" />
+                            <ComboBoxItem Content="Name (A-Z)" />
+                            <ComboBoxItem Content="Name (Z-A)" />
+                            <ComboBoxItem Content="Status" />
+                        </ComboBox>
+                    </StackPanel>
+
+                    <!-- Export Menu -->
+                    <StackPanel Grid.Column="3" Orientation="Horizontal" Margin="20,0,0,0">
+                        <Button x:Name="BtnExportJson" Click="ExportJson_Click" Padding="10,7" Margin="0,0,4,0" 
+                                ToolTip="Export to JSON" Background="#f0fdf4" Foreground="#166534" 
+                                BorderBrush="#bbf7d0" BorderThickness="1" Cursor="Hand" FontSize="12">
+                            <TextBlock Text="📄 JSON" />
+                        </Button>
+                        <Button x:Name="BtnExportCsv" Click="ExportCsv_Click" Padding="10,7" Margin="0,0,4,0" 
+                                ToolTip="Export to CSV" Background="#f0fdf4" Foreground="#166534" 
+                                BorderBrush="#bbf7d0" BorderThickness="1" Cursor="Hand" FontSize="12">
+                            <TextBlock Text="📊 CSV" />
+                        </Button>
+                        <Button x:Name="BtnExportExcel" Click="ExportExcel_Click" Padding="10,7" Margin="0,0,4,0" 
+                                ToolTip="Export to Excel" Background="#f0fdf4" Foreground="#166534" 
+                                BorderBrush="#bbf7d0" BorderThickness="1" Cursor="Hand" FontSize="12">
+                            <TextBlock Text="📗 Excel" />
+                        </Button>
+                        <Button x:Name="BtnExportPdf" Click="ExportPdf_Click" Padding="10,7" 
+                                ToolTip="Export to PDF" Background="#fef2f2" Foreground="#991b1b" 
+                                BorderBrush="#fecaca" BorderThickness="1" Cursor="Hand" FontSize="12">
+                            <TextBlock Text="📕 PDF" />
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Data Grid -->
+            <Border Grid.Row="2" Background="White" CornerRadius="10" Padding="0" ClipToBounds="True">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.06" Color="#000000" />
+                </Border.Effect>
+                <DataGrid x:Name="FormsGrid" AutoGenerateColumns="False" IsReadOnly="True" 
+                          HeadersVisibility="Column" GridLinesVisibility="Horizontal" 
+                          RowHeight="50" CanUserSortColumns="True"
+                          MouseDoubleClick="FormsGrid_DoubleClick"
+                          SelectionMode="Extended">
+                    <DataGrid.Columns>
+                        <!-- Checkbox Column (Template to bypass IsReadOnly) -->
+                        <DataGridTemplateColumn Width="44">
+                            <DataGridTemplateColumn.HeaderTemplate>
+                                <DataTemplate>
+                                    <CheckBox x:Name="ChkSelectAll" Click="SelectAll_Click" 
+                                              Style="{StaticResource GridCheckBox}"
+                                              ToolTip="Select All" />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.HeaderTemplate>
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                              Style="{StaticResource GridCheckBox}" />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="55">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="#94a3b8" />
+                                    <Setter Property="FontSize" Value="12" />
+                                    <Setter Property="VerticalAlignment" Value="Center" />
+                                    <Setter Property="Padding" Value="12,0" />
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+
+                        <DataGridTextColumn Header="Filename" Binding="{Binding Filename}" Width="*">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="#1e293b" />
+                                    <Setter Property="FontWeight" Value="Medium" />
+                                    <Setter Property="VerticalAlignment" Value="Center" />
+                                    <Setter Property="Padding" Value="12,0" />
+                                    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+
+                        <DataGridTextColumn Header="Student Name" Binding="{Binding StudentName}" Width="170">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="#334155" />
+                                    <Setter Property="VerticalAlignment" Value="Center" />
+                                    <Setter Property="Padding" Value="12,0" />
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+
+                        <DataGridTextColumn Header="Course" Binding="{Binding Course}" Width="110">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="#475569" />
+                                    <Setter Property="VerticalAlignment" Value="Center" />
+                                    <Setter Property="Padding" Value="12,0" />
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+
+                        <!-- Status Badge -->
+                        <DataGridTemplateColumn Header="Status" Width="105" SortMemberPath="Status">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Border CornerRadius="12" Padding="10,4" HorizontalAlignment="Left" 
+                                            Background="{Binding StatusBg}" Margin="8,0">
+                                        <TextBlock Text="{Binding Status}" Foreground="{Binding StatusFg}" 
+                                                   FontWeight="SemiBold" FontSize="11" />
+                                    </Border>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <DataGridTextColumn Header="Upload Date" Binding="{Binding UploadDate, StringFormat=g}" Width="150">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="#64748b" />
+                                    <Setter Property="FontSize" Value="12" />
+                                    <Setter Property="VerticalAlignment" Value="Center" />
+                                    <Setter Property="Padding" Value="12,0" />
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+
+                        <!-- Actions -->
+                        <DataGridTemplateColumn Header="Actions" Width="100">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0">
+                                        <Button Click="EditForm_Click" Tag="{Binding Id}" Padding="8,5" 
+                                                Margin="0,0,4,0" Background="#eff6ff" BorderBrush="#bfdbfe" 
+                                                BorderThickness="1" ToolTip="Edit" Cursor="Hand">
+                                            <TextBlock Text="✏️" FontSize="12" />
+                                        </Button>
+                                        <Button Click="DeleteForm_Click" Tag="{Binding Id}" Padding="8,5" 
+                                                Background="#fef2f2" BorderBrush="#fecaca" 
+                                                BorderThickness="1" ToolTip="Delete" Cursor="Hand">
+                                            <TextBlock Text="🗑️" FontSize="12" />
+                                        </Button>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Border>
+
+            <!-- Footer: Pagination & Bulk Actions -->
+            <Border Grid.Row="3" Margin="0,12,0,0" Padding="4,0">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Bulk Actions -->
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button x:Name="BtnDeleteSelected" Click="DeleteSelected_Click" Padding="14,8" 
+                                Background="#fef2f2" Foreground="#dc2626" BorderBrush="#fecaca" 
+                                BorderThickness="1" Cursor="Hand" FontWeight="SemiBold">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="🗑️" Margin="0,0,6,0" />
+                                <TextBlock Text="Delete Selected" FontSize="12" />
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="BtnAutoVerify" Click="AutoVerify_Click" Padding="14,8" Margin="8,0,0,0"
+                                Background="#f0fdf4" Foreground="#166534" BorderBrush="#bbf7d0" 
+                                BorderThickness="1" Cursor="Hand" FontWeight="SemiBold"
+                                ToolTip="Auto-verify selected forms with confidence ≥ 85% and all required fields">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="✅" Margin="0,0,6,0" />
+                                <TextBlock Text="Auto-Verify" FontSize="12" />
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="BtnBatchReExtract" Click="BatchReExtract_Click" Padding="14,8" Margin="8,0,0,0"
+                                Background="#eff6ff" Foreground="#1d4ed8" BorderBrush="#bfdbfe" 
+                                BorderThickness="1" Cursor="Hand" FontWeight="SemiBold"
+                                ToolTip="Re-extract selected forms with Gemini AI">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="🔄" Margin="0,0,6,0" />
+                                <TextBlock Text="Re-Extract" FontSize="12" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+
+
+                    <!-- Pagination -->
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                        <Button x:Name="BtnPrev" Click="PrevPage_Click" Content="← Previous" Padding="14,8" 
+                                Margin="0,0,8,0" Background="#f8fafc" BorderBrush="#e2e8f0" BorderThickness="1"
+                                Foreground="#475569" Cursor="Hand" FontSize="12" />
+                        <Border Background="#f1f5f9" CornerRadius="6" Padding="14,8" VerticalAlignment="Center">
+                            <TextBlock x:Name="TxtPageInfo" FontWeight="SemiBold" FontSize="12" Foreground="#334155" />
+                        </Border>
+                        <Button x:Name="BtnNext" Click="NextPage_Click" Content="Next →" Padding="14,8" 
+                                Margin="8,0,0,0" Background="#f8fafc" BorderBrush="#e2e8f0" BorderThickness="1"
+                                Foreground="#475569" Cursor="Hand" FontSize="12" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</Page>

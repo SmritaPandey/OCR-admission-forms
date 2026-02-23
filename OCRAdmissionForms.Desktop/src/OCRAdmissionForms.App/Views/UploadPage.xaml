@@ -1,0 +1,113 @@
+<Page x:Class="OCRAdmissionForms.App.Views.UploadPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.modernwpf.com/2019"
+      Title="Upload Form"
+      AllowDrop="True" DragOver="Page_DragOver" Drop="Page_Drop">
+
+    <Grid Margin="32" Background="#f1f5f9">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,24">
+            <TextBlock Text="Upload Forms" FontSize="28" FontWeight="Bold" Foreground="#1a3a6e" />
+            <TextBlock Text="Select one or more admission forms to process with OCR" FontSize="14" Foreground="#718096" />
+        </StackPanel>
+
+        <!-- Drop Zone -->
+        <Border Grid.Row="1" x:Name="DropZone" Background="#f0f9ff" BorderBrush="#93c5fd" BorderThickness="2" 
+                CornerRadius="12" Padding="40" Margin="0,0,0,20" Cursor="Hand"
+                MouseLeftButtonDown="DropZone_Click">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Style.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" Value="#e0f2fe" />
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <StackPanel HorizontalAlignment="Center">
+                <TextBlock Text="📁" FontSize="48" HorizontalAlignment="Center" />
+                <TextBlock Text="Drop files here or click to browse" FontSize="16" FontWeight="SemiBold" 
+                           Foreground="#0369a1" HorizontalAlignment="Center" Margin="0,12,0,0" />
+                <TextBlock Text="Supports: JPG, PNG, PDF, TIFF (Multiple files allowed)" FontSize="12" 
+                           Foreground="#64748b" HorizontalAlignment="Center" Margin="0,4,0,0" />
+            </StackPanel>
+        </Border>
+
+        <!-- Selected Files List -->
+        <Border Grid.Row="2" Background="White" CornerRadius="8" Padding="16">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <Grid Grid.Row="0" Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock x:Name="TxtFileCount" Text="Selected Files (0)" FontSize="16" FontWeight="SemiBold" />
+                    <Button Grid.Column="1" x:Name="BtnClearAll" Click="ClearAll_Click" Padding="12,6">
+                        <TextBlock Text="Clear All" />
+                    </Button>
+                </Grid>
+
+                <ListBox x:Name="FilesList" Grid.Row="1" BorderThickness="0">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                    <TextBlock Text="{Binding SizeText}" FontSize="12" Foreground="#718096" />
+                                </StackPanel>
+                                <TextBlock Grid.Column="1" Text="{Binding Status}" VerticalAlignment="Center" Margin="16,0" 
+                                           Foreground="{Binding StatusColor}" FontWeight="SemiBold" />
+                                <Button Grid.Column="2" Click="RemoveFile_Click" Tag="{Binding Path}" Padding="8,4" Background="Transparent">
+                                    <TextBlock Text="✕" Foreground="#ef4444" />
+                                </Button>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Grid>
+        </Border>
+
+        <!-- Actions -->
+        <Border Grid.Row="3" Margin="0,16,0,0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Progress -->
+                <StackPanel x:Name="ProgressPanel" Visibility="Collapsed">
+                    <TextBlock x:Name="TxtProgressStatus" Text="Processing..." FontWeight="SemiBold" />
+                    <ui:ProgressBar x:Name="ProgressBar" Margin="0,8,16,0" />
+                    <TextBlock x:Name="TxtProgressDetail" FontSize="12" Foreground="#718096" Margin="0,4,0,0" />
+                </StackPanel>
+
+                <Button Grid.Column="1" x:Name="BtnUpload" Click="Upload_Click" Padding="32,12" 
+                        Background="#2563eb" Foreground="White" IsEnabled="False">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="⬆️" Margin="0,0,8,0" />
+                        <TextBlock x:Name="TxtUploadButton" Text="Upload &amp; Process" />
+                    </StackPanel>
+                </Button>
+            </Grid>
+        </Border>
+    </Grid>
+</Page>

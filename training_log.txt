@@ -1,0 +1,50 @@
+2026-02-23 19:11:16,862 [INFO] Loading training data...
+2026-02-23 19:11:16,870 [INFO] Loaded 210 training samples from 53 forms
+2026-02-23 19:11:16,873 [INFO] Valid samples (image exists + 3+ fields): 210
+2026-02-23 19:11:26,212 [INFO] ======================================================================
+2026-02-23 19:11:26,212 [INFO]   QWEN2.5-VL-7B FINE-TUNING WITH LoRA
+2026-02-23 19:11:26,213 [INFO] ======================================================================
+2026-02-23 19:11:26,213 [INFO]   Model: Qwen/Qwen2.5-VL-7B-Instruct
+2026-02-23 19:11:26,213 [INFO]   Training samples: 210
+2026-02-23 19:11:26,213 [INFO]   Epochs: 3
+2026-02-23 19:11:26,214 [INFO]   Learning rate: 1e-05
+2026-02-23 19:11:26,214 [INFO]   Gradient accumulation: 4
+2026-02-23 19:11:26,214 [INFO]   Device: cpu | Dtype: torch.float32
+2026-02-23 19:11:26,214 [INFO]   Output: C:\Users\as\Documents\GitHub\OCR-admission-forms\training_output\vlm_7b_finetuned
+2026-02-23 19:11:26,214 [INFO] ======================================================================
+2026-02-23 19:11:26,214 [INFO] Loading Qwen2.5-VL-7B-Instruct (this downloads ~15GB on first run)...
+2026-02-23 19:11:29,368 [WARNING] Xet Storage is enabled for this repo, but the 'hf_xet' package is not installed. Falling back to regular HTTP download. For better performance, install the package with: `pip install huggingface_hub[hf_xet]` or `pip install hf_xet`
+2026-02-23 19:11:29,369 [WARNING] Xet Storage is enabled for this repo, but the 'hf_xet' package is not installed. Falling back to regular HTTP download. For better performance, install the package with: `pip install huggingface_hub[hf_xet]` or `pip install hf_xet`
+2026-02-23 19:11:29,377 [WARNING] Xet Storage is enabled for this repo, but the 'hf_xet' package is not installed. Falling back to regular HTTP download. For better performance, install the package with: `pip install huggingface_hub[hf_xet]` or `pip install hf_xet`
+2026-02-23 19:11:29,379 [WARNING] Xet Storage is enabled for this repo, but the 'hf_xet' package is not installed. Falling back to regular HTTP download. For better performance, install the package with: `pip install huggingface_hub[hf_xet]` or `pip install hf_xet`
+2026-02-23 19:11:29,669 [WARNING] Xet Storage is enabled for this repo, but the 'hf_xet' package is not installed. Falling back to regular HTTP download. For better performance, install the package with: `pip install huggingface_hub[hf_xet]` or `pip install hf_xet`
+2026-02-23 20:10:52,853 [INFO] LoRA applied: 23,794,688 trainable / 8,315,961,344 total (0.29%)
+2026-02-23 20:12:59,925 [ERROR]   Error on sample 0 (UN-39-243550370091-PARUL.pdf): element 0 of tensors does not require grad and does not have a grad_fn
+2026-02-23 20:14:54,101 [ERROR]   Error on sample 1 (UN-31-243550067747-MAANVI JAIN.pdf): element 0 of tensors does not require grad and does not have a grad_fn
+2026-02-23 20:17:19,877 [ERROR]   Error on sample 2 (UN-33-243550097675-NEILANG DABAS.pdf): element 0 of tensors does not require grad and does not have a grad_fn
+2026-02-23 20:18:57,336 [ERROR]   Error on sample 3 (UN-29-243550329885-DEV AGARWAL.pdf): element 0 of tensors does not require grad and does not have a grad_fn
+2026-02-23 20:20:51,250 [ERROR]   Error on sample 4 (UN-17-243550103187-ADVAIT SUMBLY.pdf): element 0 of tensors does not require grad and does not have a grad_fn
+2026-02-23 20:22:18,945 [ERROR]   Error on sample 5 (UN-03-243550516046-KARAN YADAV.pdf): element 0 of tensors does not require grad and does not have a grad_fn
+2026-02-23 20:24:48,918 [ERROR]   Error on sample 6 (UN-47-243550-400797-SHAURYA DALAN.pdf): element 0 of tensors does not require grad and does not have a grad_fn
+2026-02-23 20:28:06,062 [ERROR]   Error on sample 7 (UN-50-243550-352742-DHRUV GARG.pdf): element 0 of tensors does not require grad and does not have a grad_fn
+2026-02-23 20:29:57,708 [ERROR]   Error on sample 8 (UN-39-243550370091-PARUL.pdf): element 0 of tensors does not require grad and does not have a grad_fn
+2026-02-23 20:31:22,735 [ERROR]   Error on sample 9 (UN-17-243550103187-ADVAIT SUMBLY.pdf): element 0 of tensors does not require grad and does not have a grad_fn
+2026-02-23 20:33:25,465 [ERROR]   Error on sample 10 (UN-40-243550536403-YUG.pdf): element 0 of tensors does not require grad and does not have a grad_fn
+2026-02-23 20:35:46,323 [ERROR]   Error on sample 11 (jatin.pdf): element 0 of tensors does not require grad and does not have a grad_fn
+2026-02-23 20:37:26,184 [ERROR]   Error on sample 12 (UN-23-243550160028-ROOPASHEE.pdf): element 0 of tensors does not require grad and does not have a grad_fn
+2026-02-23 20:39:31,672 [ERROR]   Error on sample 13 (UN-26-243550804314-MEHAK KATNAWAR.pdf): element 0 of tensors does not require grad and does not have a grad_fn
+2026-02-23 20:40:49,846 [ERROR]   Error on sample 14 (UN-10-243551734723-TANVIR KAUR.pdf): element 0 of tensors does not require grad and does not have a grad_fn
+2026-02-23 20:43:24,482 [ERROR]   Error on sample 15 (UN-25-243550022344-MARSHDEEP SINGH PANESAR.pdf): element 0 of tensors does not require grad and does not have a grad_fn
+2026-02-23 20:45:28,205 [ERROR]   Error on sample 16 (UN-14-243550788293-SATVIKA SVRI.pdf): element 0 of tensors does not require grad and does not have a grad_fn
+2026-02-23 20:47:23,784 [ERROR]   Error on sample 17 (UN-34-243550713127-SAKSHI SHARMA.pdf): element 0 of tensors does not require grad and does not have a grad_fn
+2026-02-23 20:49:17,537 [ERROR]   Error on sample 18 (UN-23-243550160028-ROOPASHEE.pdf): element 0 of tensors does not require grad and does not have a grad_fn
+2026-02-23 20:51:15,472 [ERROR]   Error on sample 19 (UN-03-243550516046-KARAN YADAV.pdf): element 0 of tensors does not require grad and does not have a grad_fn
+2026-02-23 20:53:04,560 [ERROR]   Error on sample 20 (UN-07-243551184749-PRATHA SINGH.pdf): element 0 of tensors does not require grad and does not have a grad_fn
+2026-02-23 20:56:04,743 [ERROR]   Error on sample 21 (UN-36-243550042391-SIYA AMLA.pdf): element 0 of tensors does not require grad and does not have a grad_fn
+2026-02-23 20:58:37,262 [ERROR]   Error on sample 22 (UN-43-243550108915-PRIYANSHU DHAN.pdf): element 0 of tensors does not require grad and does not have a grad_fn
+2026-02-23 21:01:00,644 [ERROR]   Error on sample 23 (UN-46-243551102643-PRAGATI DEEP.pdf): element 0 of tensors does not require grad and does not have a grad_fn
+2026-02-23 21:03:24,832 [ERROR]   Error on sample 24 (UN-21-243551272141-DAKSH SONI.pdf): element 0 of tensors does not require grad and does not have a grad_fn
+2026-02-23 21:06:18,449 [ERROR]   Error on sample 25 (UN-39-243550370091-PARUL.pdf): element 0 of tensors does not require grad and does not have a grad_fn
+2026-02-23 21:09:26,278 [ERROR]   Error on sample 26 (UN-47-243550-400797-SHAURYA DALAN.pdf): element 0 of tensors does not require grad and does not have a grad_fn
+2026-02-23 21:11:16,442 [ERROR]   Error on sample 27 (UN-45-243550353877-DAKSH KARA.pdf): element 0 of tensors does not require grad and does not have a grad_fn
+2026-02-23 21:13:57,204 [ERROR]   Error on sample 28 (UN-38-243550025692-NIRAKSHA SENTHILKUMAR.pdf): element 0 of tensors does not require grad and does not have a grad_fn

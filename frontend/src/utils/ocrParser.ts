@@ -3,6 +3,7 @@
  */
 
 export interface ParsedInfo {
+  [key: string]: string | undefined;
   student_name?: string;
   date_of_birth?: string;
   address?: string;
@@ -24,16 +25,16 @@ export function parseOCRText(rawText: string): ParsedInfo {
 
   // Student Name - Look for "name:" or "student name:" or "applicant name:"
   const namePatterns = [
-    /(?:name|student\s+name|applicant\s+name|full\s+name)[:\s]+([a-z\s]+?)(?:\n|phone|dob|email|address|$)/i,
+    /(?:name|student\s+name|applicant\s+name|full\s+name)[:\s]+([a-z\s]+?)(?:\n(?:phone|dob|email|address|father)|$)/i,
     /^([A-Z][a-z]+\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s*$/m, // Full name on its own line
   ];
-  
+
   for (const pattern of namePatterns) {
     const match = rawText.match(pattern);
     if (match && match[1]) {
       const name = match[1].trim();
       if (name.length > 2 && name.length < 50 && /^[a-z\s'-]+$/i.test(name)) {
-        parsed.student_name = name.split(/\s+/).map(word => 
+        parsed.student_name = name.split(/\s+/).map(word =>
           word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
         ).join(' ');
         break;
@@ -54,7 +55,7 @@ export function parseOCRText(rawText: string): ParsedInfo {
     /(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/,
     /\d{10,15}/,
   ];
-  
+
   for (const pattern of phonePatterns) {
     const match = rawText.match(pattern);
     if (match) {
@@ -73,7 +74,7 @@ export function parseOCRText(rawText: string): ParsedInfo {
     /(?:dob|date\s+of\s+birth|birth\s+date|born)[:\s]+(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})/i,
     /(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})/, // Generic date pattern
   ];
-  
+
   for (const pattern of dobPatterns) {
     const match = rawText.match(pattern);
     if (match && match[1]) {
@@ -103,13 +104,13 @@ export function parseOCRText(rawText: string): ParsedInfo {
   const guardianPatterns = [
     /(?:guardian|parent|father|mother)[:\s]+([a-z\s]+?)(?:\n|phone|email|$)/i,
   ];
-  
+
   for (const pattern of guardianPatterns) {
     const match = rawText.match(pattern);
     if (match && match[1]) {
       const name = match[1].trim();
       if (name.length > 2 && name.length < 50) {
-        parsed.guardian_name = name.split(/\s+/).map(word => 
+        parsed.guardian_name = name.split(/\s+/).map(word =>
           word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
         ).join(' ');
         break;
@@ -131,7 +132,7 @@ export function parseOCRText(rawText: string): ParsedInfo {
   const coursePatterns = [
     /(?:course|program|subject|stream)[:\s]+([^\n]+)/i,
   ];
-  
+
   for (const pattern of coursePatterns) {
     const match = rawText.match(pattern);
     if (match && match[1]) {
@@ -147,7 +148,7 @@ export function parseOCRText(rawText: string): ParsedInfo {
   const qualPatterns = [
     /(?:qualification|education|degree|diploma)[:\s]+([^\n]+)/i,
   ];
-  
+
   for (const pattern of qualPatterns) {
     const match = rawText.match(pattern);
     if (match && match[1]) {

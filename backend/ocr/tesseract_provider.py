@@ -2,8 +2,7 @@ import pytesseract
 from PIL import Image
 from typing import Dict, Any, Optional
 from backend.ocr.base_provider import OCRProvider
-from backend.config import settings
-from backend.utils.image_preprocessing import preprocess_image, enhance_for_ocr
+from backend.utils.image_preprocessing import enhance_for_ocr
 import os
 import platform
 
@@ -14,15 +13,20 @@ class TesseractProvider(OCRProvider):
         self.name = "tesseract"
         # Configure Tesseract path for Windows if not in PATH
         if platform.system() == "Windows":
-            # Try default installation paths
-            default_paths = [
-                r"C:\Program Files\Tesseract-OCR\tesseract.exe",
-                r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
-            ]
-            for path in default_paths:
-                if os.path.exists(path):
-                    pytesseract.pytesseract.tesseract_cmd = path
-                    break
+            # First check if TESSERACT_CMD environment variable is set
+            tesseract_cmd = os.environ.get('TESSERACT_CMD')
+            if tesseract_cmd and os.path.exists(tesseract_cmd):
+                pytesseract.pytesseract.tesseract_cmd = tesseract_cmd
+            else:
+                # Try default installation paths
+                default_paths = [
+                    r"C:\Program Files\Tesseract-OCR\tesseract.exe",
+                    r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
+                ]
+                for path in default_paths:
+                    if os.path.exists(path):
+                        pytesseract.pytesseract.tesseract_cmd = path
+                        break
     
     async def extract_text(self, image: Image.Image, language: Optional[str] = None, 
                           psm: Optional[int] = None, oem: Optional[int] = None,
@@ -42,6 +46,18 @@ class TesseractProvider(OCRProvider):
             preprocess: Apply image preprocessing for better accuracy
         """
         try:
+            # Validate image
+            if image is None:
+                raise ValueError("Image object is None")
+            
+            # Ensure image is in RGB mode for Tesseract
+            if image.mode not in ('RGB', 'L', '1'):
+                image = image.convert('RGB')
+            
+            # Verify image is valid by checking size
+            if image.size[0] == 0 or image.size[1] == 0:
+                raise ValueError("Image has invalid dimensions")
+            
             # Default to English if no language specified
             lang = language or "eng"
             
@@ -127,17 +143,52 @@ class TesseractProvider(OCRProvider):
                     "provider": self.get_provider_name()
                 }
             
+            if best_result:
+                best_result.setdefault("pages_processed", 1)
+                best_result.setdefault(
+                    "page_results",
+                    [
+                        {
+                            "page": 1,
+                            "raw_text": best_result.get("raw_text", ""),
+                            "confidence": best_result.get("confidence"),
+                        }
+                    ],
+                )
+
             return best_result
             
+        except FileNotFoundError as e:
+            raise Exception(f"Tesseract OCR error: Tesseract not found. Please ensure Tesseract is installed and the path is configured correctly. Error: {str(e)}")
         except Exception as e:
-            raise Exception(f"Tesseract OCR error: {str(e)}")
+            error_msg = str(e)
+            if "tesseract" in error_msg.lower() and "not found" in error_msg.lower():
+                raise Exception(f"Tesseract OCR error: Tesseract executable not found. Please install Tesseract OCR and ensure it's in your PATH or set TESSERACT_CMD environment variable.")
+            raise Exception(f"Tesseract OCR error: {error_msg}")
     
     def is_available(self) -> bool:
         """Check if Tesseract is installed and available"""
         try:
+            # Ensure path is configured before checking
+            if platform.system() == "Windows":
+                # First check if TESSERACT_CMD environment variable is set
+                tesseract_cmd = os.environ.get('TESSERACT_CMD')
+                if tesseract_cmd and os.path.exists(tesseract_cmd):
+                    pytesseract.pytesseract.tesseract_cmd = tesseract_cmd
+                elif not hasattr(pytesseract.pytesseract, 'tesseract_cmd') or not pytesseract.pytesseract.tesseract_cmd:
+                    # Try default installation paths
+                    default_paths = [
+                        r"C:\Program Files\Tesseract-OCR\tesseract.exe",
+                        r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
+                    ]
+                    for path in default_paths:
+                        if os.path.exists(path):
+                            pytesseract.pytesseract.tesseract_cmd = path
+                            break
+            
             pytesseract.get_tesseract_version()
             return True
-        except Exception:
+        except Exception as e:
             return False
     
     def get_provider_name(self) -> str:

@@ -1,0 +1,320 @@
+@page "/export"
+@using Microsoft.EntityFrameworkCore
+@using OCRAdmissionForms.Core.Entities
+@using OCRAdmissionForms.Core.Enums
+@using OCRAdmissionForms.Infrastructure.Data
+@inject AppDbContext DbContext
+@inject NavigationManager Navigation
+
+<PageTitle>Export Wizard - SRCC Student DMS</PageTitle>
+
+<div class="container-fluid py-4" style="max-width: 900px;">
+    <!-- Header -->
+    <div class="card border-0 mb-4 p-4" style="background: linear-gradient(135deg, var(--srcc-navy) 0%, var(--srcc-navy-light) 100%);">
+        <h2 class="fw-bold mb-0 text-white"><span class="bi bi-download me-3"></span>Export Wizard</h2>
+        <p class="text-white opacity-75 mb-0 small mt-1">Export student records and admission forms in multiple formats with filters and section selection</p>
+    </div>
+
+    @if (!string.IsNullOrEmpty(toastMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show py-2 small" role="alert">
+            <span class="bi bi-check-circle me-2"></span>@toastMessage
+            <button type="button" class="btn-close btn-close-sm" @onclick="() => toastMessage = null"></button>
+        </div>
+    }
+
+    <div class="card border-0 shadow-sm rounded-4 card-no-hover">
+        <div class="card-body p-4">
+
+            <!-- Step 1: Data Source -->
+            <div class="mb-4">
+                <h6 class="fw-bold text-uppercase text-secondary small mb-3"><span class="badge bg-primary rounded-pill me-2">1</span>Data Source</h6>
+                <div class="d-flex gap-3">
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="datasource" id="ds-forms" checked="@(dataSource == "forms")" @onchange='() => ChangeSource("forms")' />
+                        <label class="form-check-label fw-medium" for="ds-forms"><span class="bi bi-file-earmark-text me-1 text-primary"></span>Admission Forms</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="datasource" id="ds-students" checked="@(dataSource == "students")" @onchange='() => ChangeSource("students")' />
+                        <label class="form-check-label fw-medium" for="ds-students"><span class="bi bi-people me-1 text-primary"></span>Students</label>
+                    </div>
+                </div>
+            </div>
+
+            <hr />
+
+            <!-- Step 2: Export Format -->
+            <div class="mb-4">
+                <h6 class="fw-bold text-uppercase text-secondary small mb-3"><span class="badge bg-primary rounded-pill me-2">2</span>Export Format</h6>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <div class="card border-2 cursor-pointer @(exportFormat == "excel" ? "border-primary" : "border-light")" @onclick='() => exportFormat = "excel"'>
+                            <div class="card-body text-center py-3">
+                                <span class="bi bi-file-earmark-excel fs-2 text-success d-block mb-1"></span>
+                                <span class="fw-bold small">Excel (.xlsx)</span>
+                                <div class="text-muted" style="font-size: 0.7rem;">Spreadsheet with formatting</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card border-2 cursor-pointer @(exportFormat == "csv" ? "border-primary" : "border-light")" @onclick='() => exportFormat = "csv"'>
+                            <div class="card-body text-center py-3">
+                                <span class="bi bi-filetype-csv fs-2 text-primary d-block mb-1"></span>
+                                <span class="fw-bold small">CSV (.csv)</span>
+                                <div class="text-muted" style="font-size: 0.7rem;">Comma-separated values</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card border-2 cursor-pointer @(exportFormat == "pdf" ? "border-primary" : "border-light")" @onclick='() => exportFormat = "pdf"'>
+                            <div class="card-body text-center py-3">
+                                <span class="bi bi-file-earmark-pdf fs-2 text-danger d-block mb-1"></span>
+                                <span class="fw-bold small">PDF Report</span>
+                                <div class="text-muted" style="font-size: 0.7rem;">Formatted document</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <hr />
+
+            <!-- Step 3: Filters -->
+            <div class="mb-4">
+                <h6 class="fw-bold text-uppercase text-secondary small mb-3"><span class="badge bg-primary rounded-pill me-2">3</span>Filters</h6>
+                <div class="row g-3">
+                    @if (dataSource == "forms")
+                    {
+                        <div class="col-md-3">
+                            <label class="form-label small text-muted">Status</label>
+                            <select class="form-select form-select-sm" @bind="filterStatus" @bind:after="UpdateRecordCount">
+                                <option value="">All</option>
+                                @foreach (var s in Enum.GetValues<FormStatus>())
+                                {
+                                    <option value="@s">@s</option>
+                                }
+                            </select>
+                        </div>
+                    }
+                    <div class="col-md-3">
+                        <label class="form-label small text-muted">Course</label>
+                        <select class="form-select form-select-sm" @bind="filterCourse" @bind:after="UpdateRecordCount">
+                            <option value="">All</option>
+                            @foreach (var c in courses)
+                            {
+                                <option value="@c">@c</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small text-muted">Category</label>
+                        <select class="form-select form-select-sm" @bind="filterCategory" @bind:after="UpdateRecordCount">
+                            <option value="">All</option>
+                            <option value="GEN">GEN</option>
+                            <option value="OBC">OBC</option>
+                            <option value="SC">SC</option>
+                            <option value="ST">ST</option>
+                            <option value="EWS">EWS</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small text-muted">From Date</label>
+                        <input type="date" class="form-control form-control-sm" @bind="filterDateFrom" @bind:after="UpdateRecordCount" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small text-muted">To Date</label>
+                        <input type="date" class="form-control form-control-sm" @bind="filterDateTo" @bind:after="UpdateRecordCount" />
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button class="btn btn-outline-secondary btn-sm w-100" @onclick="ClearFilters">
+                            <span class="bi bi-x-circle me-1"></span>Clear Filters
+                        </button>
+                    </div>
+                </div>
+                <div class="alert alert-info py-2 small mt-3 mb-0 d-flex align-items-center">
+                    <span class="bi bi-info-circle me-2"></span>
+                    <strong>@recordCount</strong>&nbsp;record(s) match your filters
+                </div>
+            </div>
+
+            <hr />
+
+            <!-- Step 4: Field Sections (Forms only) -->
+            @if (dataSource == "forms")
+            {
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="fw-bold text-uppercase text-secondary small mb-0"><span class="badge bg-primary rounded-pill me-2">4</span>Field Sections</h6>
+                        <div>
+                            <button class="btn btn-sm btn-outline-secondary me-1" @onclick="SelectAllSections">Select All</button>
+                            <button class="btn btn-sm btn-outline-secondary" @onclick="DeselectAllSections">Deselect All</button>
+                        </div>
+                    </div>
+                    <div class="row g-2">
+                        @foreach (var sec in fieldSections)
+                        {
+                            <div class="col-md-4 col-lg-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="sec-@sec.Key" checked="@sec.Value"
+                                           @onchange="(e) => fieldSections[sec.Key] = (bool)(e.Value ?? false)" />
+                                    <label class="form-check-label small" for="sec-@sec.Key">@sec.Key</label>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+                <hr />
+            }
+
+            <!-- Export Button -->
+            <div class="text-center pt-3">
+                <button class="btn btn-primary btn-lg px-5 py-3 rounded-pill shadow" disabled="@(recordCount == 0 || isExporting)" @onclick="RunExport">
+                    @if (isExporting)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2"></span>
+                        <span>Exporting...</span>
+                    }
+                    else
+                    {
+                        <span class="bi bi-download me-2"></span>
+                        <span>Export @recordCount Record(s) as @exportFormat.ToUpper()</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Exports -->
+    <div class="card border-0 shadow-sm rounded-4 mt-4 card-no-hover">
+        <div class="card-header bg-white py-3 rounded-top-4">
+            <span class="bi bi-clock-history me-2"></span><strong>Recent Exports</strong>
+        </div>
+        <div class="card-body p-4">
+            @if (recentExports.Any())
+            {
+                <div class="list-group list-group-flush">
+                    @foreach (var exp in recentExports)
+                    {
+                        <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <div>
+                                <span class="bi bi-file-earmark me-2 text-primary"></span>
+                                <span class="small fw-medium">@exp.Name</span>
+                            </div>
+                            <span class="text-muted small">@exp.Time.ToString("g")</span>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <p class="text-muted small mb-0">No recent exports. Complete an export above to see it here.</p>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    .cursor-pointer { cursor: pointer; transition: all 0.2s; }
+    .cursor-pointer:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important; }
+</style>
+
+@code {
+    private string dataSource = "forms";
+    private string exportFormat = "excel";
+    private string filterStatus = "";
+    private string filterCourse = "";
+    private string filterCategory = "";
+    private DateTime? filterDateFrom;
+    private DateTime? filterDateTo;
+    private int recordCount = 0;
+    private bool isExporting = false;
+    private string? toastMessage;
+    private List<string> courses = new();
+
+    private Dictionary<string, bool> fieldSections = new()
+    {
+        { "Personal", true },
+        { "Academic", true },
+        { "CUET Scores", true },
+        { "12th Class", true },
+        { "10th Class", true },
+        { "Parents", true },
+        { "Contact & Address", true },
+        { "Guardian", true },
+        { "Emergency", true },
+        { "Certificates", true },
+        { "Documents Checklist", true },
+        { "Declarations", true },
+        { "Metadata", true }
+    };
+
+    private record ExportRecord(string Name, DateTime Time);
+    private List<ExportRecord> recentExports = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        courses = await DbContext.AdmissionForms
+            .Where(f => f.Course != null && f.Course != "")
+            .Select(f => f.Course!)
+            .Distinct().OrderBy(c => c).ToListAsync();
+        await UpdateRecordCount();
+    }
+
+    private async Task ChangeSource(string source)
+    {
+        dataSource = source;
+        filterStatus = "";
+        filterCourse = "";
+        filterCategory = "";
+        filterDateFrom = null;
+        filterDateTo = null;
+        await UpdateRecordCount();
+    }
+
+    private async Task UpdateRecordCount()
+    {
+        if (dataSource == "forms")
+        {
+            var q = DbContext.AdmissionForms.AsQueryable();
+            if (!string.IsNullOrEmpty(filterStatus) && Enum.TryParse<FormStatus>(filterStatus, out var s)) q = q.Where(f => f.Status == s);
+            if (!string.IsNullOrEmpty(filterCourse)) q = q.Where(f => f.Course == filterCourse);
+            if (!string.IsNullOrEmpty(filterCategory)) q = q.Where(f => f.Category == filterCategory);
+            if (filterDateFrom.HasValue) q = q.Where(f => f.UploadDate >= filterDateFrom.Value);
+            if (filterDateTo.HasValue) q = q.Where(f => f.UploadDate <= filterDateTo.Value.AddDays(1));
+            recordCount = await q.CountAsync();
+        }
+        else
+        {
+            recordCount = await DbContext.StudentProfiles.CountAsync();
+        }
+    }
+
+    private async Task ClearFilters()
+    {
+        filterStatus = "";
+        filterCourse = "";
+        filterCategory = "";
+        filterDateFrom = null;
+        filterDateTo = null;
+        await UpdateRecordCount();
+    }
+
+    private void SelectAllSections() { foreach (var k in fieldSections.Keys.ToList()) fieldSections[k] = true; }
+    private void DeselectAllSections() { foreach (var k in fieldSections.Keys.ToList()) fieldSections[k] = false; }
+
+    private void RunExport()
+    {
+        isExporting = true;
+        var format = exportFormat == "excel" ? "" : $"?format={exportFormat}";
+        var url = dataSource == "forms" ? $"/api/export/forms{format}" : $"/api/export/students{format}";
+        Navigation.NavigateTo(url, forceLoad: true);
+
+        recentExports.Insert(0, new ExportRecord(
+            $"{dataSource} export ({recordCount} records) — {exportFormat.ToUpper()}",
+            DateTime.Now));
+        if (recentExports.Count > 5) recentExports.RemoveAt(5);
+
+        toastMessage = $"Export started: {recordCount} {dataSource} as {exportFormat.ToUpper()}";
+        isExporting = false;
+    }
+}

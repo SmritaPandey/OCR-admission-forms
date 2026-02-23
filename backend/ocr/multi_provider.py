@@ -35,16 +35,30 @@ class MultiProviderOCR:
         
         results = []
         
-        # Try each provider
+        # Try all providers in parallel
+        tasks = []
         for provider_name in providers:
             try:
                 provider = OCRFactory.create_provider(provider_name)
-                result = await provider.extract_text(image, language)
-                result['provider_used'] = provider_name
-                results.append(result)
+                tasks.append(self._extract_with_provider(provider, image, language, provider_name))
             except Exception as e:
-                # If provider fails, continue with others
+                # If provider factory fails, skip it
+                print(f"Failed to create provider {provider_name}: {e}")
                 continue
+        
+        if not tasks:
+            raise ValueError("No OCR providers available to try")
+
+        # Run all extractions in parallel
+        extraction_results = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        # Collect successful results
+        for result in extraction_results:
+            if not isinstance(result, Exception):
+                results.append(result)
+            else:
+                # Log or handle individual provider failures
+                print(f"OCR provider failed: {result}")
         
         if not results:
             raise Exception("All OCR providers failed")

@@ -1,0 +1,43 @@
+﻿@inherits LayoutComponentBase
+
+<div class="page">
+    <div class="sidebar">
+        <NavMenu />
+    </div>
+
+    <main>
+        <div class="top-row px-4 d-flex align-items-center justify-content-between">
+            <span class="text-muted small">SRCC Admission Portal — Administrative Console</span>
+            <div class="d-flex align-items-center gap-3">
+                <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-1 small">
+                    <span class="bi bi-circle-fill me-1" style="font-size: 0.5rem;"></span> Online
+                </span>
+                <span class="text-muted small">@DateTime.Now.ToString("dd MMM yyyy")</span>
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <span class="bi bi-person-circle me-1"></span>Admin
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                        <li><a class="dropdown-item small" href="settings"><span class="bi bi-gear me-2"></span>Settings</a></li>
+                        <li><hr class="dropdown-divider" /></li>
+                        <li><a class="dropdown-item small text-danger" href="#"><span class="bi bi-box-arrow-right me-2"></span>Sign Out</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <article class="content px-4">
+            @Body
+        </article>
+
+        <footer class="text-center py-3 border-top text-muted small" style="background: #f8f9fc;">
+            <span class="bi bi-shield-check me-1"></span>© @DateTime.Now.Year Shri Ram College of Commerce. All rights reserved. — SRCC Student DMS v2.0
+        </footer>
+    </main>
+</div>
+
+<div id="blazor-error-ui" data-nosnippet>
+    An unhandled error has occurred.
+    <a href="." class="reload">Reload</a>
+    <span class="dismiss">🗙</span>
+</div>

@@ -1,0 +1,13 @@
+**/bin/
+**/obj/
+**/.git
+**/.vs
+**/.vscode
+**/Dist/
+**/build_output.txt
+**/web_errors.txt
+**/*.md
+**/*.bat
+**/publish_*
+**/.dockerignore
+**/Dockerfile

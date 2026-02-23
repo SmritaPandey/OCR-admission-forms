@@ -1,0 +1,445 @@
+@page "/search"
+@using Microsoft.EntityFrameworkCore
+@using OCRAdmissionForms.Core.Entities
+@using OCRAdmissionForms.Core.Enums
+@using OCRAdmissionForms.Infrastructure.Data
+@inject AppDbContext DbContext
+@inject NavigationManager Navigation
+
+<PageTitle>Global Search - SRCC Student DMS</PageTitle>
+
+<div class="container-fluid py-4">
+    <!-- Premium Header -->
+    <div class="card border-0 mb-4 p-4 glass-effect" style="background: linear-gradient(135deg, var(--srcc-navy) 0%, var(--srcc-navy-light) 100%);">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2 class="fw-bold mb-0 text-white"><span class="bi bi-search me-3"></span>Global Search</h2>
+                <p class="text-white opacity-75 mb-0 small mt-1">Search & filter students, forms, and documents across the entire database</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="card border-0 shadow-sm mb-3 rounded-4 card-no-hover">
+        <div class="card-body p-4">
+            <div class="row g-3 align-items-end">
+                <div class="col">
+                    <div class="input-group input-group-lg">
+                        <span class="input-group-text bg-light border-end-0 rounded-start-4"><span class="bi bi-search text-muted"></span></span>
+                        <input type="text" class="form-control bg-light border-start-0 rounded-end-4" placeholder="Search by name, roll number, Aadhar, phone, email, DU Form No..." @bind="searchQuery" @bind:event="oninput" @onkeyup="HandleKeyUp" />
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <button class="btn btn-primary btn-lg px-4 rounded-4 shadow-sm" @onclick="RunSearch">
+                        <span class="bi bi-search me-2"></span>Search
+                    </button>
+                </div>
+                <div class="col-auto">
+                    <button class="btn btn-outline-secondary btn-lg rounded-4" @onclick="ClearAll">
+                        <span class="bi bi-x-lg"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="card border-0 shadow-sm mb-4 rounded-4 card-no-hover">
+        <div class="card-body px-4 py-3">
+            <div class="d-flex align-items-center mb-3">
+                <span class="bi bi-funnel-fill text-primary me-2"></span>
+                <span class="small fw-bold text-uppercase text-secondary letter-spacing-1">Filters</span>
+                <button class="btn btn-sm btn-link text-muted ms-auto" @onclick="ClearFilters">
+                    <span class="bi bi-x-circle me-1"></span>Clear Filters
+                </button>
+            </div>
+            <div class="row g-3">
+                <div class="col-md-3 col-lg">
+                    <label class="form-label small text-muted mb-1">Status</label>
+                    <select class="form-select form-select-sm" @bind="filterStatus" @bind:after="RunSearch">
+                        <option value="">All</option>
+                        <option value="Uploaded">Uploaded</option>
+                        <option value="Extracting">Extracting</option>
+                        <option value="Extracted">Extracted</option>
+                        <option value="Verified">Verified</option>
+                        <option value="Error">Error</option>
+                    </select>
+                </div>
+                <div class="col-md-3 col-lg">
+                    <label class="form-label small text-muted mb-1">Course</label>
+                    <select class="form-select form-select-sm" @bind="filterCourse" @bind:after="RunSearch">
+                        <option value="">All</option>
+                        @foreach (var c in availableCourses)
+                        {
+                            <option value="@c">@c</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-3 col-lg">
+                    <label class="form-label small text-muted mb-1">Category</label>
+                    <select class="form-select form-select-sm" @bind="filterCategory" @bind:after="RunSearch">
+                        <option value="">All</option>
+                        <option value="GEN">GEN</option>
+                        <option value="OBC">OBC</option>
+                        <option value="SC">SC</option>
+                        <option value="ST">ST</option>
+                        <option value="EWS">EWS</option>
+                        <option value="PwD">PwD</option>
+                        <option value="Sports">Sports</option>
+                        <option value="CW">CW</option>
+                        <option value="KM">KM</option>
+                        <option value="ECA">ECA</option>
+                        <option value="Foreign">Foreign</option>
+                    </select>
+                </div>
+                <div class="col-md-3 col-lg">
+                    <label class="form-label small text-muted mb-1">Gender</label>
+                    <select class="form-select form-select-sm" @bind="filterGender" @bind:after="RunSearch">
+                        <option value="">All</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Transgender">Transgender</option>
+                    </select>
+                </div>
+                <div class="col-md-3 col-lg">
+                    <label class="form-label small text-muted mb-1">Religion</label>
+                    <select class="form-select form-select-sm" @bind="filterReligion" @bind:after="RunSearch">
+                        <option value="">All</option>
+                        <option value="Hindu">Hindu</option>
+                        <option value="Muslim">Muslim</option>
+                        <option value="Sikh">Sikh</option>
+                        <option value="Jain">Jain</option>
+                        <option value="Christian">Christian</option>
+                        <option value="Buddhist">Buddhist</option>
+                        <option value="Persian">Persian</option>
+                        <option value="Others">Others</option>
+                    </select>
+                </div>
+                <div class="col-md-3 col-lg">
+                    <label class="form-label small text-muted mb-1">Blood Group</label>
+                    <select class="form-select form-select-sm" @bind="filterBloodGroup" @bind:after="RunSearch">
+                        <option value="">All</option>
+                        <option value="A+">A+</option>
+                        <option value="A-">A-</option>
+                        <option value="B+">B+</option>
+                        <option value="B-">B-</option>
+                        <option value="AB+">AB+</option>
+                        <option value="AB-">AB-</option>
+                        <option value="O+">O+</option>
+                        <option value="O-">O-</option>
+                    </select>
+                </div>
+                <div class="col-md-3 col-lg">
+                    <label class="form-label small text-muted mb-1">Nationality</label>
+                    <select class="form-select form-select-sm" @bind="filterNationality" @bind:after="RunSearch">
+                        <option value="">All</option>
+                        <option value="Indian">Indian</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="col-md-3 col-lg">
+                    <label class="form-label small text-muted mb-1">BPL</label>
+                    <select class="form-select form-select-sm" @bind="filterBPL" @bind:after="RunSearch">
+                        <option value="">All</option>
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Tabs -->
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden card-no-hover">
+        <!-- Tab Headers -->
+        <div class="card-header bg-white border-bottom-0 p-0">
+            <ul class="nav nav-tabs border-bottom" style="padding-left: 1rem;">
+                <li class="nav-item">
+                    <button class="nav-link @(activeTab == "students" ? "active fw-bold" : "") px-4 py-3" @onclick='() => activeTab = "students"'>
+                        <span class="bi bi-people me-2"></span>Students <span class="badge bg-primary-subtle text-primary rounded-pill ms-2">@students.Count</span>
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link @(activeTab == "forms" ? "active fw-bold" : "") px-4 py-3" @onclick='() => activeTab = "forms"'>
+                        <span class="bi bi-file-earmark-text me-2"></span>Forms <span class="badge bg-primary-subtle text-primary rounded-pill ms-2">@forms.Count</span>
+                    </button>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Students Tab -->
+        @if (activeTab == "students")
+        {
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="bg-light text-secondary small text-uppercase">
+                        <tr>
+                            <th class="ps-4" style="width: 60px;">ID</th>
+                            <th>Student Name</th>
+                            <th>Roll Number</th>
+                            <th>Aadhar</th>
+                            <th>Created</th>
+                            <th class="text-end pe-4">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (students.Count == 0)
+                        {
+                            <tr><td colspan="6" class="text-center text-muted py-5">
+                                <span class="bi bi-inbox fs-1 d-block mb-2 opacity-25"></span>
+                                @(hasSearched ? "No students found" : "Enter a search term or select filters")
+                            </td></tr>
+                        }
+                        @foreach (var s in students)
+                        {
+                            <tr class="cursor-pointer" @onclick='() => Navigation.NavigateTo($"students/{s.Id}")'>
+                                <td class="ps-4 text-muted small">#@s.Id</td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="rounded-circle bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center me-3" style="width: 36px; height: 36px; font-weight: 600; font-size: 0.85rem;">
+                                            @(string.IsNullOrEmpty(s.StudentName) ? "?" : s.StudentName.Substring(0, 1).ToUpper())
+                                        </div>
+                                        <span class="fw-semibold">@s.StudentName</span>
+                                    </div>
+                                </td>
+                                <td><span class="badge bg-light text-dark border px-3 py-2 font-monospace">@(s.RollNumber ?? "—")</span></td>
+                                <td class="text-muted small font-monospace">@(s.AadharNumber ?? "—")</td>
+                                <td class="text-muted small">@s.CreatedDate.ToString("dd/MM/yyyy")</td>
+                                <td class="text-end pe-4">
+                                    <button class="btn btn-sm btn-outline-primary rounded-pill px-3" @onclick:stopPropagation @onclick='() => Navigation.NavigateTo($"students/{s.Id}")'>
+                                        <span class="bi bi-eye me-1"></span>View
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+
+        <!-- Forms Tab -->
+        @if (activeTab == "forms")
+        {
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="bg-light text-secondary small text-uppercase">
+                        <tr>
+                            <th class="ps-4" style="width: 60px;">ID</th>
+                            <th>Student Name</th>
+                            <th>Roll No</th>
+                            <th>Course</th>
+                            <th>Category</th>
+                            <th>Gender</th>
+                            <th>Phone</th>
+                            <th>Status</th>
+                            <th>Upload Date</th>
+                            <th class="text-end pe-4">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (forms.Count == 0)
+                        {
+                            <tr><td colspan="10" class="text-center text-muted py-5">
+                                <span class="bi bi-inbox fs-1 d-block mb-2 opacity-25"></span>
+                                @(hasSearched ? "No forms found" : "Enter a search term or select filters")
+                            </td></tr>
+                        }
+                        @foreach (var f in forms)
+                        {
+                            <tr class="cursor-pointer" @onclick='() => Navigation.NavigateTo($"forms/{f.Id}")'>
+                                <td class="ps-4 text-muted small">#@f.Id</td>
+                                <td class="fw-semibold">@(f.StudentName ?? "—")</td>
+                                <td><span class="badge bg-light text-dark border font-monospace px-2 py-1">@(f.CollegeRollNo ?? "—")</span></td>
+                                <td class="small">@(f.Course ?? "—")</td>
+                                <td class="small">@(f.Category ?? "—")</td>
+                                <td class="small">@(f.Gender ?? "—")</td>
+                                <td class="small text-muted font-monospace">@(f.PhoneNumber ?? "—")</td>
+                                <td>
+                                    @switch (f.Status)
+                                    {
+                                        case FormStatus.Verified:
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3">Verified</span>
+                                            break;
+                                        case FormStatus.Extracted:
+                                            <span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill px-3">Extracted</span>
+                                            break;
+                                        case FormStatus.Error:
+                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-3">Error</span>
+                                            break;
+                                        default:
+                                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill px-3">@f.Status</span>
+                                            break;
+                                    }
+                                </td>
+                                <td class="text-muted small">@f.UploadDate.ToString("dd/MM/yyyy")</td>
+                                <td class="text-end pe-4">
+                                    <button class="btn btn-sm btn-outline-primary rounded-pill px-3" @onclick:stopPropagation @onclick='() => Navigation.NavigateTo($"forms/{f.Id}")'>
+                                        <span class="bi bi-pencil-square me-1"></span>Open
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+
+        <!-- Status Bar -->
+        <div class="card-footer bg-white border-top py-3 px-4 d-flex justify-content-between align-items-center">
+            <span class="text-muted small">@statusMessage</span>
+            <div class="d-flex gap-2">
+                <a href="/api/export/forms" class="btn btn-sm btn-outline-primary rounded-pill px-3" target="_blank">
+                    <span class="bi bi-download me-1"></span>Export Results
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .cursor-pointer { cursor: pointer; }
+    .cursor-pointer:hover { background-color: #f8f9fa !important; }
+    .letter-spacing-1 { letter-spacing: 0.05em; }
+    .nav-tabs .nav-link { border: none; color: #6c757d; transition: all 0.2s; }
+    .nav-tabs .nav-link.active { color: var(--srcc-navy); border-bottom: 3px solid var(--srcc-navy); }
+    .nav-tabs .nav-link:hover:not(.active) { color: var(--srcc-navy); background: #f8f9fa; }
+</style>
+
+@code {
+    private string searchQuery = "";
+    private string filterStatus = "";
+    private string filterCourse = "";
+    private string filterCategory = "";
+    private string filterGender = "";
+    private string filterReligion = "";
+    private string filterBloodGroup = "";
+    private string filterNationality = "";
+    private string filterBPL = "";
+    private string activeTab = "forms";
+    private string statusMessage = "Enter a search term or use filters to begin";
+    private bool hasSearched = false;
+
+    private List<StudentProfile> students = new();
+    private List<AdmissionForm> forms = new();
+    private List<string> availableCourses = new();
+
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public string? Status { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Load available courses from DB
+        availableCourses = await DbContext.AdmissionForms
+            .Where(f => f.Course != null && f.Course != "")
+            .Select(f => f.Course!)
+            .Distinct()
+            .OrderBy(c => c)
+            .ToListAsync();
+
+        if (!string.IsNullOrEmpty(Status))
+        {
+            filterStatus = Status;
+            await RunSearch();
+        }
+    }
+
+    private async Task HandleKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await RunSearch();
+    }
+
+    private async Task RunSearch()
+    {
+        hasSearched = true;
+        var query = searchQuery.Trim();
+
+        bool hasFilters = !string.IsNullOrEmpty(filterStatus) || !string.IsNullOrEmpty(filterCourse)
+            || !string.IsNullOrEmpty(filterCategory) || !string.IsNullOrEmpty(filterGender)
+            || !string.IsNullOrEmpty(filterReligion) || !string.IsNullOrEmpty(filterBloodGroup)
+            || !string.IsNullOrEmpty(filterNationality) || !string.IsNullOrEmpty(filterBPL);
+
+        if (string.IsNullOrEmpty(query) && !hasFilters)
+        {
+            statusMessage = "Enter a search term or select filters";
+            students.Clear();
+            forms.Clear();
+            return;
+        }
+
+        // Search Forms with all filters
+        var fq = DbContext.AdmissionForms.AsQueryable();
+
+        if (!string.IsNullOrEmpty(query))
+            fq = fq.Where(f => f.StudentName.Contains(query) || f.CollegeRollNo.Contains(query)
+                || f.Filename.Contains(query) || f.AadharNumber.Contains(query)
+                || f.PhoneNumber.Contains(query) || f.Email.Contains(query)
+                || f.DuPortalFormNumber.Contains(query));
+
+        if (!string.IsNullOrEmpty(filterStatus) && Enum.TryParse<FormStatus>(filterStatus, out var s))
+            fq = fq.Where(f => f.Status == s);
+        if (!string.IsNullOrEmpty(filterCourse))
+            fq = fq.Where(f => f.Course == filterCourse);
+        if (!string.IsNullOrEmpty(filterCategory))
+            fq = fq.Where(f => f.Category == filterCategory);
+        if (!string.IsNullOrEmpty(filterGender))
+            fq = fq.Where(f => f.Gender == filterGender);
+        if (!string.IsNullOrEmpty(filterReligion))
+            fq = fq.Where(f => f.Religion == filterReligion);
+        if (!string.IsNullOrEmpty(filterBloodGroup))
+            fq = fq.Where(f => f.BloodGroup == filterBloodGroup);
+        if (!string.IsNullOrEmpty(filterNationality))
+            fq = fq.Where(f => f.Nationality == filterNationality);
+        if (!string.IsNullOrEmpty(filterBPL))
+            fq = fq.Where(f => f.BelowPovertyLine == filterBPL);
+
+        forms = await fq.OrderByDescending(f => f.UploadDate).Take(500).ToListAsync();
+
+        // Search Students (text search only)
+        if (!string.IsNullOrEmpty(query))
+        {
+            students = await DbContext.StudentProfiles
+                .Where(sp => sp.StudentName.Contains(query) || sp.RollNumber.Contains(query) || sp.AadharNumber.Contains(query))
+                .OrderByDescending(sp => sp.CreatedDate)
+                .Take(100)
+                .ToListAsync();
+        }
+        else
+        {
+            students.Clear();
+        }
+
+        var total = students.Count + forms.Count;
+        var filterDesc = hasFilters ? " (filtered)" : "";
+        statusMessage = total > 0
+            ? $"Found {total} results{filterDesc}"
+            : $"No results found{filterDesc}";
+
+        // Auto-switch to Forms tab if filters used but no text search
+        if (string.IsNullOrEmpty(query) && hasFilters && forms.Count > 0)
+            activeTab = "forms";
+    }
+
+    private async Task ClearFilters()
+    {
+        filterStatus = "";
+        filterCourse = "";
+        filterCategory = "";
+        filterGender = "";
+        filterReligion = "";
+        filterBloodGroup = "";
+        filterNationality = "";
+        filterBPL = "";
+        if (hasSearched) await RunSearch();
+    }
+
+    private async Task ClearAll()
+    {
+        searchQuery = "";
+        await ClearFilters();
+        students.Clear();
+        forms.Clear();
+        hasSearched = false;
+        statusMessage = "Enter a search term or use filters to begin";
+    }
+}

@@ -7,10 +7,8 @@ __pycache__/
 env/
 venv/
 ENV/
-.venv
+.venv/
 *.egg-info/
-dist/
-build/
 
 # Node
 node_modules/
@@ -19,16 +17,6 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# Environment variables
-.env
-.env.local
-.env.*.local
-
-# Database
-*.db
-*.sqlite
-*.sqlite3
-
 # IDE
 .vscode/
 .idea/
@@ -36,24 +24,69 @@ yarn-error.log*
 *.swo
 *~
 .DS_Store
+Thumbs.db
 
 # Logs
 *.log
 logs/
 
-# Uploads (user-uploaded files)
-uploads/*
-!uploads/.gitkeep
-
-# Build outputs
-frontend/dist/
-frontend/build/
-*.tsbuildinfo
-
-# OS
-Thumbs.db
-.DS_Store
+# Next.js build output
+.next/
+out/
 
 # Cursor
 .cursor/
 
+# Misc
+.backend.pid
+
+# ═══ Large data / binary folders (DO NOT PUSH) ═══
+# Training data & outputs (~14GB)
+training_output/
+training_data/
+models/
+
+# Student form PDFs
+BA ECO-QC/
+Student Forms/
+uploads/
+
+# Python / Node builds
+build/
+dist/
+backend-dist/
+
+# Desktop publish bundles
+publish_v4/
+publish_v4_final/
+publish_v4_final_v2/
+publish_v4_final_v3/
+publish_v4_single/
+
+# .NET build artifacts
+**/bin/
+**/obj/
+SRC_DOT/Dist/
+
+# Desktop app publish
+OCRAdmissionForms.Desktop/publish/
+
+# Electron node_modules (pulled by npm install)
+electron/node_modules/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# ═══ Uploads dir (keep placeholder) ═══
+uploads/*
+!uploads/.gitkeep
+
+# ═══ Temp / debug files ═══
+*.spec
+*.pid
+debug_*.txt
+temp_*.json
+form_*_dump*.json
+gemini_test_output.txt

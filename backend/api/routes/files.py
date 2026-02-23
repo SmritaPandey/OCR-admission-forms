@@ -7,6 +7,8 @@ from sqlalchemy.orm import Session
 from backend.database import get_db, AdmissionForm
 from backend.utils.file_handler import load_image
 from backend.config import settings
+from backend.api.dependencies import RequireAnyAuth
+from backend.models.auth_models import CurrentUser
 from pathlib import Path
 import io
 from PIL import Image
@@ -14,7 +16,10 @@ from PIL import Image
 router = APIRouter()
 
 @router.get("/preview/{form_id}")
-async def get_form_preview(form_id: int, page: int = 1, db: Session = Depends(get_db)):
+async def get_form_preview(
+    form_id: int, page: int = 1, db: Session = Depends(get_db),
+    user: CurrentUser = Depends(RequireAnyAuth),
+):
     """
     Get form preview as image (converts PDF to image if needed)
     For PDFs, use ?page=1, ?page=2, etc. to view specific pages
@@ -73,7 +78,10 @@ async def get_form_preview(form_id: int, page: int = 1, db: Session = Depends(ge
         raise HTTPException(status_code=500, detail=f"Failed to generate preview: {str(e)}")
 
 @router.get("/preview/{form_id}/pages")
-async def get_form_pages_info(form_id: int, db: Session = Depends(get_db)):
+async def get_form_pages_info(
+    form_id: int, db: Session = Depends(get_db),
+    user: CurrentUser = Depends(RequireAnyAuth),
+):
     """
     Get information about PDF pages (number of pages)
     """

@@ -1,0 +1,185 @@
+<Page x:Class="OCRAdmissionForms.App.Views.DashboardPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.modernwpf.com/2019"
+      Title="Dashboard">
+
+    <Page.Resources>
+        <!-- Clickable Card Style -->
+        <Style x:Key="ClickableCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="24"/>
+            <Setter Property="Width" Value="220"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect BlurRadius="15" ShadowDepth="3" Opacity="0.12"/>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#f8fafc"/>
+                    <Setter Property="Effect">
+                        <Setter.Value>
+                            <DropShadowEffect BlurRadius="20" ShadowDepth="5" Opacity="0.2"/>
+                        </Setter.Value>
+                    </Setter>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Page.Resources>
+
+    <ScrollViewer Padding="32" Background="#f1f5f9">
+        <StackPanel MaxWidth="1200">
+            <!-- Header with Gradient -->
+            <Border CornerRadius="12" Padding="24" Margin="0,0,0,24">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="#1a3a6e" Offset="0"/>
+                        <GradientStop Color="#2563eb" Offset="1"/>
+                    </LinearGradientBrush>
+                </Border.Background>
+                <StackPanel>
+                    <TextBlock Text="SRCC Student DMS" FontSize="32" FontWeight="Bold" Foreground="White"/>
+                    <TextBlock x:Name="TxtWelcome" Text="Welcome back! Here's your overview." FontSize="14" Foreground="#94a3b8" Margin="0,4,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Stats Cards Row 1 -->
+            <TextBlock Text="📊 Statistics" FontSize="18" FontWeight="SemiBold" Foreground="#1a3a6e" Margin="0,0,0,16"/>
+            <WrapPanel Orientation="Horizontal">
+                <Border Style="{StaticResource ClickableCardStyle}" x:Name="CardTotalForms" MouseLeftButtonUp="CardTotalForms_Click" Margin="0,0,20,0">
+                    <Grid>
+                        <StackPanel>
+                            <Ellipse Width="48" Height="48" Fill="#dbeafe" Margin="0,0,0,12"/>
+                            <TextBlock x:Name="TxtTotalForms" Text="0" FontSize="40" FontWeight="Bold" Foreground="#2563eb"/>
+                            <TextBlock Text="Total Forms" FontSize="14" Foreground="#64748b"/>
+                            <TextBlock Text="Click to view all →" FontSize="11" Foreground="#94a3b8" Margin="0,8,0,0"/>
+                        </StackPanel>
+                        <TextBlock Text="📄" FontSize="24" HorizontalAlignment="Right" VerticalAlignment="Top"/>
+                    </Grid>
+                </Border>
+
+                <Border Style="{StaticResource ClickableCardStyle}" x:Name="CardProcessed" MouseLeftButtonUp="CardProcessed_Click" Margin="0,0,20,0">
+                    <Grid>
+                        <StackPanel>
+                            <Ellipse Width="48" Height="48" Fill="#d1fae5" Margin="0,0,0,12"/>
+                            <TextBlock x:Name="TxtProcessed" Text="0" FontSize="40" FontWeight="Bold" Foreground="#059669"/>
+                            <TextBlock Text="Verified Forms" FontSize="14" Foreground="#64748b"/>
+                            <TextBlock Text="Click to view verified →" FontSize="11" Foreground="#94a3b8" Margin="0,8,0,0"/>
+                        </StackPanel>
+                        <TextBlock Text="✅" FontSize="24" HorizontalAlignment="Right" VerticalAlignment="Top"/>
+                    </Grid>
+                </Border>
+
+                <Border Style="{StaticResource ClickableCardStyle}" x:Name="CardPending" MouseLeftButtonUp="CardPending_Click" Margin="0,0,20,0">
+                    <Grid>
+                        <StackPanel>
+                            <Ellipse Width="48" Height="48" Fill="#fef3c7" Margin="0,0,0,12"/>
+                            <TextBlock x:Name="TxtPending" Text="0" FontSize="40" FontWeight="Bold" Foreground="#d97706"/>
+                            <TextBlock Text="Pending Review" FontSize="14" Foreground="#64748b"/>
+                            <TextBlock Text="Click to process →" FontSize="11" Foreground="#94a3b8" Margin="0,8,0,0"/>
+                        </StackPanel>
+                        <TextBlock Text="⏳" FontSize="24" HorizontalAlignment="Right" VerticalAlignment="Top"/>
+                    </Grid>
+                </Border>
+
+                <Border Style="{StaticResource ClickableCardStyle}" x:Name="CardStudents" MouseLeftButtonUp="CardStudents_Click">
+                    <Grid>
+                        <StackPanel>
+                            <Ellipse Width="48" Height="48" Fill="#ede9fe" Margin="0,0,0,12"/>
+                            <TextBlock x:Name="TxtStudents" Text="0" FontSize="40" FontWeight="Bold" Foreground="#7c3aed"/>
+                            <TextBlock Text="Student Profiles" FontSize="14" Foreground="#64748b"/>
+                            <TextBlock Text="Click to manage →" FontSize="11" Foreground="#94a3b8" Margin="0,8,0,0"/>
+                        </StackPanel>
+                        <TextBlock Text="👥" FontSize="24" HorizontalAlignment="Right" VerticalAlignment="Top"/>
+                    </Grid>
+                </Border>
+            </WrapPanel>
+
+            <!-- Additional Stats -->
+            <WrapPanel Orientation="Horizontal" Margin="0,20,0,0">
+                <Border Style="{StaticResource ClickableCardStyle}" x:Name="CardExtracted" MouseLeftButtonUp="CardExtracted_Click" Margin="0,0,20,0">
+                    <Grid>
+                        <StackPanel>
+                            <TextBlock x:Name="TxtExtracted" Text="0" FontSize="36" FontWeight="Bold" Foreground="#0891b2"/>
+                            <TextBlock Text="Extracted (Awaiting Verify)" FontSize="13" Foreground="#64748b"/>
+                        </StackPanel>
+                        <TextBlock Text="🔍" FontSize="22" HorizontalAlignment="Right" VerticalAlignment="Top"/>
+                    </Grid>
+                </Border>
+
+                <Border Style="{StaticResource ClickableCardStyle}" x:Name="CardErrors" MouseLeftButtonUp="CardErrors_Click" Margin="0,0,20,0">
+                    <Grid>
+                        <StackPanel>
+                            <TextBlock x:Name="TxtErrors" Text="0" FontSize="36" FontWeight="Bold" Foreground="#dc2626"/>
+                            <TextBlock Text="OCR Errors" FontSize="13" Foreground="#64748b"/>
+                        </StackPanel>
+                        <TextBlock Text="⚠️" FontSize="22" HorizontalAlignment="Right" VerticalAlignment="Top"/>
+                    </Grid>
+                </Border>
+
+                <Border Style="{StaticResource ClickableCardStyle}" MouseLeftButtonUp="CardToday_Click">
+                    <Grid>
+                        <StackPanel>
+                            <TextBlock x:Name="TxtTodayUploads" Text="0" FontSize="36" FontWeight="Bold" Foreground="#6366f1"/>
+                            <TextBlock Text="Uploaded Today" FontSize="13" Foreground="#64748b"/>
+                        </StackPanel>
+                        <TextBlock Text="📅" FontSize="22" HorizontalAlignment="Right" VerticalAlignment="Top"/>
+                    </Grid>
+                </Border>
+            </WrapPanel>
+
+            <!-- Quick Actions -->
+            <TextBlock Text="⚡ Quick Actions" FontSize="18" FontWeight="SemiBold" Foreground="#1a3a6e" Margin="0,32,0,16"/>
+            <ui:SimpleStackPanel Orientation="Horizontal" Spacing="16">
+                <Button x:Name="BtnQuickUpload" Click="QuickUpload_Click" Padding="20,14" Background="#2563eb" Foreground="White" FontWeight="SemiBold">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="📤" FontSize="16" Margin="0,0,8,0"/>
+                        <TextBlock Text="Upload New Form" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+                <Button x:Name="BtnQuickBatch" Click="QuickBatch_Click" Padding="20,14" Background="#059669" Foreground="White" FontWeight="SemiBold">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="📁" FontSize="16" Margin="0,0,8,0"/>
+                        <TextBlock Text="Batch Upload" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+                <Button x:Name="BtnViewAllForms" Click="ViewAllForms_Click" Padding="20,14" FontWeight="SemiBold">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="📋" FontSize="16" Margin="0,0,8,0"/>
+                        <TextBlock Text="View All Forms" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+                <Button x:Name="BtnViewStudents" Click="ViewStudents_Click" Padding="20,14" FontWeight="SemiBold">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="👥" FontSize="16" Margin="0,0,8,0"/>
+                        <TextBlock Text="Manage Students" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+            </ui:SimpleStackPanel>
+
+            <!-- Recent Activity -->
+            <TextBlock Text="📋 Recent Forms" FontSize="18" FontWeight="SemiBold" Foreground="#1a3a6e" Margin="0,32,0,16"/>
+            <Border Background="White" CornerRadius="12" Padding="16">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="15" ShadowDepth="3" Opacity="0.1"/>
+                </Border.Effect>
+                <DataGrid x:Name="RecentFormsGrid" AutoGenerateColumns="False" IsReadOnly="True" 
+                          HeadersVisibility="Column" GridLinesVisibility="None" RowHeight="48"
+                          MouseDoubleClick="RecentFormsGrid_DoubleClick">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="60"/>
+                        <DataGridTextColumn Header="Filename" Binding="{Binding Filename}" Width="*"/>
+                        <DataGridTextColumn Header="Student" Binding="{Binding StudentName}" Width="180"/>
+                        <DataGridTextColumn Header="Course" Binding="{Binding Course}" Width="120"/>
+                        <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="100"/>
+                        <DataGridTextColumn Header="Upload Date" Binding="{Binding UploadDate, StringFormat=g}" Width="150"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Border>
+            <TextBlock Text="Double-click a form to view details" FontSize="11" Foreground="#94a3b8" Margin="8,8,0,32"/>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

@@ -14,19 +14,15 @@ function Dashboard() {
     students: 0,
   });
 
-  useEffect(() => {
-    loadForms();
-  }, []);
-
-  const loadForms = async () => {
+  const loadForms = async (isInitial = false) => {
     try {
-      setLoading(true);
+      if (isInitial) setLoading(true);
       const data = await apiService.listForms(0, 10);
       setForms(data);
-      
+
       // Calculate stats
       const allForms = await apiService.listForms(0, 1000);
-      
+
       // Count documents
       let documentCount = 0;
       try {
@@ -35,7 +31,7 @@ function Dashboard() {
       } catch (err) {
         console.error('Failed to load documents:', err);
       }
-      
+
       // Count students
       let studentCount = 0;
       try {
@@ -44,7 +40,7 @@ function Dashboard() {
       } catch (err) {
         console.error('Failed to load students:', err);
       }
-      
+
       setStats({
         total: allForms.length,
         verified: allForms.filter(f => f.status === 'verified').length,
@@ -58,6 +54,31 @@ function Dashboard() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadForms(true); // Initial load with spinner
+    // Auto-refresh every 8 seconds (reduced frequency to avoid timeouts)
+    // Use a ref to track if we're currently loading to avoid stale closures
+    let isRefreshing = false;
+    let timeoutId: NodeJS.Timeout;
+    const interval = setInterval(() => {
+      if (!isRefreshing) {
+        isRefreshing = true;
+        timeoutId = setTimeout(async () => {
+          try {
+            await loadForms();
+          } finally {
+            isRefreshing = false;
+          }
+        }, 100); // Small delay to debounce
+      }
+    }, 8000);
+    return () => {
+      clearInterval(interval);
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run on mount, loadForms is stable
 
   const handleDelete = async (formId: number, filename: string) => {
     if (!window.confirm(`Are you sure you want to delete "${filename}"? This action cannot be undone.`)) {
@@ -85,44 +106,107 @@ function Dashboard() {
     return <span className={`status-badge ${statusInfo.class}`}>{statusInfo.label}</span>;
   };
 
+  const overviewStats = [
+    {
+      label: 'Total Forms',
+      value: stats.total,
+      description: 'Overall submissions received this cycle',
+    },
+    {
+      label: 'Verified',
+      value: stats.verified,
+      description: 'Applications cleared for enrollment',
+    },
+    {
+      label: 'Pending Verification',
+      value: stats.pending,
+      description: 'Awaiting manual review and confirmation',
+    },
+    {
+      label: 'Supporting Documents',
+      value: stats.documents,
+      description: 'Files on record across all applicants',
+    },
+    {
+      label: 'Student Profiles',
+      value: stats.students,
+      description: 'Applicants actively tracked in the system',
+    },
+  ];
+
+  const currentYear = new Date().getFullYear();
+  const nextYear = currentYear + 1;
+
   if (loading) {
     return <div className="loading">Loading...</div>;
   }
 
   return (
     <div className="dashboard">
-      <div className="dashboard-header">
-        <h2>Dashboard</h2>
-        <Link to="/upload" className="btn btn-primary">
-          Upload New Form
-        </Link>
-      </div>
+      <section className="dashboard-hero premium-card">
+        <div className="hero-content">
+          <p className="hero-eyebrow badge badge-primary">Admissions Cycle {currentYear} – {nextYear}</p>
+          <h1 className="text-premium">Admissions Command Center</h1>
+          <p className="hero-copy text-muted">
+            Monitor intake momentum, track verification progress, and coordinate applicant follow-up
+            — all from a single, college-ready workspace.
+          </p>
+          <div className="hero-actions">
+            <Link to="/upload" className="btn btn-primary btn-lg shadow-sm">
+              Upload New Form
+            </Link>
+            <Link to="/search" className="btn btn-secondary btn-lg">
+              Advanced Search
+            </Link>
+          </div>
+        </div>
+        <div className="hero-summary">
+          <div className="summary-card glassmorphism">
+            <span className="summary-label">Verified</span>
+            <span className="summary-value text-success">{stats.verified}</span>
+            <span className="summary-description">Students cleared</span>
+          </div>
+          <div className="summary-card glassmorphism">
+            <span className="summary-label">Pending</span>
+            <span className="summary-value text-warning">{stats.pending}</span>
+            <span className="summary-description">Awaiting checks</span>
+          </div>
+          <div className="summary-card glassmorphism">
+            <span className="summary-label">Records</span>
+            <span className="summary-value text-primary">{stats.documents}</span>
+            <span className="summary-description">Files archived</span>
+          </div>
+        </div>
+      </section>
 
       <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-value">{stats.total}</div>
-          <div className="stat-label">Total Forms</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-value">{stats.verified}</div>
-          <div className="stat-label">Verified</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-value">{stats.pending}</div>
-          <div className="stat-label">Pending Verification</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-value">{stats.documents}</div>
-          <div className="stat-label">Documents</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-value">{stats.students}</div>
-          <div className="stat-label">Student Profiles</div>
-        </div>
+        {overviewStats.map((item) => (
+          <div className="stat-card hover-lift" key={item.label}>
+            <span className="stat-chip badge badge-outline">{item.label}</span>
+            <div className="stat-value">{item.value.toLocaleString()}</div>
+            <p className="stat-description text-xs text-muted">{item.description}</p>
+          </div>
+        ))}
       </div>
 
       <div className="recent-forms">
-        <h3>Recent Forms</h3>
+        <div className="recent-header">
+          <div>
+            <h3>Recent Form Activity</h3>
+            <p className="recent-subtitle">
+              Latest submissions across the admissions cycle, ready for review or follow-up.
+            </p>
+          </div>
+          <div className="recent-actions">
+            <Link to="/upload" className="btn btn-secondary">
+              Upload Files
+            </Link>
+            <Link to="/search" className="btn btn-link">
+              View all records →
+            </Link>
+          </div>
+        </div>
+
         {forms.length === 0 ? (
           <div className="empty-state">
             <p>No forms uploaded yet.</p>

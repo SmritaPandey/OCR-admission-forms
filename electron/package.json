@@ -1,0 +1,79 @@
+{
+    "name": "ocr-admission-forms-desktop",
+    "productName": "OCR Form Extractor",
+    "version": "2.0.0",
+    "description": "Desktop application for OCR processing of admission forms",
+    "main": "main.js",
+    "scripts": {
+        "start": "electron .",
+        "dist": "electron-builder",
+        "pack": "electron-builder --dir"
+    },
+    "keywords": [
+        "Electron",
+        "OCR",
+        "FastAPI"
+    ],
+    "author": "Smrita Pandey",
+    "license": "ISC",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/SmritaPandey/OCR-admission-forms"
+    },
+    "devDependencies": {
+        "electron": "^28.1.0",
+        "electron-builder": "^24.9.1"
+    },
+    "dependencies": {
+        "tree-kill": "^1.2.2"
+    },
+    "build": {
+        "appId": "com.smrita.ocrformextractor",
+        "publish": null,
+        "asar": true,
+        "win": {
+            "target": "nsis",
+            "requestedExecutionLevel": "asInvoker"
+        },
+        "mac": {
+            "target": "dmg",
+            "icon": "resources/icon.icns"
+        },
+        "linux": {
+            "target": "AppImage",
+            "icon": "resources/icon.png"
+        },
+        "nsis": {
+            "oneClick": false,
+            "allowToChangeInstallationDirectory": true
+        },
+        "files": [
+            "**/*",
+            "!**/*.ts",
+            "!*.map"
+        ],
+        "extraResources": [
+            {
+                "from": "../backend-dist/api.exe",
+                "to": "backend/api.exe",
+                "filter": ["api.exe"]
+            },
+            {
+                "from": "../frontend/dist",
+                "to": "frontend",
+                "filter": ["**/*"]
+            },
+            {
+                "from": "../data",
+                "to": "data",
+                "filter": ["**/*"]
+            }
+        ],
+        "extraFiles": [
+            {
+                "from": "../.env.example",
+                "to": ".env.example"
+            }
+        ]
+    }
+}

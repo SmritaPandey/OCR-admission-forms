@@ -5,6 +5,7 @@ from pathlib import Path
 from fastapi import UploadFile
 from PIL import Image
 from backend.config import settings
+from typing import Optional
 import fitz  # PyMuPDF for PDF support
 
 def ensure_upload_dir():
@@ -132,7 +133,30 @@ def load_image(file_path: str) -> Image.Image:
         
         # Handle image files
         else:
+            # Verify file exists and is readable
+            if not os.path.exists(file_path):
+                raise ValueError(f"File not found: {file_path}")
+            
+            if not os.path.isfile(file_path):
+                raise ValueError(f"Path is not a file: {file_path}")
+            
+            # Check file size
+            file_size = os.path.getsize(file_path)
+            if file_size == 0:
+                raise ValueError(f"File is empty: {file_path}")
+            
+            # Open and validate image
+            try:
+                # First, try to open and verify the image
+                test_image = Image.open(file_path)
+                # Verify image is valid by loading it (this closes the file)
+                test_image.verify()
+            except Exception as verify_error:
+                raise ValueError(f"Invalid or corrupted image file: {str(verify_error)}")
+            
+            # Reopen image after verification (verify() closes the file)
             image = Image.open(file_path)
+            
             # Convert to RGB if necessary (for JPEG compatibility)
             if image.mode in ('RGBA', 'LA', 'P'):
                 rgb_image = Image.new('RGB', image.size, (255, 255, 255))
@@ -142,6 +166,11 @@ def load_image(file_path: str) -> Image.Image:
                 return rgb_image
             elif image.mode != 'RGB':
                 image = image.convert('RGB')
+            
+            # Final validation
+            if image.size[0] == 0 or image.size[1] == 0:
+                raise ValueError(f"Image has invalid dimensions: {image.size}")
+            
             return image
             
     except Exception as e:
@@ -193,4 +222,65 @@ def load_all_pdf_pages(file_path: str) -> list[Image.Image]:
         
     except Exception as e:
         raise ValueError(f"Failed to process PDF pages: {str(e)}")
+
+def save_pdf_page_as_document(
+    pdf_path: str,
+    page_number: int,
+    output_filename: Optional[str] = None
+) -> tuple[str, str, int]:
+    """
+    Extract a single page from a PDF and save it as a separate PDF document file.
+    
+    Args:
+        pdf_path: Path to the source PDF file
+        page_number: Page number to extract (1-indexed)
+        output_filename: Optional custom filename (without extension)
+    
+    Returns:
+        Tuple of (file_path, relative_path, file_size_in_bytes)
+    """
+    try:
+        import fitz  # PyMuPDF
+        from pathlib import Path
+        import uuid
+        import os
+        
+        # Open source PDF
+        pdf_document = fitz.open(pdf_path)
+        
+        if page_number < 1 or page_number > len(pdf_document):
+            pdf_document.close()
+            raise ValueError(f"Page number {page_number} is out of range (1-{len(pdf_document)})")
+        
+        # Create new PDF with single page
+        new_pdf = fitz.open()
+        new_pdf.insert_pdf(pdf_document, from_page=page_number-1, to_page=page_number-1)
+        
+        # Save to documents directory
+        documents_dir = ensure_documents_dir()
+        
+        # Generate filename
+        if output_filename:
+            filename = f"{output_filename}.pdf"
+        else:
+            filename = f"{uuid.uuid4()}.pdf"
+        
+        file_path = documents_dir / filename
+        
+        # Save the single-page PDF
+        new_pdf.save(str(file_path))
+        file_size = file_path.stat().st_size
+        
+        # Close PDFs
+        new_pdf.close()
+        pdf_document.close()
+        
+        # Return relative path from uploads directory
+        upload_dir = ensure_upload_dir()
+        relative_path = os.path.relpath(file_path, upload_dir)
+        
+        return str(file_path), relative_path, file_size
+        
+    except Exception as e:
+        raise ValueError(f"Failed to extract PDF page {page_number}: {str(e)}")
 

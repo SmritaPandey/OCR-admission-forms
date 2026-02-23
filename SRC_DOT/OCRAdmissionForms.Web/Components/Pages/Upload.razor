@@ -1,0 +1,264 @@
+@page "/upload"
+@using OCRAdmissionForms.Core.Entities
+@using OCRAdmissionForms.Core.Enums
+@using OCRAdmissionForms.Core.Interfaces
+@using OCRAdmissionForms.Infrastructure.Data
+@inject AppDbContext DbContext
+@inject IOcrService OcrService
+@inject IFormExtractorService FormExtractor
+@inject IWebHostEnvironment Environment
+@inject NavigationManager Navigation
+
+<PageTitle>Upload Records - SRCC Student DMS</PageTitle>
+
+<div class="container-fluid py-4">
+    <!-- Premium Header -->
+    <div class="card border-0 mb-4 p-4 glass-effect text-white" style="background: linear-gradient(135deg, var(--srcc-navy) 0%, var(--srcc-navy-light) 100%);">
+        <h2 class="fw-bold mb-0"><span class="bi bi-cloud-upload-fill me-3"></span>Record Ingestion</h2>
+        <p class="opacity-75 mb-0 small">Securely upload and process student admission forms using AI-powered OCR</p>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm p-4 rounded-4 bg-white h-100">
+                <h4 class="fw-bold mb-4 text-primary-emphasis">Upload Document</h4>
+                <div class="upload-zone p-5 border-2 border-dashed rounded-4 text-center bg-light" style="border-color: #cbd5e1 !important;">
+                    <span class="bi bi-file-earmark-arrow-up fs-1 text-primary mb-3 d-block"></span>
+                    <h5 class="fw-bold">Select Form file</h5>
+                    <p class="text-muted small mb-4">Supported formats: JPG, PNG, PDF (Max 20MB)</p>
+                    <InputFile OnChange="@LoadFiles" class="form-control d-none" id="formFile" accept=".png,.jpg,.jpeg,.pdf,.tiff" />
+                    <label for="formFile" class="btn btn-primary px-4 py-2 rounded-pill">
+                        <span class="bi bi-folder2-open me-2"></span> Browse Files
+                    </label>
+                </div>
+
+                @if (isLoading)
+                {
+                    <div class="mt-4 p-4 bg-primary bg-opacity-10 rounded-4 text-center">
+                        <div class="spinner-border text-primary mb-3" role="status"></div>
+                        <h5 class="fw-bold text-primary mb-1">Processing Engine Online</h5>
+                        <p class="text-primary mb-0 small">@ProcessingStatus</p>
+                    </div>
+                }
+
+                @if (ProcessingStatus != null && !isLoading)
+                {
+                    <div class="mt-4 alert @StatusClass border-0 shadow-sm rounded-4 d-flex align-items-center">
+                        <span class="bi @(StatusClass.Contains("success") ? "bi-check-circle-fill" : "bi-exclamation-triangle-fill") me-3 fs-4"></span>
+                        <div>@ProcessingStatus</div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            @if (ExtractedForm != null)
+            {
+                <div class="card border-0 shadow-sm rounded-4 h-100 bg-white overflow-hidden">
+                    <div class="bg-success bg-opacity-10 p-4 border-bottom border-success border-opacity-10">
+                        <h4 class="fw-bold mb-0 text-success"><span class="bi bi-stars me-2"></span>Extraction Success</h4>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="d-flex align-items-center mb-4">
+                            <div class="rounded-circle bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px; font-weight: 700; font-size: 1.25rem;">
+                                @ExtractedForm.StudentName.Substring(0, 1).ToUpper()
+                            </div>
+                            <div>
+                                <h5 class="fw-bold mb-0">@ExtractedForm.StudentName</h5>
+                                <p class="text-muted small mb-0">Candidate Profile Identified</p>
+                            </div>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <div class="p-3 bg-light rounded-3">
+                                    <small class="text-muted d-block uppercase small fw-bold mb-1">Roll Number</small>
+                                    <span class="fw-bold">@(ExtractedForm.CollegeRollNo ?? "N/A")</span>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="p-3 bg-light rounded-3">
+                                    <small class="text-muted d-block uppercase small fw-bold mb-1">Course</small>
+                                    <span class="fw-bold">@ExtractedForm.Course</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 pt-3 border-top d-grid">
+                            <button class="btn btn-primary py-3 rounded-4 shadow-sm fw-bold" @onclick='() => Navigation.NavigateTo($"forms/{ExtractedForm.Id}")'>
+                                <span class="bi bi-pencil-square me-2"></span> Continue to Verification
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="card border-0 bg-transparent h-100 d-flex align-items-center justify-content-center opacity-50">
+                    <div class="text-center">
+                        <span class="bi bi-layout-text-sidebar-reverse fs-1 d-block mb-3"></span>
+                        <p>Preview will appear here after extraction</p>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private bool isLoading = false;
+    private string? ProcessingStatus;
+    private string StatusClass = "alert-info";
+    private AdmissionForm? ExtractedForm;
+
+    private async Task LoadFiles(InputFileChangeEventArgs e)
+    {
+        isLoading = true;
+        ProcessingStatus = "Uploading...";
+        StatusClass = "alert-info";
+        ExtractedForm = null;
+        
+        try
+        {
+            foreach (var file in e.GetMultipleFiles(1))
+            {
+                // Save file
+                var uploadsPath = Path.Combine(Environment.ContentRootPath, "uploads");
+                if (!Directory.Exists(uploadsPath)) Directory.CreateDirectory(uploadsPath);
+                
+                var fileName = $"{Guid.NewGuid()}{Path.GetExtension(file.Name)}";
+                var filePath = Path.Combine(uploadsPath, fileName);
+                
+                await using FileStream fs = new(filePath, FileMode.Create);
+                await file.OpenReadStream(maxAllowedSize: 20 * 1024 * 1024).CopyToAsync(fs);
+                fs.Close();
+
+                // Create Entity
+                var form = new AdmissionForm
+                {
+                    Filename = file.Name,
+                    FilePath = fileName,
+                    Status = FormStatus.Extracting,
+                    OcrProvider = "unified_ocr"
+                };
+                
+                DbContext.AdmissionForms.Add(form);
+                await DbContext.SaveChangesAsync();
+
+                // Process OCR
+                ProcessingStatus = "Performing OCR (Google Vision + Tesseract)...";
+                StateHasChanged();
+                
+                try 
+                {
+                    // Step 1: OCR using Unified Service (Google Vision primary, Tesseract fallback)
+                    var ocrResult = await OcrService.ExtractAsync(filePath);
+                    
+                    // Step 2: Extract structured fields using SRCC Form Extractor
+                    var extraction = FormExtractor.Extract(ocrResult.RawText);
+                    
+                    // Step 3: Map extracted fields to form entity
+                    MapExtractionToForm(form, extraction);
+                    
+                    // Store raw extraction data as JSON
+                    form.ExtractedDataJson = System.Text.Json.JsonSerializer.Serialize(extraction.Fields);
+                    form.Status = FormStatus.Extracted;
+                    
+                    await DbContext.SaveChangesAsync();
+                    ProcessingStatus = $"OCR Complete! Extracted {extraction.Fields.Count} fields.";
+                    StatusClass = "alert-success";
+                    ExtractedForm = form;
+                    
+                    // Auto-navigate to details after 1.5 seconds
+                    await Task.Delay(1500);
+                    Navigation.NavigateTo($"forms/{form.Id}");
+                }
+                catch (Exception ex)
+                {
+                    form.Status = FormStatus.Error;
+                    await DbContext.SaveChangesAsync();
+                    ProcessingStatus = $"OCR Failed: {ex.Message}. File saved for manual processing.";
+                    StatusClass = "alert-danger";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            ProcessingStatus = $"Error: {ex.Message}";
+            StatusClass = "alert-danger";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void MapExtractionToForm(AdmissionForm form, ExtractionResult extraction)
+    {
+        var fields = extraction.Fields;
+        
+        form.StudentName = GetField(fields, "StudentName");
+        form.FirstName = GetField(fields, "FirstName");
+        form.MiddleName = GetField(fields, "MiddleName");
+        form.Surname = GetField(fields, "Surname");
+        form.Gender = GetField(fields, "Gender");
+        form.DateOfBirth = GetField(fields, "DateOfBirth");
+        form.Category = GetField(fields, "Category");
+        form.Nationality = GetField(fields, "Nationality");
+        form.Religion = GetField(fields, "Religion");
+        form.BloodGroup = GetField(fields, "BloodGroup");
+        form.AadharNumber = GetField(fields, "AadharNumber");
+        form.AcademicSession = GetField(fields, "AcademicSession");
+        form.Course = GetField(fields, "Course");
+        form.AdmissionCategory = GetField(fields, "AdmissionCategory");
+        form.DuPortalFormNumber = GetField(fields, "DuPortalFormNumber");
+        form.CuetScore = GetField(fields, "CuetScore");
+        form.CollegeRollNo = GetField(fields, "CollegeRollNo");
+        form.DateOfAdmission = GetField(fields, "DateOfAdmission");
+        form.PermanentAddress = GetField(fields, "PermanentAddress");
+        form.PermanentState = GetField(fields, "PermanentState");
+        form.PermanentPincode = GetField(fields, "PermanentPincode");
+        form.Pincode = GetField(fields, "Pincode");
+        form.CorrespondenceAddress = GetField(fields, "CorrespondenceAddress");
+        form.Email = GetField(fields, "Email");
+        form.PhoneNumber = GetField(fields, "PhoneNumber");
+        form.AlternatePhone = GetField(fields, "AlternatePhone");
+        form.MotherName = GetField(fields, "MotherName");
+        form.FatherName = GetField(fields, "FatherName");
+        form.MotherOccupation = GetField(fields, "MotherOccupation");
+        form.FatherOccupation = GetField(fields, "FatherOccupation");
+        form.MotherMobile = GetField(fields, "MotherMobile");
+        form.FatherMobile = GetField(fields, "FatherMobile");
+        form.GuardianName = GetField(fields, "GuardianName");
+        form.GuardianAddress = GetField(fields, "GuardianAddress");
+        form.GuardianMobile = GetField(fields, "GuardianMobile");
+        form.GuardianEmail = GetField(fields, "GuardianEmail");
+        form.GuardianRelation = GetField(fields, "GuardianRelation");
+
+        form.TwelfthYear = GetField(fields, "TwelfthYear");
+        form.TwelfthBoard = GetField(fields, "TwelfthBoard");
+        form.TwelfthPercentage = GetField(fields, "TwelfthPercentage");
+        form.TwelfthInstitution = GetField(fields, "TwelfthInstitution");
+        form.TwelfthRollNumber = GetField(fields, "TwelfthRollNumber");
+
+        form.TenthBoard = GetField(fields, "TenthBoard");
+        form.TenthYear = GetField(fields, "TenthYear");
+        form.TenthPercentage = GetField(fields, "TenthPercentage");
+        form.TenthSchool = GetField(fields, "TenthSchool");
+
+        form.CuetSubject1 = GetField(fields, "CuetSubject1");
+        form.CuetScoreObtained1 = GetField(fields, "CuetScoreObtained1");
+        form.CuetTotalScore1 = GetField(fields, "CuetTotalScore1");
+        form.CuetSubject2 = GetField(fields, "CuetSubject2");
+        form.CuetScoreObtained2 = GetField(fields, "CuetScoreObtained2");
+        form.CuetTotalScore2 = GetField(fields, "CuetTotalScore2");
+        form.CuetScoreObtainedAll = GetField(fields, "CuetScoreObtainedAll");
+        
+        form.HindiStudiedUpto = GetField(fields, "HindiStudiedUpto");
+    }
+
+    private static string? GetField(Dictionary<string, string?> fields, string key)
+    {
+        return fields.TryGetValue(key, out var value) ? value : null;
+    }
+}

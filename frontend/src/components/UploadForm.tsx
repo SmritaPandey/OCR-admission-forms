@@ -9,7 +9,7 @@ function UploadForm() {
   const [availableProviders, setAvailableProviders] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
-  const [filePreviews, setFilePreviews] = useState<{[key: string]: string}>({});
+  const [filePreviews, setFilePreviews] = useState<{ [key: string]: string }>({});
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -17,14 +17,27 @@ function UploadForm() {
   }, []);
 
   const loadProviders = async () => {
+    // Optimization: Skip API call if providers are already loaded
+    if (availableProviders && availableProviders.length > 0) {
+      return;
+    }
+
     try {
       const providers = await apiService.getProviders();
-      setAvailableProviders(providers.providers);
-      if (providers.providers.length > 0) {
+      if (providers && providers.providers && providers.providers.length > 0) {
+        setAvailableProviders(providers.providers);
         setOcrProvider(providers.default || providers.providers[0]);
+      } else {
+        // Fallback to default providers if API fails
+        console.warn('No providers returned from API, using defaults');
+        setAvailableProviders(['tesseract']);
+        setOcrProvider('tesseract');
       }
     } catch (error) {
       console.error('Failed to load providers:', error);
+      // Fallback to default providers on error
+      setAvailableProviders(['tesseract']);
+      setOcrProvider('tesseract');
     }
   };
 
@@ -42,7 +55,7 @@ function UploadForm() {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    
+
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       handleFiles(Array.from(e.dataTransfer.files));
     }
@@ -59,9 +72,9 @@ function UploadForm() {
       const ext = file.name.split('.').pop()?.toLowerCase();
       return ['jpg', 'jpeg', 'png', 'pdf', 'tiff', 'bmp'].includes(ext || '');
     });
-    
+
     setFiles(prev => [...prev, ...validFiles]);
-    
+
     // Generate previews for image files
     validFiles.forEach(file => {
       if (file.type.startsWith('image/')) {
@@ -95,18 +108,22 @@ function UploadForm() {
     try {
       setUploading(true);
       // Upload files sequentially to avoid overwhelming the server
-      const uploadPromises = files.map(file => 
+      const uploadPromises = files.map(file =>
         apiService.uploadForm(file, ocrProvider)
       );
-      
+
       const results = await Promise.all(uploadPromises);
-      
+
       // Navigate to the last uploaded form
       if (results.length > 0) {
         navigate(`/forms/${results[results.length - 1].id}`);
       }
     } catch (error: any) {
-      alert(`Upload failed: ${error.response?.data?.detail || error.message}`);
+      const errorMessage = error.response?.data?.detail ||
+        error.message ||
+        'Network error. Please check your connection and try again.';
+      console.error('Upload error:', error);
+      alert(`Upload failed: ${errorMessage}`);
     } finally {
       setUploading(false);
     }
@@ -114,8 +131,22 @@ function UploadForm() {
 
   return (
     <div className="upload-form">
-      <h2>Upload Admission Form</h2>
-      
+      <div className="upload-header">
+        <div className="upload-heading">
+          <span className="page-eyebrow">Document Intake</span>
+          <h2>Upload Admission Form</h2>
+          <p>
+            Submit scanned admission forms and supporting paperwork to route them into the admissions
+            review workflow. You can import multiple files at once using drag &amp; drop.
+          </p>
+        </div>
+        <ul className="upload-guidelines">
+          <li>Use high-resolution scans (300&nbsp;DPI recommended) for handwritten content.</li>
+          <li>Merge multi-page documents into a single PDF before uploading.</li>
+          <li>Ensure each file remains under 10&nbsp;MB to preserve processing speed.</li>
+        </ul>
+      </div>
+
       <form onSubmit={handleSubmit} className="upload-container">
         <div
           className={`file-dropzone ${dragActive ? 'drag-active' : ''}`}
@@ -133,23 +164,26 @@ function UploadForm() {
             multiple
           />
           <label htmlFor="file-input" className="file-label">
-            <div>
+            <div className="dropzone-graphic" aria-hidden="true">
+              <span className="dropzone-icon">⬆︎</span>
+              <span className="dropzone-pulse" />
+            </div>
+            <div className="dropzone-copy">
               <p className="dropzone-text">
-                Drag and drop your scanned forms here, or click to browse
+                Drag &amp; drop scanned forms here or click to browse your computer.
               </p>
               <p className="dropzone-hint">
-                Supports: JPG, PNG, PDF, TIFF, BMP (Multiple files allowed)
+                Supports: JPG, PNG, PDF, TIFF, BMP · Multiple files allowed
               </p>
               <button
                 type="button"
-                className="btn btn-secondary"
-                style={{ marginTop: '1rem' }}
+                className="btn btn-secondary file-trigger"
                 onClick={(e) => {
                   e.preventDefault();
                   document.getElementById('file-input')?.click();
                 }}
               >
-                Choose Files
+                Select Files
               </button>
             </div>
           </label>
@@ -157,7 +191,10 @@ function UploadForm() {
 
         {files.length > 0 && (
           <div className="file-list">
-            <h4>Selected Files ({files.length}):</h4>
+            <div className="file-list-header">
+              <h4>Selected Files</h4>
+              <span className="file-count">{files.length} file(s)</span>
+            </div>
             {files.map((file) => (
               <div key={file.name} className="file-item">
                 {filePreviews[file.name] ? (
@@ -167,7 +204,7 @@ function UploadForm() {
                     className="file-preview"
                   />
                 ) : (
-                  <div className="file-preview file-preview-placeholder">
+                  <div className="file-preview file-preview-placeholder" aria-hidden="true">
                     <span>📄</span>
                     <span>{file.name.split('.').pop()?.toUpperCase()}</span>
                   </div>
@@ -191,20 +228,48 @@ function UploadForm() {
 
         <div className="form-group">
           <label htmlFor="ocr-provider">OCR Provider</label>
-          <select
-            id="ocr-provider"
-            value={ocrProvider}
-            onChange={(e) => setOcrProvider(e.target.value)}
-            className="form-select"
-          >
-            {availableProviders.map((provider) => (
-              <option key={provider} value={provider}>
-                {provider.charAt(0).toUpperCase() + provider.slice(1)}
-              </option>
-            ))}
-          </select>
+          {availableProviders.length > 0 ? (
+            <select
+              id="ocr-provider"
+              value={ocrProvider}
+              onChange={(e) => setOcrProvider(e.target.value)}
+              className="form-select"
+            >
+              {availableProviders.map((provider) => {
+                // Format provider names for display
+                const providerLabels: Record<string, string> = {
+                  'tesseract': 'Tesseract (Local)',
+                  'google-vision': 'Google Vision',
+                  'google': 'Google Vision',
+                  'google-documentai': 'Google Document AI',
+                  'azure-vision': 'Azure Vision',
+                  'azure': 'Azure Vision',
+                  'azure-form-recognizer': 'Azure Form Recognizer',
+                  'aws-textract': 'AWS Textract',
+                  'craft-trocr': 'CRAFT + TR-OCR (Handwritten) ⭐',
+                  'craft': 'CRAFT (Text Detection Only)',
+                  'trocr': 'TR-OCR (Text Recognition Only)',
+                  'best': 'Automatic (Best)',
+                  'multi': 'Automatic (Best)'
+                };
+
+                const label = providerLabels[provider.toLowerCase()] ||
+                  provider.charAt(0).toUpperCase() + provider.slice(1).replace(/-/g, ' ');
+
+                return (
+                  <option key={provider} value={provider}>
+                    {label}
+                  </option>
+                );
+              })}
+            </select>
+          ) : (
+            <div className="form-select" style={{ padding: '0.9rem 1rem', background: '#f5f5f5', color: '#666' }}>
+              Loading providers...
+            </div>
+          )}
           <small className="form-hint">
-            Select the OCR provider to use for text extraction
+            Select the OCR provider to use for text extraction.
           </small>
         </div>
 
@@ -215,6 +280,11 @@ function UploadForm() {
         >
           {uploading ? `Uploading ${files.length} file(s)...` : `Upload & Extract ${files.length} file(s)`}
         </button>
+
+        <p className="upload-footer-hint">
+          Need to capture new documents? Schedule a scan session with the admissions desk to keep
+          your intake queue current.
+        </p>
       </form>
     </div>
   );

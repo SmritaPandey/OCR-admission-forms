@@ -1,0 +1,208 @@
+<Page x:Class="OCRAdmissionForms.App.Views.ExportPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.modernwpf.com/2019"
+      Title="Export Data">
+
+    <Page.Resources>
+        <!-- Section checkbox style -->
+        <Style x:Key="SectionCheck" TargetType="CheckBox">
+            <Setter Property="Margin" Value="0,4,16,4"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="IsChecked" Value="True"/>
+        </Style>
+        <Style x:Key="FilterLabel" TargetType="TextBlock">
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+            <Setter Property="Foreground" Value="#374151"/>
+        </Style>
+    </Page.Resources>
+
+    <ScrollViewer Padding="24">
+        <StackPanel MaxWidth="900">
+            <!-- Header -->
+            <Border CornerRadius="12" Margin="0,0,0,20">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                        <GradientStop Color="#1B365D" Offset="0"/>
+                        <GradientStop Color="#6B1D2A" Offset="1"/>
+                    </LinearGradientBrush>
+                </Border.Background>
+                <StackPanel Margin="24,16">
+                    <TextBlock Text="📊  Export Data" FontSize="22" FontWeight="Bold" Foreground="White"/>
+                    <TextBlock Text="Export student records and admission forms in multiple formats" 
+                               Foreground="#D1D5DB" FontSize="13" Margin="0,4,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <!-- ═══════════ DATA SOURCE ═══════════ -->
+            <Border Style="{StaticResource CardBorder}" Margin="0,0,0,16">
+                <StackPanel>
+                    <TextBlock Text="1. Data Source" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12" Foreground="#1B365D"/>
+                    <StackPanel Orientation="Horizontal">
+                        <RadioButton x:Name="RbStudents" Content="Students" GroupName="DataSource" 
+                                     IsChecked="True" Margin="0,0,24,0" FontSize="14"
+                                     Checked="DataSource_Changed"/>
+                        <RadioButton x:Name="RbForms" Content="Admission Forms" GroupName="DataSource" 
+                                     FontSize="14" Checked="DataSource_Changed"/>
+                    </StackPanel>
+                    <TextBlock x:Name="TxtRecordCount" Text="Loading record count..." 
+                               Foreground="#6B7280" FontSize="12" Margin="0,8,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <!-- ═══════════ FORMAT ═══════════ -->
+            <Border Style="{StaticResource CardBorder}" Margin="0,0,0,16">
+                <StackPanel>
+                    <TextBlock Text="2. Export Format" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12" Foreground="#1B365D"/>
+                    <StackPanel Orientation="Horizontal">
+                        <RadioButton x:Name="RbExcel" Content="📗 Excel (.xlsx)" GroupName="Format" 
+                                     IsChecked="True" Margin="0,0,24,0" FontSize="14"/>
+                        <RadioButton x:Name="RbCsv" Content="📄 CSV (.csv)" GroupName="Format" 
+                                     Margin="0,0,24,0" FontSize="14"/>
+                        <RadioButton x:Name="RbPdf" Content="📕 PDF Report" GroupName="Format" 
+                                     FontSize="14"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- ═══════════ FILTERS (Forms only) ═══════════ -->
+            <Border x:Name="FiltersCard" Style="{StaticResource CardBorder}" Margin="0,0,0,16">
+                <StackPanel>
+                    <TextBlock Text="3. Filters" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,12" Foreground="#1B365D"/>
+
+                    <WrapPanel>
+                        <!-- Status -->
+                        <StackPanel Orientation="Horizontal" Margin="0,0,24,8">
+                            <TextBlock Text="Status:" Style="{StaticResource FilterLabel}"/>
+                            <ComboBox x:Name="CmbStatus" Width="140" SelectedIndex="0">
+                                <ComboBoxItem Content="All"/>
+                                <ComboBoxItem Content="Uploaded"/>
+                                <ComboBoxItem Content="Extracted"/>
+                                <ComboBoxItem Content="Verified"/>
+                                <ComboBoxItem Content="Error"/>
+                            </ComboBox>
+                        </StackPanel>
+
+                        <!-- Course -->
+                        <StackPanel Orientation="Horizontal" Margin="0,0,24,8">
+                            <TextBlock Text="Course:" Style="{StaticResource FilterLabel}"/>
+                            <ComboBox x:Name="CmbCourse" Width="200" SelectedIndex="0" IsEditable="True">
+                                <ComboBoxItem Content="All"/>
+                            </ComboBox>
+                        </StackPanel>
+
+                        <!-- Category -->
+                        <StackPanel Orientation="Horizontal" Margin="0,0,24,8">
+                            <TextBlock Text="Category:" Style="{StaticResource FilterLabel}"/>
+                            <ComboBox x:Name="CmbCategory" Width="140" SelectedIndex="0">
+                                <ComboBoxItem Content="All"/>
+                                <ComboBoxItem Content="GEN"/>
+                                <ComboBoxItem Content="OBC"/>
+                                <ComboBoxItem Content="SC"/>
+                                <ComboBoxItem Content="ST"/>
+                                <ComboBoxItem Content="EWS"/>
+                            </ComboBox>
+                        </StackPanel>
+
+                        <!-- Date Range -->
+                        <StackPanel Orientation="Horizontal" Margin="0,0,24,8">
+                            <TextBlock Text="From:" Style="{StaticResource FilterLabel}"/>
+                            <DatePicker x:Name="DpFrom" Width="140"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                            <TextBlock Text="To:" Style="{StaticResource FilterLabel}"/>
+                            <DatePicker x:Name="DpTo" Width="140"/>
+                        </StackPanel>
+                    </WrapPanel>
+
+                    <Button Content="↻ Clear Filters" Click="ClearFilters_Click" 
+                            Margin="0,8,0,0" Padding="12,4" FontSize="12"
+                            Background="Transparent" Foreground="#6B7280" Cursor="Hand"/>
+                </StackPanel>
+            </Border>
+
+            <!-- ═══════════ FIELD SECTIONS (Forms only) ═══════════ -->
+            <Border x:Name="FieldSectionsCard" Style="{StaticResource CardBorder}" Margin="0,0,0,16">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                        <TextBlock Text="4. Field Sections" FontSize="16" FontWeight="SemiBold" Foreground="#1B365D"/>
+                        <TextBlock Text="(choose which sections to include)" Foreground="#9CA3AF" FontSize="12" 
+                                   VerticalAlignment="Center" Margin="12,0,0,0"/>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                        <Button Content="Select All" Click="SelectAll_Click" Padding="10,3" FontSize="11"
+                                Margin="0,0,8,0" Background="#E5E7EB" Foreground="#374151"/>
+                        <Button Content="Deselect All" Click="DeselectAll_Click" Padding="10,3" FontSize="11"
+                                Background="#E5E7EB" Foreground="#374151"/>
+                    </StackPanel>
+
+                    <WrapPanel x:Name="FieldSectionChecks">
+                        <CheckBox Content="Personal" Style="{StaticResource SectionCheck}" Tag="Personal"/>
+                        <CheckBox Content="Academic" Style="{StaticResource SectionCheck}" Tag="Academic"/>
+                        <CheckBox Content="CUET Scores" Style="{StaticResource SectionCheck}" Tag="CUET Scores"/>
+                        <CheckBox Content="12th Class" Style="{StaticResource SectionCheck}" Tag="12th Class"/>
+                        <CheckBox Content="10th Class" Style="{StaticResource SectionCheck}" Tag="10th Class"/>
+                        <CheckBox Content="Parents" Style="{StaticResource SectionCheck}" Tag="Parents"/>
+                        <CheckBox Content="Contact &amp; Address" Style="{StaticResource SectionCheck}" Tag="Contact &amp; Address"/>
+                        <CheckBox Content="Guardian" Style="{StaticResource SectionCheck}" Tag="Guardian"/>
+                        <CheckBox Content="Emergency" Style="{StaticResource SectionCheck}" Tag="Emergency"/>
+                        <CheckBox Content="Certificates" Style="{StaticResource SectionCheck}" Tag="Certificates"/>
+                        <CheckBox Content="Documents Checklist" Style="{StaticResource SectionCheck}" Tag="Documents Checklist"/>
+                        <CheckBox Content="Declarations" Style="{StaticResource SectionCheck}" Tag="Declarations"/>
+                        <CheckBox Content="Metadata" Style="{StaticResource SectionCheck}" Tag="Metadata"/>
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- ═══════════ EXPORT BUTTON ═══════════ -->
+            <Border Style="{StaticResource CardBorder}" Margin="0,0,0,16">
+                <StackPanel>
+                    <Button x:Name="BtnExport" Click="Export_Click" 
+                            HorizontalAlignment="Stretch" Height="44" Cursor="Hand">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="Bd" CornerRadius="8" Padding="16,8"
+                                        Background="#1B365D">
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Style.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter Property="Background" Value="#2A4A7F"/>
+                                                </Trigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                </Border>
+                            </ControlTemplate>
+                        </Button.Template>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="⬇" FontSize="16" Foreground="White" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="TxtExportButton" Text="Export Now" 
+                                       FontSize="15" FontWeight="SemiBold" Foreground="White" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
+                    <!-- Progress -->
+                    <ProgressBar x:Name="ExportProgress" Height="6" Margin="0,12,0,0" 
+                                 Visibility="Collapsed" IsIndeterminate="True"
+                                 Foreground="#1B365D"/>
+                    <TextBlock x:Name="TxtStatus" Text="" FontSize="13" Margin="0,8,0,0"
+                               TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+
+            <!-- ═══════════ RECENT EXPORTS ═══════════ -->
+            <Border Style="{StaticResource CardBorder}" Margin="0,0,0,24">
+                <StackPanel>
+                    <TextBlock Text="Recent Exports" FontSize="14" FontWeight="SemiBold" Foreground="#1B365D" Margin="0,0,0,8"/>
+                    <TextBlock x:Name="TxtRecentExports" Text="No recent exports" 
+                               Foreground="#9CA3AF" FontSize="12" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

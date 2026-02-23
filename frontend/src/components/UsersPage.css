@@ -1,0 +1,156 @@
+.users-page {
+  padding: 1.5rem 2rem;
+  max-width: 900px;
+}
+
+.users-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.users-header h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #1a2a4a;
+}
+
+.users-loading,
+.users-error {
+  padding: 1rem;
+  color: #64748b;
+}
+
+.users-error {
+  color: #b91c1c;
+  background: #fef2f2;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.users-btn-primary {
+  padding: 0.5rem 1rem;
+  background: #1a3a6e;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.users-btn-primary:hover {
+  background: #16324a;
+}
+
+.users-btn-delete {
+  padding: 0.25rem 0.5rem;
+  background: transparent;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.users-btn-delete:hover {
+  background: #fef2f2;
+}
+
+.users-table-wrap {
+  overflow-x: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.users-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.users-table th,
+.users-table td {
+  padding: 0.6rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.users-table th {
+  background: #f8fafc;
+  font-weight: 600;
+  color: #334155;
+}
+
+.users-table tr:last-child td {
+  border-bottom: none;
+}
+
+.users-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.users-modal-inner {
+  background: #fff;
+  border-radius: 12px;
+  padding: 1.5rem;
+  width: 100%;
+  max-width: 380px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+.users-modal-inner h2 {
+  margin: 0 0 1rem;
+  font-size: 1.2rem;
+}
+
+.users-modal-inner label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.users-modal-inner input,
+.users-modal-inner select {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+}
+
+.users-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+}
+
+.users-modal-actions button {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.users-modal-actions button[type="button"] {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+}
+
+.users-modal-actions button[type="submit"] {
+  background: #1a3a6e;
+  color: #fff;
+  border: none;
+}
+
+.users-modal-actions button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
